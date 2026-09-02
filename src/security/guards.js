@@ -111,3 +111,64 @@ export function redactCredentials(url) {
     parsed.password = '';
     return parsed.toString();
 }
+
+const SCHEDULE_MODES = Object.freeze(['continuous', 'scheduled', 'motion', 'off']);
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MASK_PATTERN = /^[01]{336}$/;
+const DETECTION_CLASSES = Object.freeze([
+    'person', 'vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
+    'dog', 'cat', 'bird', 'animal', 'face', 'plate', 'motion'
+]);
+
+export function requireScheduleMode(value, field = 'mode') {
+    return requireEnum(value, field, SCHEDULE_MODES);
+}
+
+export function requireWeekMask(value, field = 'weekMask') {
+    const candidate = requireString(value, field, { min: 336, max: 336 });
+    if (!MASK_PATTERN.test(candidate)) throw validationError(`${field} must contain exactly 336 binary characters`);
+    return candidate;
+}
+
+export function requireIsoDay(value, field = 'day') {
+    const candidate = requireString(value, field, { min: 10, max: 10 });
+    if (!DAY_PATTERN.test(candidate)) throw validationError(`${field} must be YYYY-MM-DD`);
+    return candidate;
+}
+
+export function requireNumberRange(value, field, min, max) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < min || num > max) {
+        throw validationError(`${field} must be a number between ${min} and ${max}`);
+    }
+    return num;
+}
+
+export function requirePolygon(points, field = 'points') {
+    if (!Array.isArray(points) || points.length < 3) {
+        throw validationError(`${field} must be an array of at least 3 points`);
+    }
+    if (points.length > 64) {
+        throw validationError(`${field} must not have more than 64 points`);
+    }
+    const clean = [];
+    for (let i = 0; i < points.length; i += 1) {
+        const pt = points[i];
+        if (!Array.isArray(pt) || pt.length < 2) {
+            throw validationError(`${field}[${i}] must be [x, y] coordinates`);
+        }
+        const x = requireNumberRange(pt[0], `${field}[${i}][0]`, 0, 1);
+        const y = requireNumberRange(pt[1], `${field}[${i}][1]`, 0, 1);
+        clean.push([x, y]);
+    }
+    return clean;
+}
+
+export function requireDetectionClass(value, field = 'className') {
+    const candidate = requireString(value, field, { max: 32 });
+    if (!DETECTION_CLASSES.includes(candidate)) {
+        throw validationError(`${field} must be one of: ${DETECTION_CLASSES.join(', ')}`);
+    }
+    return candidate;
+}
+

@@ -2,6 +2,8 @@ import { Recorder } from './recorder.js';
 import { runRetention } from './retention_worker.js';
 import { listCameras } from '../cameras/camera_repository.js';
 import { getSetting } from '../settings/settings_repository.js';
+import { getEffectiveSchedule } from '../scheduling/scheduling_repository.js';
+import { isActive } from '../scheduling/schedule.js';
 import { onShutdown } from '../../kernel/process_guard.js';
 import { subscribe, Topic } from '../../kernel/event_bus.js';
 import { createLogger } from '../../kernel/logger.js';
@@ -10,6 +12,7 @@ import { notFound } from '../../kernel/errors.js';
 const log = createLogger('recording-hub');
 
 const RETENTION_INTERVAL_MS = 10 * 60 * 1000;
+const POLICY_INTERVAL_MS = 30 * 1000;
 
 const recorders = new Map();
 let runtimeConfig = null;
@@ -21,6 +24,16 @@ function segmentSeconds() {
 
 function isEnabled(cameraId) {
     return getSetting(`recording.enabled.${cameraId}`, false) === true;
+}
+
+function shouldRecord(camera, now = new Date()) {
+    if (!camera.enabled || !isEnabled(camera.id)) return false;
+    const { schedule, exception } = getEffectiveSchedule(camera.id, now);
+    const effective = exception ?? schedule;
+    const mode = effective?.mode ?? 'continuous';
+    if (mode === 'continuous' || mode === 'motion') return true;
+    if (mode === 'off') return false;
+    return isActive(schedule, exception, now);
 }
 
 export function startRecording(cameraId) {
@@ -45,20 +58,23 @@ export function stopRecording(cameraId, reason = 'operator') {
 }
 
 export function recordingStates() {
+    const now = new Date();
     return listCameras().map((camera) => {
         const recorder = recorders.get(camera.id);
         return {
             cameraId: camera.id,
             name: camera.name,
             enabled: isEnabled(camera.id),
+            scheduledActive: shouldRecord(camera, now),
             ...(recorder ? recorder.snapshot() : { state: 'stopped', since: null, segmentSeconds: segmentSeconds() })
         };
     });
 }
 
 export function applyRecordingPolicy() {
+    const now = new Date();
     for (const camera of listCameras()) {
-        const shouldRun = camera.enabled && isEnabled(camera.id);
+        const shouldRun = shouldRecord(camera, now);
         const running = recorders.has(camera.id);
 
         if (shouldRun && !running) startRecording(camera.id);
@@ -75,6 +91,11 @@ export function installRecordingHub(config) {
 
     applyRecordingPolicy();
 
+    const policyTimer = setInterval(() => {
+        applyRecordingPolicy();
+    }, POLICY_INTERVAL_MS);
+    policyTimer.unref();
+
     const retentionTimer = setInterval(() => {
         runRetention(config);
     }, RETENTION_INTERVAL_MS);
@@ -83,6 +104,7 @@ export function installRecordingHub(config) {
     log.info('recording hub ready', { active: recorders.size });
 
     onShutdown('recording-hub', () => {
+        clearInterval(policyTimer);
         clearInterval(retentionTimer);
         unsubscribeDelete();
         for (const cameraId of Array.from(recorders.keys())) {
@@ -90,3 +112,4 @@ export function installRecordingHub(config) {
         }
     });
 }
+

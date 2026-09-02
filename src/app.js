@@ -22,6 +22,10 @@ import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
 import { installUpdateWatchdog } from './features/updates/update_service.js';
+import { registerSchedulingRoutes } from './features/scheduling/scheduling_routes.js';
+import { registerMotionRoutes } from './features/motion/motion_routes.js';
+import { installMotionHub } from './features/motion/motion_hub.js';
+import { registerDetectionRoutes } from './features/detections/detections_routes.js';
 import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
@@ -38,7 +42,11 @@ function registerRoutes(router) {
     registerKioskRoutes(router);
     registerExportRoutes(router);
     registerUpdateRoutes(router);
+    registerSchedulingRoutes(router);
+    registerMotionRoutes(router);
+    registerDetectionRoutes(router);
 }
+
 
 function startSessionJanitor() {
     const timer = setInterval(() => {
@@ -71,7 +79,9 @@ export async function bootstrap(overrides = {}) {
     startSessionJanitor();
     installStreamHub();
     installRecordingHub(config);
+    installMotionHub(config);
     installUpdateWatchdog(config);
+
 
     const { server } = createHttpServer(config, registerRoutes);
     attachEventSocket(server);

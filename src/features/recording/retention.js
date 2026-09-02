@@ -8,6 +8,13 @@ function byOldestFirst(a, b) {
     return a.startedAt - b.startedAt;
 }
 
+function byPrunePriority(a, b) {
+    const aEv = a.hasEvent === true ? 1 : 0;
+    const bEv = b.hasEvent === true ? 1 : 0;
+    if (aEv !== bEv) return aEv - bEv;
+    return a.startedAt - b.startedAt;
+}
+
 export function planRetention(inventory, policy, now = Date.now()) {
     const removals = [];
     const kept = [];
@@ -15,7 +22,8 @@ export function planRetention(inventory, policy, now = Date.now()) {
     const candidates = inventory.slice().sort(byOldestFirst);
     let totalBytes = candidates.reduce((sum, item) => sum + item.bytes, 0);
 
-    const maxAgeMs = policy.maxAgeDays > 0 ? policy.maxAgeDays * 86400000 : 0;
+    const normalMaxAgeMs = policy.maxAgeDays > 0 ? policy.maxAgeDays * 86400000 : 0;
+    const eventMaxAgeMs = policy.eventMaxAgeDays > 0 ? policy.eventMaxAgeDays * 86400000 : normalMaxAgeMs;
     const quotaBytes = policy.maxBytes > 0 ? policy.maxBytes : 0;
 
     for (const segment of candidates) {
@@ -24,7 +32,8 @@ export function planRetention(inventory, policy, now = Date.now()) {
             continue;
         }
 
-        if (maxAgeMs > 0 && now - segment.startedAt > maxAgeMs) {
+        const effectiveMaxAgeMs = segment.hasEvent ? eventMaxAgeMs : normalMaxAgeMs;
+        if (effectiveMaxAgeMs > 0 && now - segment.startedAt > effectiveMaxAgeMs) {
             removals.push({ ...segment, reason: RetentionReason.AGE });
             totalBytes -= segment.bytes;
             continue;
@@ -34,7 +43,7 @@ export function planRetention(inventory, policy, now = Date.now()) {
     }
 
     if (quotaBytes > 0 && totalBytes > quotaBytes) {
-        for (const segment of kept.slice().sort(byOldestFirst)) {
+        for (const segment of kept.slice().sort(byPrunePriority)) {
             if (totalBytes <= quotaBytes) break;
             if (segment.protected) continue;
 
@@ -50,7 +59,7 @@ export function planRetention(inventory, policy, now = Date.now()) {
 
     if (freeShortfall > 0) {
         let reclaimed = 0;
-        for (const segment of kept.slice().sort(byOldestFirst)) {
+        for (const segment of kept.slice().sort(byPrunePriority)) {
             if (reclaimed >= freeShortfall) break;
             if (segment.protected) continue;
 
@@ -66,6 +75,7 @@ export function planRetention(inventory, policy, now = Date.now()) {
         remainingBytes: kept.reduce((sum, item) => sum + item.bytes, 0)
     };
 }
+
 
 export function summarise(plan) {
     const byReason = {};

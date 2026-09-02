@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { appendSegment } from './segment_index.js';
 import { parseSegmentStart, relativeSegmentPath, segmentPathFromName } from './segment_paths.js';
+import { hasRecentEvent } from '../detections/detections_repository.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
+
 import { createLogger } from '../../kernel/logger.js';
 
 const log = createLogger('segment-watcher');
@@ -71,6 +73,10 @@ export function createSegmentWatcher(config, cameraId, listingPath) {
             if (!stat || stat.size === 0) continue;
 
             const startedAt = parseSegmentStart(absolute) ?? stat.birthtimeMs;
+            const endedAt = startedAt + parsed.durationMs;
+            const fromIso = new Date(startedAt - 5000).toISOString();
+            const toIso = new Date(endedAt + 5000).toISOString();
+            const hasEvent = hasRecentEvent(cameraId, fromIso, toIso);
 
             const record = {
                 startedAt,
@@ -78,8 +84,10 @@ export function createSegmentWatcher(config, cameraId, listingPath) {
                 bytes: stat.size,
                 file: relativeSegmentPath(config, cameraId, absolute),
                 sha256: hashFile(absolute),
+                hasEvent,
                 protected: false
             };
+
 
             if (appendSegment(config, cameraId, record)) {
                 publish(Topic.SEGMENT_CLOSED, { cameraId, ...record });

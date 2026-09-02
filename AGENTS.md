@@ -3,7 +3,8 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.6.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.7.0
+
 
 ---
 
@@ -211,6 +212,19 @@ Divisione dei compiti:
 
 ---
 
+## 5h. Pianificazione oraria, rilevamento movimento con zone, ingressi rilevamenti (F4)
+
+`src/features/scheduling/` + `src/features/motion/` + `src/features/detections/`.
+
+- **Pianificazione oraria pura**: `schedule.js` calcola gli slot su orario locale (7 giorni × 48 slot da 30 minuti = 336 slot). Nessun I/O. `recording_hub.js` rivaluta la policy ogni 30 secondi e gestisce eccezioni di calendario giornaliere.
+- **Rilevamento movimento su pixel senza librerie AI**: processo ffmpeg separato su substream (`fps=5,scale=160:90,format=gray`, 14400 byte a fotogramma). Modello di sfondo a media mobile esponenziale ($\alpha=0.02$), differenza pixel (soglia 25), guardia anti-abbagliamento / cambi di luce (>60% pixel azzera lo sfondo, 0 eventi).
+- **Zone poligonali normalizzate (0–1)**: point-in-polygon a ray-casting puro, bitmask a 32 bit per frame 160×90, massimo 32 zone per telecamera. Isteresi a 2 frame per accensione e 10 per spegnimento, cooldown configurabile per zona.
+- **Ingresso rilevamenti macchina**: `POST /api/detections` protetto da chiavi API con memorizzazione del solo hash SHA-256 (nessuna chiave in chiaro nel DB) o sessione operatore. Rate limit 600/min per sorgente.
+- **Registrazione su evento e ritenzione selettiva**: segmenti associati a finestre temporali di eventi rilevati; `retention.js` estesa per conservare i segmenti con evento più a lungo rispetto ai segmenti ordinari e sacrificare per primi i segmenti ordinari in caso di quota o pressione disco.
+- **Interfaccia responsive**: editor griglia oraria 7×48 (`web/features/scheduling/schedule_editor.js`) ed editor canvas per il tracciamento di poligoni di movimento con slider sensibilità e cooldown (`web/features/motion/zone_editor.js`).
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -254,6 +268,20 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | DELETE | `/api/cameras/:id` | `camera.manage` |
 | POST | `/api/cameras/:id/probe` | `camera.manage` |
 | POST | `/api/discovery/onvif` | `camera.manage` |
+| GET | `/api/cameras/:id/schedule` | `camera.manage` |
+| PUT | `/api/cameras/:id/schedule` | `camera.manage` |
+| DELETE | `/api/cameras/:id/schedule` | `camera.manage` |
+| POST | `/api/cameras/:id/schedule/exceptions` | `camera.manage` |
+| DELETE | `/api/cameras/:id/schedule/exceptions/:day` | `camera.manage` |
+| GET | `/api/cameras/:id/motion/zones` | `live.view` |
+| PUT | `/api/cameras/:id/motion/zones` | `camera.manage` |
+| POST | `/api/cameras/:id/motion/zones` | `camera.manage` |
+| DELETE | `/api/cameras/:id/motion/zones/:zoneId` | `camera.manage` |
+| POST | `/api/detections` | API key sorgente o `camera.manage`, rate limit 600/1min |
+| GET | `/api/detections` | `live.view` |
+| GET | `/api/detections/sources` | `system.manage` |
+| POST | `/api/detections/sources` | `system.manage` |
+| DELETE | `/api/detections/sources/:id` | `system.manage` |
 | GET | `/api/system/health` | anonimo |
 | GET | `/api/system/info` | `live.view` |
 | GET | `/api/system/audit` | `audit.view` |
@@ -278,9 +306,9 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**.
 
-**Non ancora implementato:** esportazione con catena di custodia, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
+**Non ancora implementato:** persone con riconoscimento facciale biometrico vero, targhe ANPR con voto su fotogrammi multipli, regole di accesso e apertura varchi relè, notifiche Telegram / MQTT, ricerca forense unificata, planimetria con barriere virtuali.
 
 Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
 
@@ -297,9 +325,10 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FA | Autoinstaller Linux, console locale a schermo intero | completata |
 | FU | Autoaggiornamento da GitHub con ripristino automatico | completata |
 | F3b | Esportazione con catena di custodia | completata |
-| F4 | Pianificazione oraria, motion detection, zone | da fare |
-| F5 | NAS, tiering, allarmi, audio | da fare |
-| F6 | Salute, watchdog, conformita' | da fare |
+| F4 | Pianificazione oraria, motion detection con zone, ingressi rilevamenti | completata |
+| F5 | Persone, targhe, automazioni, varchi, notifiche | da fare |
+| F6 | Planimetria, preset, diagnostica, watchdog | da fare |
+
 
 **Vincolo architetturale per F2**: l'indice dei segmenti non va nella tabella SQLite se supera l'ordine di 10^5 righe. Usa file JSONL append-only per canale e per giorno; in SQLite tieni solo configurazione e rollup giornalieri.
 

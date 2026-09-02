@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.6.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. L'archivio si esporta con una catena di custodia verificabile. Mancano ancora rilevamento movimento, pianificazione oraria e le funzioni di riconoscimento. Vedi [Roadmap](#roadmap) per il quadro onesto.
+> **Stato attuale: 0.7.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. La pianificazione oraria (griglia 7×48 ed eccezioni di calendario) e il rilevamento movimento reale con zone poligonali operano in tempo reale con processo ffmpeg dedicato a bassa risoluzione. I rilevamenti esterni e di bordo entrano via API autenticata con chiavi dedicate. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. L'archivio si esporta con una catena di custodia verificabile. Vedi [Roadmap](#roadmap) per il quadro onesto.
 
 ---
 
@@ -47,9 +47,12 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Interfaccia responsive** | Stessa interfaccia su desktop, tablet e telefono, senza app da installare |
 | **Diretta video** | Flussi RTSP riprodotti nel browser con latenza sotto il secondo, senza plugin e senza librerie esterne |
 | **Muro video** | Griglia adattiva 1/4/9 riquadri, riconnessione automatica, stato per canale |
-| **Registrazione continua** | Segmenti MP4 senza ricodifica, con hash SHA-256 di ogni file per l'integrità |
+| **Registrazione continua ed evento** | Segmenti MP4 senza ricodifica, con hash SHA-256 e marcatura eventi per conservazione selettiva |
+| **Pianificazione oraria** | Griglia settimanale 7×48 slot da mezz'ora per telecamera più eccezioni giornaliere di calendario |
+| **Rilevamento movimento con zone** | Modello di sfondo adattivo a 5 fps 160×90 in pura aritmetica pixel; zone poligonali su canvas, isteresi, guardia anti-abbagliamento e cooldown |
+| **Ingresso rilevamenti macchina** | API autenticata con chiavi crittografiche (solo hash SHA-256 nel DB) per flussi ONVIF esterni o modelli di inferenza |
 | **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
-| **Ritenzione automatica** | Per giorni, per quota e per spazio libero; i segmenti protetti non vengono mai cancellati |
+| **Ritenzione automatica differenziata** | Per giorni, quota e spazio libero, con ritenzione estesa per segmenti contenenti eventi rilevati |
 | **Installazione automatica Linux** | Un comando solo: rileva la distribuzione, installa Node.js e ffmpeg, registra il servizio, apre il firewall e stampa l'indirizzo web. Nessuna domanda |
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
@@ -58,7 +61,8 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 
 ### In sviluppo
 
-Registrazione su evento · Rilevamento movimento con zone · Pianificazione oraria e per data · Ritenzione automatica e quote · Archiviazione su NAS con tiering · Uscite di allarme relè, ONVIF e MQTT · Uscite audio per entrata, uscita e allarme · Riconoscimento targhe e volti
+Persone e anagrafica con riconoscimento facciale biometrico vero · Riconoscimento targhe ANPR con voto su fotogrammi multipli · Automazioni, notifiche Telegram e webhook relè · Apertura varchi · Planimetria e barriere virtuali · Archiviazione su NAS con tiering
+
 
 ---
 
@@ -436,9 +440,10 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **F3** | Riproduzione, timeline ed esportazione con catena di custodia | ✅ completata |
 | **FA** | Autoinstaller Linux e console locale a schermo intero | ✅ completata |
 | **FU** | Aggiornamento da GitHub con ripristino automatico | ✅ completata |
-| **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | 🔜 in corso |
-| **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |
-| **F6** | Monitoraggio salute, watchdog, conformità GDPR | ⬜ |
+| **F4** | Pianificazione oraria, rilevamento movimento con zone, ingressi rilevamenti | ✅ completata |
+| **F5** | Persone, targhe ANPR, automazioni, varchi, notifiche | 🔜 in corso |
+| **F6** | Planimetria, preset, diagnostica, watchdog, conformità GDPR | ⬜ |
+
 
 Il riconoscimento di targhe e volti richiede un motore di inferenza separato. ARGUS-PR non lo simula: quando arriverà, sarà un ingresso reale che accetta rilevamenti da un motore esterno o dall'analitica di bordo delle telecamere, che molte già hanno. Preferisco un NVR che registra in modo affidabile a uno che promette intelligenza artificiale e perde fotogrammi.
 

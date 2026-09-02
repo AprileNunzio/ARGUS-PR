@@ -1,5 +1,8 @@
 import { el, chip, field, empty, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { renderScheduleEditor } from '/features/scheduling/schedule_editor.js';
+import { renderZoneEditor } from '/features/motion/zone_editor.js';
+
 
 function canManage(session) {
     return session.permissions.includes('camera.manage');
@@ -84,8 +87,9 @@ function recordingToggle({ camera, api, recording }) {
     return button;
 }
 
-function cameraRow({ camera, api, session, recording, onChanged }) {
+function cameraRow({ camera, api, session, recording, onChanged, onOpenSchedule, onOpenZones }) {
     const status = el('td', {}, [camera.enabled ? chip('attivo', 'ok') : chip('disattivo', 'warn')]);
+
 
     const probeButton = el('button', {
         className: 'btn btn--sm',
@@ -111,6 +115,18 @@ function cameraRow({ camera, api, session, recording, onChanged }) {
     const actions = el('td', { className: 'right' }, [
         el('div', { className: 'inline' }, [
             probeButton,
+            canManage(session) ? el('button', {
+                className: 'btn btn--sm',
+                type: 'button',
+                textContent: 'Orari',
+                onclick: () => onOpenSchedule(camera)
+            }) : null,
+            canManage(session) ? el('button', {
+                className: 'btn btn--sm',
+                type: 'button',
+                textContent: 'Zone',
+                onclick: () => onOpenZones(camera)
+            }) : null,
             canManage(session) ? recordingToggle({ camera, api, recording }) : null,
             canManage(session)
                 ? el('button', {
@@ -136,6 +152,7 @@ function cameraRow({ camera, api, session, recording, onChanged }) {
         actions
     ]);
 }
+
 
 export async function renderCameras({ api, session }) {
     const outlet = el('div', { className: 'view' });
@@ -202,6 +219,28 @@ export async function renderCameras({ api, session }) {
             })
             : null;
 
+        const onOpenSchedule = (camera) => {
+            formHost.replaceChildren(renderScheduleEditor({
+                camera,
+                api,
+                onSaved: () => { formHost.setAttribute('hidden', 'hidden'); refresh(); },
+                onCancel: () => formHost.setAttribute('hidden', 'hidden')
+            }));
+            formHost.removeAttribute('hidden');
+            formHost.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        const onOpenZones = (camera) => {
+            formHost.replaceChildren(renderZoneEditor({
+                camera,
+                api,
+                onSaved: () => { formHost.setAttribute('hidden', 'hidden'); refresh(); },
+                onCancel: () => formHost.setAttribute('hidden', 'hidden')
+            }));
+            formHost.removeAttribute('hidden');
+            formHost.scrollIntoView({ behavior: 'smooth' });
+        };
+
         const table = cameras.length === 0
             ? empty('Nessun canale configurato. Aggiungi una telecamera RTSP per iniziare.')
             : el('div', { className: 'tablewrap' }, [
@@ -216,9 +255,18 @@ export async function renderCameras({ api, session }) {
                             el('th', { textContent: 'Azioni' })
                         ])
                     ]),
-                    el('tbody', {}, cameras.map((camera) => cameraRow({ camera, api, session, recording: recorders, onChanged: refresh })))
+                    el('tbody', {}, cameras.map((camera) => cameraRow({
+                        camera,
+                        api,
+                        session,
+                        recording: recorders,
+                        onChanged: refresh,
+                        onOpenSchedule,
+                        onOpenZones
+                    })))
                 ])
             ]);
+
 
         outlet.replaceChildren(
             el('div', { className: 'view__head' }, [

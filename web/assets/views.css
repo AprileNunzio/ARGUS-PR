@@ -188,3 +188,18 @@
 .rec-toggle { display: inline-flex; align-items: center; gap: var(--gap-2); }
 .rec-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: 0 0 9px; }
 .rec-dot--on { background: var(--rose); box-shadow: 0 0 0 3px var(--rose-soft); animation: pulse 2s var(--ease) infinite; }
+
+.schedule-grid-host { display: flex; flex-direction: column; gap: var(--gap-3); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.schedule-table { display: flex; flex-direction: column; gap: 4px; min-width: 580px; }
+.schedule-row { display: flex; align-items: center; gap: var(--gap-2); }
+.schedule-day-label { width: 44px; font-weight: 700; font-size: 0.78rem; text-align: right; color: var(--ink); flex-shrink: 0; }
+.schedule-slots-header { display: flex; justify-content: space-between; flex: 1; font-size: 0.68rem; font-family: var(--mono); color: var(--muted); padding: 0 4px; }
+.schedule-cells { display: grid; grid-template-columns: repeat(48, 1fr); gap: 2px; flex: 1; height: 24px; }
+.schedule-cell { background: var(--surface-2); border: 1px solid var(--rule); border-radius: 2px; cursor: pointer; transition: background-color var(--speed); }
+.schedule-cell:hover { border-color: var(--accent); }
+.schedule-cell--active { background: var(--accent); border-color: var(--accent); }
+.schedule-presets { margin-bottom: var(--gap-2); }
+
+.zone-canvas-wrapper { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 52vh; background: #0b0f19; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--rule); }
+.zone-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+

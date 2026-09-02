@@ -67,3 +67,10 @@ export function buildThumbnailArgs(camera, destination) {
     args.push('-frames:v', '1', '-q:v', '4', '-y', destination);
     return args;
 }
+
+export function buildMotionArgs(camera) {
+    const args = buildInputArgs(camera);
+    args.push('-an', '-vf', 'fps=5,scale=160:90,format=gray', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1');
+    return args;
+}
+
