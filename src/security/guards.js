@@ -172,3 +172,32 @@ export function requireDetectionClass(value, field = 'className') {
     return candidate;
 }
 
+const ACCESS_LIST_TYPES = Object.freeze(['whitelist', 'blacklist', 'monitored']);
+
+export function requireListType(value, field = 'listType') {
+    return requireEnum(value, field, ACCESS_LIST_TYPES);
+}
+
+const PLATE_PATTERN_REGEX = /^[A-Z0-9*?_-]{2,20}$/;
+
+export function requirePlatePattern(value, field = 'platePattern') {
+    const candidate = requireString(value, field, { min: 2, max: 20 }).toUpperCase();
+    if (!PLATE_PATTERN_REGEX.test(candidate)) {
+        throw validationError(`${field} contains invalid characters for a license plate pattern`);
+    }
+    return candidate;
+}
+
+export function requireEmbedding(value, field = 'embedding') {
+    if (!Array.isArray(value) || value.length < 16 || value.length > 512) {
+        throw validationError(`${field} must be a numeric vector with standard embedding dimensions`);
+    }
+    for (let i = 0; i < value.length; i += 1) {
+        if (typeof value[i] !== 'number' || !Number.isFinite(value[i])) {
+            throw validationError(`${field}[${i}] must be a finite number`);
+        }
+    }
+    return value;
+}
+
+

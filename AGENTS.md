@@ -3,7 +3,8 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.7.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.8.0
+
 
 
 ---
@@ -225,6 +226,20 @@ Divisione dei compiti:
 
 ---
 
+## 5i. Visione AI, tracciamento, biometria facciale, targhe ANPR e controllo accessi (F5)
+
+`src/features/vision/` + `src/features/access/` + `src/features/people/` + `vision/worker.py`.
+
+- **Isolamento runtime Node.js**: Node.js mantiene strettamente **2 dipendenze** runtime (`better-sqlite3`, `ws`). Nessuna libreria di rete neurale o binding C++ caricato nel processo principale.
+- **Worker di visione Python su standard I/O**: `vision/worker.py` legge fotogrammi rawvideo BGR24 640×360 da `stdin` e invia risultati JSONL su `stdout`. Esegue modelli ONNX YOLOX (oggetti, persone, veicoli, animali), YuNet (volti) e SFace (vettori 128-d).
+- **Tracciamento puro IoU**: `tracking.js` associa rilevazioni consecutive con soglia minima IoU 0.3, conferma le tracce dopo 3 frame e le chiude dopo 5 assenze.
+- **Voto multi-frame su targhe**: `plates.js` colleziona le letture e calcola la stringa vincente pesata per confidenza con validazione del formato targa italiano ed europeo.
+- **Biometria facciale e cancellazione GDPR**: `face_matcher.js` calcola similarità del coseno (soglia SFace 0.363). `people_repository.js` supporta la cancellazione immediata e totale di anagrafica e log ai sensi del GDPR.
+- **Controllo accessi e priorità assoluta blacklist**: `access_rules.js` valuta pattern con wildcard (`*`, `?`). La blacklist vince sempre sulla whitelist in caso di conflitto (`deny`).
+- **Installatori completi e autonomi**: `autoinstaller.sh` (Linux) e `deploy/windows/install.ps1` (Windows) configurano autonomamente l'ambiente Python virtualenv, scaricano i modelli ONNX con controllo SHA-256 e configurano i servizi di sistema.
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -282,6 +297,18 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | GET | `/api/detections/sources` | `system.manage` |
 | POST | `/api/detections/sources` | `system.manage` |
 | DELETE | `/api/detections/sources/:id` | `system.manage` |
+| GET | `/api/access/rules` | `live.view` |
+| POST | `/api/access/rules` | `camera.manage` |
+| PUT | `/api/access/rules/:id` | `camera.manage` |
+| DELETE | `/api/access/rules/:id` | `camera.manage` |
+| GET | `/api/access/events` | `live.view` |
+| GET | `/api/people` | `live.view` |
+| POST | `/api/people` | `camera.manage` |
+| GET | `/api/people/:id` | `live.view` |
+| PUT | `/api/people/:id` | `camera.manage` |
+| DELETE | `/api/people/:id` | `camera.manage` |
+| POST | `/api/people/match` | `live.view` |
+| GET | `/api/people/logs/faces` | `live.view` |
 | GET | `/api/system/health` | anonimo |
 | GET | `/api/system/info` | `live.view` |
 | GET | `/api/system/audit` | `audit.view` |
@@ -306,9 +333,9 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**.
 
-**Non ancora implementato:** persone con riconoscimento facciale biometrico vero, targhe ANPR con voto su fotogrammi multipli, regole di accesso e apertura varchi relè, notifiche Telegram / MQTT, ricerca forense unificata, planimetria con barriere virtuali.
+**Non ancora implementato:** relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.
 
 Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
 
@@ -326,7 +353,9 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FU | Autoaggiornamento da GitHub con ripristino automatico | completata |
 | F3b | Esportazione con catena di custodia | completata |
 | F4 | Pianificazione oraria, motion detection con zone, ingressi rilevamenti | completata |
-| F5 | Persone, targhe, automazioni, varchi, notifiche | da fare |
+| F5 | Persone, targhe, biometria, ANPR, controllo accessi, installatori autonomi | completata |
+| F6 | Planimetria, preset, notifiche Telegram/MQTT, relè | da fare |
+
 | F6 | Planimetria, preset, diagnostica, watchdog | da fare |
 
 

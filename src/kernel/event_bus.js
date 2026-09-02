@@ -13,8 +13,11 @@ export const Topic = Object.freeze({
     ALARM: 'alarm.raised',
     STORAGE_PRESSURE: 'storage.pressure',
     SYSTEM_HEALTH: 'system.health',
-    DEPENDENCY_PROGRESS: 'dependency.progress'
+    DEPENDENCY_PROGRESS: 'dependency.progress',
+    DETECTION: 'detection.event',
+    ACCESS: 'access.event'
 });
+
 
 export function publish(topic, payload) {
     emitter.emit(topic, { topic, at: Date.now(), payload });

@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.7.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. La pianificazione oraria (griglia 7×48 ed eccezioni di calendario) e il rilevamento movimento reale con zone poligonali operano in tempo reale con processo ffmpeg dedicato a bassa risoluzione. I rilevamenti esterni e di bordo entrano via API autenticata con chiavi dedicate. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. L'archivio si esporta con una catena di custodia verificabile. Vedi [Roadmap](#roadmap) per il quadro onesto.
+> **Stato attuale: 0.8.0.** Il ciclo NVR è completo con analisi AI: acquisizione RTSP, diretta a bassa latenza, registrazione con segmentazione e indice, riproduzione, rilevamento movimento con zone, tracciamento oggetti, rilevamento persone, veicoli e animali, biometria facciale con conformità GDPR, lettura targhe ANPR a voto pesato, controllo varchi e regole di accesso con blacklist prioritaria. Installatori autonomi per Linux e Windows. Vedi [Roadmap](#roadmap).
 
 ---
 
@@ -50,10 +50,14 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Registrazione continua ed evento** | Segmenti MP4 senza ricodifica, con hash SHA-256 e marcatura eventi per conservazione selettiva |
 | **Pianificazione oraria** | Griglia settimanale 7×48 slot da mezz'ora per telecamera più eccezioni giornaliere di calendario |
 | **Rilevamento movimento con zone** | Modello di sfondo adattivo a 5 fps 160×90 in pura aritmetica pixel; zone poligonali su canvas, isteresi, guardia anti-abbagliamento e cooldown |
+| **Visione AI e tracciamento** | Riconoscimento persone, veicoli (auto, furgoni, moto, bici), animali (cani, gatti, uccelli) con tracciamento IoU tra fotogrammi |
+| **Biometria facciale e GDPR** | Modelli YuNet + SFace con soglia standard 0.363, centroide biometrico e cancellazione totale GDPR |
+| **Lettura targhe ANPR** | OCR multi-frame con voto pesato per confidenza e validazione formati italiani ed europei |
+| **Controllo accessi e varchi** | Regole whitelist, blacklist e monitorate, pattern con wildcard e priorità assoluta per la blacklist |
 | **Ingresso rilevamenti macchina** | API autenticata con chiavi crittografiche (solo hash SHA-256 nel DB) per flussi ONVIF esterni o modelli di inferenza |
 | **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
 | **Ritenzione automatica differenziata** | Per giorni, quota e spazio libero, con ritenzione estesa per segmenti contenenti eventi rilevati |
-| **Installazione automatica Linux** | Un comando solo: rileva la distribuzione, installa Node.js e ffmpeg, registra il servizio, apre il firewall e stampa l'indirizzo web. Nessuna domanda |
+| **Installatori autonomi** | Linux (`autoinstaller.sh`) e Windows (`deploy/windows/install.ps1`) non presidiati con venv Python e modelli ONNX |
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
@@ -61,8 +65,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 
 ### In sviluppo
 
-Persone e anagrafica con riconoscimento facciale biometrico vero · Riconoscimento targhe ANPR con voto su fotogrammi multipli · Automazioni, notifiche Telegram e webhook relè · Apertura varchi · Planimetria e barriere virtuali · Archiviazione su NAS con tiering
-
+Notifiche push Telegram e MQTT · Integrazione relè fisici di apertura varchi · Ricerca forense unificata · Planimetria con barriere virtuali
 
 ---
 
@@ -94,16 +97,16 @@ Il modo più veloce per vedere il programma funzionare.
 
 Lo script controlla i prerequisiti, installa le dipendenze, avvia il server e apre il browser. La password dell'amministratore compare nella finestra del terminale al primo avvio.
 
-### Windows — installazione permanente come servizio
+### Windows — installazione autonoma come servizio
 
-Da PowerShell come amministratore:
+Da PowerShell eseguita come Amministratore:
 
 ```powershell
-winget install NSSM.NSSM
-.\deploy\windows\install-service.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
 ```
 
-Il servizio parte da solo all'accensione del PC. Registra anche la regola del firewall sulla porta scelta.
+Installa e verifica autonomamente Node.js, ffmpeg, Python, dipendenze AI e modelli ONNX con SHA-256, crea il servizio Windows `ArgusPR` e configura il firewall.
+
 
 ### Linux — installazione automatica (consigliata)
 
@@ -175,29 +178,20 @@ sudo apt update && sudo apt upgrade -y
 
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs ffmpeg git rsync
-
 git clone https://github.com/AprileNunzio/ARGUS-PR.git
-cd ARGUS-PR
-sudo ./deploy/linux/install.sh
-
-sudo ufw allow 8088/tcp
+cd ARGUS-PR && sudo ./deploy/linux/install.sh && sudo ufw allow 8088/tcp
 ```
 
 Per un disco dedicato alle registrazioni:
 
 ```bash
-sudo mkfs.ext4 /dev/sdb1
-sudo mkdir -p /srv/registrazioni
+sudo mkfs.ext4 /dev/sdb1 && sudo mkdir -p /srv/registrazioni
 echo '/dev/sdb1 /srv/registrazioni ext4 defaults,noatime 0 2' | sudo tee -a /etc/fstab
-sudo mount -a
-sudo chown -R argus:argus /srv/registrazioni
-
-sudo systemctl edit argus-pr
-# aggiungi:
-#   [Service]
-#   Environment=ARGUS_MEDIA_DIR=/srv/registrazioni
+sudo mount -a && sudo chown -R argus:argus /srv/registrazioni
+sudo systemctl edit argus-pr --setenv=ARGUS_MEDIA_DIR=/srv/registrazioni
 sudo systemctl restart argus-pr
 ```
+
 
 </details>
 
@@ -441,13 +435,10 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **FA** | Autoinstaller Linux e console locale a schermo intero | ✅ completata |
 | **FU** | Aggiornamento da GitHub con ripristino automatico | ✅ completata |
 | **F4** | Pianificazione oraria, rilevamento movimento con zone, ingressi rilevamenti | ✅ completata |
-| **F5** | Persone, targhe ANPR, automazioni, varchi, notifiche | 🔜 in corso |
-| **F6** | Planimetria, preset, diagnostica, watchdog, conformità GDPR | ⬜ |
+| **F5** | Persone, biometria facciale, targhe ANPR, controllo accessi, installer autonomi | ✅ completata |
+| **F6** | Planimetria, preset, notifiche Telegram/MQTT, relè fisici | 🔜 in corso |
 
-
-Il riconoscimento di targhe e volti richiede un motore di inferenza separato. ARGUS-PR non lo simula: quando arriverà, sarà un ingresso reale che accetta rilevamenti da un motore esterno o dall'analitica di bordo delle telecamere, che molte già hanno. Preferisco un NVR che registra in modo affidabile a uno che promette intelligenza artificiale e perde fotogrammi.
-
-Chi prosegue lo sviluppo trova il piano completo in **[HANDOVER.md](HANDOVER.md)** e le istruzioni operative in **[docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md)**.
+Il motore di visione AI opera tramite worker Python dedicato alimentato da flussi rawvideo ffmpeg su pipe standard. Esegue YOLOX per rilevamento oggetti, YuNet per volti, SFace per biometria e OCR pesato per targhe ANPR, senza appesantire il processo Node.js.
 
 ---
 

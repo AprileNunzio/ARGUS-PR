@@ -105,14 +105,15 @@ install_base_packages() {
     log "Installazione prerequisiti di sistema"
     pkg_refresh
     case "$PKG" in
-        apt-get) pkg_install ca-certificates curl git xz-utils python3 build-essential procps iproute2 || true ;;
-        dnf|yum) pkg_install ca-certificates curl git xz python3 gcc-c++ make iproute || true ;;
-        pacman) pkg_install ca-certificates curl git xz python base-devel iproute2 || true ;;
-        zypper) pkg_install ca-certificates curl git xz python3 gcc-c++ make iproute2 || true ;;
-        apk) pkg_install ca-certificates curl git xz python3 build-base iproute2 bash || true ;;
+        apt-get) pkg_install ca-certificates curl git xz-utils python3 python3-pip python3-venv build-essential procps iproute2 || true ;;
+        dnf|yum) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute || true ;;
+        pacman) pkg_install ca-certificates curl git xz python python-pip base-devel iproute2 || true ;;
+        zypper) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute2 || true ;;
+        apk) pkg_install ca-certificates curl git xz python3 py3-pip build-base iproute2 bash || true ;;
     esac
     pkg_try ffmpeg ffmpeg-free || warn "ffmpeg assente nei repository: ARGUS-PR lo scarichera' da solo al primo avvio."
 }
+
 
 node_major() { "$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
 
@@ -204,6 +205,33 @@ ENVEOF
     chown root:"$SERVICE_USER" "$ENV_FILE"
 }
 
+setup_vision() {
+    log "Configurazione ambiente di visione artificiale e AI"
+    local venv_dir="${DATA_DIR}/vision/venv"
+    mkdir -p "${DATA_DIR}/vision" "${DATA_DIR}/models"
+
+    if [[ ! -d "$venv_dir" ]]; then
+        python3 -m venv "$venv_dir" || true
+    fi
+
+    if [[ -x "${venv_dir}/bin/pip" && -f "${INSTALL_DIR}/vision/requirements.txt" ]]; then
+        "${venv_dir}/bin/pip" install --quiet --upgrade pip || true
+        "${venv_dir}/bin/pip" install --quiet -r "${INSTALL_DIR}/vision/requirements.txt" || true
+    fi
+
+    if [[ -f "${INSTALL_DIR}/bin/argus.js" ]]; then
+        ( cd "$INSTALL_DIR" && "$NODE_BIN" -e "
+            import { ensureModel, loadCatalog } from './src/features/vision/vision_provision.js';
+            const cat = loadCatalog('./vision/models_catalog.json');
+            for (const m of cat.models) {
+                ensureModel(m, '${DATA_DIR}/models').then(r => console.log('Modello ' + r.name + ': ' + r.status)).catch(e => console.warn(e.message));
+            }
+        " ) || true
+    fi
+
+    chown -R "$SERVICE_USER":"$SERVICE_USER" "${DATA_DIR}/vision" "${DATA_DIR}/models"
+}
+
 write_service() {
     log "Registrazione servizio systemd"
     mkdir -p "${INSTALL_DIR}/vendor" "$HELPER_DIR"
@@ -227,6 +255,7 @@ Environment=ARGUS_INSTALL_DIR=${INSTALL_DIR}
 Environment=ARGUS_SERVICE_USER=${SERVICE_USER}
 Environment=ARGUS_NODE_BIN=${NODE_BIN}
 Environment=ARGUS_NPM_BIN=${NPM_BIN}
+Environment="PATH=${DATA_DIR}/vision/venv/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStartPre=+${HELPER_DIR}/pre-start.sh
 ExecStart=${NODE_BIN} ${INSTALL_DIR}/bin/argus.js serve
 Restart=always
@@ -234,6 +263,7 @@ RestartSec=5
 SuccessExitStatus=75
 KillSignal=SIGTERM
 TimeoutStopSec=20
+
 
 NoNewPrivileges=true
 PrivateTmp=true
@@ -412,10 +442,12 @@ main() {
     create_users
     fetch_sources
     write_environment
+    setup_vision
     write_service
     open_firewall
     if want_kiosk; then install_kiosk; else log "Muro video locale non richiesto"; fi
     summary
 }
+
 
 main "$@"

@@ -52,10 +52,15 @@ set ARGUS_DATA_DIR=%ProgramData%\ARGUS-PR
 set ARGUS_MEDIA_DIR=%ProgramData%\ARGUS-PR\media
 if not defined ARGUS_PORT set ARGUS_PORT=8088
 
+if exist "%ProgramData%\ARGUS-PR\vision\venv\Scripts" (
+    set "PATH=%ProgramData%\ARGUS-PR\vision\venv\Scripts;%PATH%"
+)
+
 if not exist "%ARGUS_DATA_DIR%" mkdir "%ARGUS_DATA_DIR%"
 
 echo   Dati:      %ARGUS_DATA_DIR%
 echo   Interfaccia: http://localhost:%ARGUS_PORT%
+
 echo.
 echo   Premi CTRL+C per fermare il server.
 echo.

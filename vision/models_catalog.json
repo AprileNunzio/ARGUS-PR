@@ -1,0 +1,28 @@
+{
+  "models": [
+    {
+      "name": "yolox_nano",
+      "filename": "yolox_nano.onnx",
+      "url": "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_nano.onnx",
+      "sha256": "43924bf63351d08e5e8df7bc250df7b0a75f850d53c3061699920194098679f2",
+      "size": 3907862,
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "face_detection_yunet",
+      "filename": "face_detection_yunet_2023mar.onnx",
+      "url": "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
+      "sha256": "342b36b280387b3e15f33f956c382db0e44ef1f2a3ff4f447f5a9e3ee3fb4a72",
+      "size": 392576,
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "face_recognition_sface",
+      "filename": "face_recognition_sface_2021dec.onnx",
+      "url": "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx",
+      "sha256": "a34614ff797deeb9063546a94f6f8dd3c9b74070a6c2fa200c82245b7fbabef3",
+      "size": 37243956,
+      "license": "Apache-2.0"
+    }
+  ]
+}

@@ -26,11 +26,20 @@ import { registerSchedulingRoutes } from './features/scheduling/scheduling_route
 import { registerMotionRoutes } from './features/motion/motion_routes.js';
 import { installMotionHub } from './features/motion/motion_hub.js';
 import { registerDetectionRoutes } from './features/detections/detections_routes.js';
+import { registerAccessRoutes } from './features/access/access_routes.js';
+import { createAccessRepository } from './features/access/access_repository.js';
+import { registerPeopleRoutes } from './features/people/people_routes.js';
+import { createPeopleRepository } from './features/people/people_repository.js';
+import { installVisionHub } from './features/vision/vision_hub.js';
+import { listCameras } from './features/cameras/camera_repository.js';
+import { insertDetectionEvent } from './features/detections/detections_repository.js';
 import { readPackageVersion } from './platform/version.js';
+
+
 
 const log = createLogger('app');
 
-function registerRoutes(router) {
+function registerRoutes(router, { db, accessRepository, peopleRepository }) {
     registerSetupRoutes(router);
     registerAuthRoutes(router);
     registerCameraRoutes(router);
@@ -45,8 +54,9 @@ function registerRoutes(router) {
     registerSchedulingRoutes(router);
     registerMotionRoutes(router);
     registerDetectionRoutes(router);
+    registerAccessRoutes({ router, accessRepository });
+    registerPeopleRoutes({ router, peopleRepository, db });
 }
-
 
 function startSessionJanitor() {
     const timer = setInterval(() => {
@@ -71,7 +81,7 @@ export async function bootstrap(overrides = {}) {
     });
 
     initVault(config);
-    openDatabase(config);
+    const db = openDatabase(config);
 
     const setup = prepareSetup();
     await initMediaTools(config);
@@ -82,10 +92,24 @@ export async function bootstrap(overrides = {}) {
     installMotionHub(config);
     installUpdateWatchdog(config);
 
+    const accessRepository = createAccessRepository(db);
+    const peopleRepository = createPeopleRepository(db);
 
-    const { server } = createHttpServer(config, registerRoutes);
+    const visionHub = installVisionHub({
+        config,
+        cameraRepository: { list: listCameras },
+        detectionsRepository: { recordEvent: insertDetectionEvent },
+        peopleRepository,
+        accessRepository
+    });
+    onShutdown('vision-hub', () => visionHub.stop());
+
+
+
+    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository }));
     attachEventSocket(server);
     await listen(server, config);
 
     return { config, setup };
 }
+
