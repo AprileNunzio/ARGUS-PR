@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.2.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.3.0
 
 ---
 
@@ -13,7 +13,7 @@ NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce fluss
 
 **Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
 
-Stato reale: **fondamenta e diretta video funzionanti; registrazione su disco non ancora implementata.** Vedi §9.
+Stato reale: **fondamenta, diretta, registrazione, archivio e riproduzione funzionanti.** Vedi §9.
 
 ---
 
@@ -149,6 +149,17 @@ Per aggiornare la versione basta cambiare `tag` e `series` in `catalog.js`. Non 
 
 Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun errore.
 
+## 5d. Registrazione e archivio (F2/F3)
+
+`src/features/recording/`. Vincoli progettuali da rispettare:
+
+- **L'indice dei segmenti NON sta in SQLite.** Vive in `media/index/<camera>/<AAAA-MM-GG>.jsonl`, append-only. In SQLite restano solo configurazione e impostazioni. Non spostarlo: a un segmento al minuto per otto canali si arriva a milioni di righe l'anno.
+- **Partizionamento per giorno**, non per ora: il muxer `segment` di ffmpeg supporta `strftime` ma **non** `strftime_mkdir` (quella e' del muxer `hls`), quindi le directory le crea `ensureSegmentDays()`, con un timer che prepara anche il giorno successivo.
+- **L'indicizzazione parte dal CSV di ffmpeg** (`-segment_list ... -segment_list_type csv`), che contiene solo il **nome file**, non il percorso: `segmentPathFromName()` ricostruisce la directory dalla data nel nome. Il CSV viene troncato ad ogni riavvio di ffmpeg, quindi il watcher rileva la troncatura e riazzera il contatore.
+- **`-re` sulle sorgenti non RTSP.** Un file letto a velocita' piena verrebbe consumato in un istante e produrrebbe un unico segmento.
+- **La ritenzione e' una funzione pura** (`retention.js`), coperta da test. Non introdurre I/O al suo interno: e' il codice che cancella prove, e deve restare verificabile su scenari limite. Un segmento `protected` non si cancella mai, per nessun motivo.
+- La riproduzione passa da `/api/archive/:id/media`, che serve i file con supporto Range tramite `serveFile` e confina ogni percorso con `resolveInside`. Il traversal e' verificato: risponde 403.
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -202,9 +213,9 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**.
 
-**Non ancora implementato:** registrazione video, segmentazione, indice archivio, playback, timeline, esportazione, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
+**Non ancora implementato:** esportazione con catena di custodia, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 
 Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
 
@@ -216,8 +227,8 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 |---|---|---|
 | F0 | Kernel, sicurezza, HTTP, UI, telecamere | completata |
 | F1 | Pipeline ffmpeg, diretta, fMP4 su WebSocket | completata |
-| F2 | Registrazione, segmentazione, indice, ritenzione | da fare |
-| F3 | Playback, timeline, export con catena di custodia | da fare |
+| F2 | Registrazione, segmentazione, indice, ritenzione | completata |
+| F3 | Playback e timeline (export ancora da fare) | parziale |
 | F4 | Pianificazione oraria, motion detection, zone | da fare |
 | F5 | NAS, tiering, allarmi, audio | da fare |
 | F6 | Salute, watchdog, conformita' | da fare |

@@ -1,6 +1,6 @@
 {
   "name": "argus-pr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Self-hosted Network Video Recorder with ONVIF discovery, RTSP recording and AI-assisted analytics",
   "type": "module",
   "license": "MIT",
@@ -29,7 +29,7 @@
     "start": "node bin/argus.js serve",
     "doctor": "node bin/argus.js doctor",
     "reset-admin": "node bin/argus.js reset-admin",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

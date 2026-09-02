@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.2.0.** Fondamenta e **diretta video** funzionanti: autenticazione, database, sicurezza, interfaccia, gestione telecamere, scoperta ONVIF, riproduzione dei flussi RTSP nel browser. **La registrazione su disco non è ancora implementata**: è la fase in corso. Vedi [Roadmap](#roadmap) per il quadro onesto di cosa c'è e cosa manca.
+> **Stato attuale: 0.3.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
 
 ---
 
@@ -47,11 +47,14 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Interfaccia responsive** | Stessa interfaccia su desktop, tablet e telefono, senza app da installare |
 | **Diretta video** | Flussi RTSP riprodotti nel browser con latenza sotto il secondo, senza plugin e senza librerie esterne |
 | **Muro video** | Griglia adattiva 1/4/9 riquadri, riconnessione automatica, stato per canale |
+| **Registrazione continua** | Segmenti MP4 senza ricodifica, con hash SHA-256 di ogni file per l'integrità |
+| **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
+| **Ritenzione automatica** | Per giorni, per quota e per spazio libero; i segmenti protetti non vengono mai cancellati |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
 ### In sviluppo
 
-Registrazione continua e su evento · Segmentazione e indice dell'archivio · Riproduzione con timeline e ricerca temporale · Esportazione con catena di custodia · Rilevamento movimento con zone · Pianificazione oraria e per data · Ritenzione automatica e quote · Archiviazione su NAS con tiering · Uscite di allarme relè, ONVIF e MQTT · Uscite audio per entrata, uscita e allarme · Riconoscimento targhe e volti
+Registrazione su evento · Esportazione con catena di custodia · Rilevamento movimento con zone · Pianificazione oraria e per data · Ritenzione automatica e quote · Archiviazione su NAS con tiering · Uscite di allarme relè, ONVIF e MQTT · Uscite audio per entrata, uscita e allarme · Riconoscimento targhe e volti
 
 ---
 
@@ -264,9 +267,9 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 |---|---|---|
 | **F0** | Kernel, sicurezza, HTTP, interfaccia, telecamere, scoperta ONVIF | ✅ completata |
 | **F1** | Pipeline ffmpeg, diretta video, trasporto fMP4 su WebSocket | ✅ completata |
-| **F2** | Registrazione, segmentazione, indice archivio, ritenzione | 🔜 in corso |
-| **F3** | Riproduzione, timeline, esportazione con catena di custodia | ⬜ |
-| **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | ⬜ |
+| **F2** | Registrazione, segmentazione, indice archivio, ritenzione | ✅ completata |
+| **F3** | Riproduzione e timeline | ✅ completata · esportazione ⬜ |
+| **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | 🔜 in corso |
 | **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |
 | **F6** | Monitoraggio salute, watchdog, conformità GDPR | ⬜ |
 

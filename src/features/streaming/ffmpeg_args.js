@@ -6,6 +6,8 @@ export function buildInputArgs(camera) {
     if (camera.url.startsWith('rtsp')) {
         args.push('-rtsp_transport', camera.transport === 'udp' ? 'udp' : 'tcp');
         args.push('-stimeout', '8000000');
+    } else {
+        args.push('-re');
     }
 
     args.push('-fflags', 'nobuffer', '-flags', 'low_delay');
@@ -38,19 +40,24 @@ export function buildPreviewArgs(camera, probe, accelerators = []) {
     return { args, transcoded: !canCopy, accelerators };
 }
 
-export function buildRecordArgs(camera, segmentPattern, segmentSeconds) {
+export function buildRecordArgs(camera, options) {
     const args = buildInputArgs(camera);
 
-    args.push('-map', '0');
+    args.push('-map', '0:v:0');
+    if (options.withAudio) args.push('-map', '0:a:0?');
     args.push('-c', 'copy');
     args.push('-f', 'segment');
-    args.push('-segment_time', String(segmentSeconds));
+    args.push('-segment_time', String(options.segmentSeconds));
     args.push('-segment_format', 'mp4');
     args.push('-segment_format_options', 'movflags=+faststart');
+    args.push('-segment_list', options.listingPath);
+    args.push('-segment_list_type', 'csv');
+    args.push('-segment_list_flags', '+live');
+    args.push('-segment_list_size', '0');
     args.push('-reset_timestamps', '1');
     args.push('-strftime', '1');
     args.push('-segment_atclocktime', '1');
-    args.push(segmentPattern);
+    args.push(options.pattern);
 
     return args;
 }

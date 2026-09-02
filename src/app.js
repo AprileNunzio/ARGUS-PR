@@ -15,6 +15,9 @@ import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.j
 import { registerSystemRoutes } from './features/system/system_routes.js';
 import { registerStreamRoutes } from './features/streaming/stream_routes.js';
 import { installStreamHub } from './features/streaming/stream_hub.js';
+import { registerRecordingRoutes } from './features/recording/recording_routes.js';
+import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
+import { installRecordingHub } from './features/recording/recording_hub.js';
 import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
@@ -26,6 +29,8 @@ function registerRoutes(router) {
     registerDiscoveryRoutes(router);
     registerSystemRoutes(router);
     registerStreamRoutes(router);
+    registerRecordingRoutes(router);
+    registerPlaybackRoutes(router);
 }
 
 function startSessionJanitor() {
@@ -58,6 +63,7 @@ export async function bootstrap(overrides = {}) {
 
     startSessionJanitor();
     installStreamHub();
+    installRecordingHub(config);
 
     const { server } = createHttpServer(config, registerRoutes);
     attachEventSocket(server);

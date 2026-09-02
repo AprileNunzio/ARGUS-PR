@@ -64,7 +64,27 @@ function cameraForm({ api, onSaved, onCancel }) {
     return form;
 }
 
-function cameraRow({ camera, api, session, onChanged }) {
+function recordingToggle({ camera, api, recording }) {
+    const entry = recording.find((item) => item.cameraId === camera.id);
+    const active = entry ? entry.enabled : false;
+
+    const dot = el('span', { className: active ? 'rec-dot rec-dot--on' : 'rec-dot' });
+    const button = el('button', {
+        className: 'btn btn--sm rec-toggle',
+        type: 'button',
+        title: active ? 'Interrompi registrazione' : 'Avvia registrazione',
+        onclick: async () => {
+            button.disabled = true;
+            await api.post(`/api/recording/${camera.id}`, { enabled: !active }).catch(() => undefined);
+            button.disabled = false;
+            window.dispatchEvent(new CustomEvent('argus:refresh-cameras'));
+        }
+    }, [dot, el('span', { textContent: active ? 'REC' : 'Off' })]);
+
+    return button;
+}
+
+function cameraRow({ camera, api, session, recording, onChanged }) {
     const status = el('td', {}, [camera.enabled ? chip('attivo', 'ok') : chip('disattivo', 'warn')]);
 
     const probeButton = el('button', {
@@ -91,6 +111,7 @@ function cameraRow({ camera, api, session, onChanged }) {
     const actions = el('td', { className: 'right' }, [
         el('div', { className: 'inline' }, [
             probeButton,
+            canManage(session) ? recordingToggle({ camera, api, recording }) : null,
             canManage(session)
                 ? el('button', {
                     className: 'btn btn--sm btn--danger',
@@ -121,6 +142,7 @@ export async function renderCameras({ api, session }) {
 
     const refresh = async () => {
         const { cameras } = await api.get('/api/cameras');
+        const { recorders } = await api.get('/api/recording').catch(() => ({ recorders: [] }));
 
         const formHost = el('div', { hidden: 'hidden' });
         const addButton = canManage(session)
@@ -194,7 +216,7 @@ export async function renderCameras({ api, session }) {
                             el('th', { textContent: 'Azioni' })
                         ])
                     ]),
-                    el('tbody', {}, cameras.map((camera) => cameraRow({ camera, api, session, onChanged: refresh })))
+                    el('tbody', {}, cameras.map((camera) => cameraRow({ camera, api, session, recording: recorders, onChanged: refresh })))
                 ])
             ]);
 
@@ -210,6 +232,8 @@ export async function renderCameras({ api, session }) {
             el('section', { className: 'panel' }, [table])
         );
     };
+
+    window.addEventListener('argus:refresh-cameras', refresh);
 
     await refresh();
     return outlet;
