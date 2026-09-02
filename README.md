@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.5.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
+> **Stato attuale: 0.6.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. L'archivio si esporta con una catena di custodia verificabile. Mancano ancora rilevamento movimento, pianificazione oraria e le funzioni di riconoscimento. Vedi [Roadmap](#roadmap) per il quadro onesto.
 
 ---
 
@@ -52,12 +52,13 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Ritenzione automatica** | Per giorni, per quota e per spazio libero; i segmenti protetti non vengono mai cancellati |
 | **Installazione automatica Linux** | Un comando solo: rileva la distribuzione, installa Node.js e ffmpeg, registra il servizio, apre il firewall e stampa l'indirizzo web. Nessuna domanda |
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
+| **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
 ### In sviluppo
 
-Registrazione su evento · Esportazione con catena di custodia · Rilevamento movimento con zone · Pianificazione oraria e per data · Ritenzione automatica e quote · Archiviazione su NAS con tiering · Uscite di allarme relè, ONVIF e MQTT · Uscite audio per entrata, uscita e allarme · Riconoscimento targhe e volti
+Registrazione su evento · Rilevamento movimento con zone · Pianificazione oraria e per data · Ritenzione automatica e quote · Archiviazione su NAS con tiering · Uscite di allarme relè, ONVIF e MQTT · Uscite audio per entrata, uscita e allarme · Riconoscimento targhe e volti
 
 ---
 
@@ -214,6 +215,34 @@ npm install
 npm run doctor
 npm start
 ```
+
+---
+
+## Esportazione con catena di custodia
+
+Un filmato estratto da un impianto di videosorveglianza può finire davanti a un'assicurazione o a un giudice. Lì la domanda non è "si vede bene", è "come dimostri che è quello originale". ARGUS-PR risponde con un manifesto.
+
+Dalla scheda **Archivio**, sotto la linea temporale: scegli l'intervallo, scrivi il motivo, premi *Esporta*. Ottieni tre file.
+
+| File | Contenuto |
+|---|---|
+| `video.mp4` | I segmenti uniti **senza ricodifica**: i fotogrammi sono bit per bit quelli registrati |
+| `manifest.json` | Chi ha esportato, da quale indirizzo, quando, perché; ogni segmento sorgente con il suo hash; l'hash del video prodotto; la catena |
+| `manifest.sig` | Il sigillo HMAC-SHA256 del manifesto |
+
+**Come funziona la catena.** Ogni segmento produce un anello calcolato sull'anello precedente, sulla propria posizione, sul proprio hash, sull'istante e sulla dimensione. Modificare un segmento, riordinarli o sostituirne uno cambia la radice della catena, e la verifica se ne accorge.
+
+**Il doppio hash.** L'hash di ogni segmento viene calcolato due volte: quando il segmento viene registrato, e di nuovo quando lo si esporta. Se qualcuno ha toccato un file sul disco nel frattempo, il manifesto lo dice e indica **quale** segmento non torna. L'esportazione non viene bloccata: si esporta quello che c'è, dichiarando cosa non quadra. Nascondere il problema sarebbe peggio che segnalarlo.
+
+**Il sigillo.** È un HMAC-SHA256 con una chiave derivata dalla chiave principale dell'installazione tramite HKDF. La chiave principale non viene mai usata direttamente e non lascia la macchina. Un manifesto riscritto e risigillato altrove non passa la verifica.
+
+Il pulsante **Verifica** ricontrolla tutto: hash del manifesto, sigillo, catena dei segmenti e hash del video sul disco.
+
+```
+Esportazione integra: video, manifesto e sigillo corrispondono. Catena cc759b5999d1c93d…
+```
+
+Limiti voluti: sei ore per intervallo, 720 segmenti, due esportazioni in parallelo. Servono a impedire che un'esportazione saturi la macchina mentre sta registrando.
 
 ---
 
@@ -404,14 +433,16 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **F0** | Kernel, sicurezza, HTTP, interfaccia, telecamere, scoperta ONVIF | ✅ completata |
 | **F1** | Pipeline ffmpeg, diretta video, trasporto fMP4 su WebSocket | ✅ completata |
 | **F2** | Registrazione, segmentazione, indice archivio, ritenzione | ✅ completata |
-| **F3** | Riproduzione e timeline | ✅ completata · esportazione ⬜ |
+| **F3** | Riproduzione, timeline ed esportazione con catena di custodia | ✅ completata |
 | **FA** | Autoinstaller Linux e console locale a schermo intero | ✅ completata |
 | **FU** | Aggiornamento da GitHub con ripristino automatico | ✅ completata |
 | **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | 🔜 in corso |
 | **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |
 | **F6** | Monitoraggio salute, watchdog, conformità GDPR | ⬜ |
 
-Il riconoscimento di targhe e volti richiede un motore di inferenza separato e sarà valutato dopo F6, non prima: preferisco un NVR che registra in modo affidabile a uno che promette intelligenza artificiale e perde fotogrammi.
+Il riconoscimento di targhe e volti richiede un motore di inferenza separato. ARGUS-PR non lo simula: quando arriverà, sarà un ingresso reale che accetta rilevamenti da un motore esterno o dall'analitica di bordo delle telecamere, che molte già hanno. Preferisco un NVR che registra in modo affidabile a uno che promette intelligenza artificiale e perde fotogrammi.
+
+Chi prosegue lo sviluppo trova il piano completo in **[HANDOVER.md](HANDOVER.md)**.
 
 ---
 

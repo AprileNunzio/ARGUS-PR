@@ -19,6 +19,7 @@ import { registerRecordingRoutes } from './features/recording/recording_routes.j
 import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
 import { installRecordingHub } from './features/recording/recording_hub.js';
 import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
+import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
 import { installUpdateWatchdog } from './features/updates/update_service.js';
 import { readPackageVersion } from './platform/version.js';
@@ -35,6 +36,7 @@ function registerRoutes(router) {
     registerRecordingRoutes(router);
     registerPlaybackRoutes(router);
     registerKioskRoutes(router);
+    registerExportRoutes(router);
     registerUpdateRoutes(router);
 }
 

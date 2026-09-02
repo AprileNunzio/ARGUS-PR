@@ -45,6 +45,10 @@ function requireKey() {
     return masterKey;
 }
 
+export function deriveKey(purpose) {
+    return crypto.hkdfSync('sha256', requireKey(), Buffer.alloc(0), Buffer.from(purpose, 'utf8'), KEY_BYTES);
+}
+
 export function encryptSecret(plaintext) {
     if (typeof plaintext !== 'string' || plaintext.length === 0) return null;
 

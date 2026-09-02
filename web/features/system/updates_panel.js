@@ -99,7 +99,7 @@ export function renderUpdatesPanel({ api }) {
                 ? notice('warn', 'Questa copia non e\' un clone git, quindi non puo\' aggiornarsi da sola. L\'installazione automatica Linux usa git e supporta l\'aggiornamento da questa pagina.')
                 : null,
             status.lastCheck && !available
-                ? notice('success', 'Il sistema e\' allineato all\'ultima versione pubblicata.')
+                ? notice('ok', 'Il sistema e\' allineato all\'ultima versione pubblicata.')
                 : null
         ].filter(Boolean);
 

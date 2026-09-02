@@ -1,9 +1,9 @@
 # AGENTS.md
 
 Contesto operativo per assistenti AI che lavorano su questo repository.
-Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
+Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora**, leggi [HANDOVER.md](HANDOVER.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.5.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.6.0
 
 ---
 
@@ -56,7 +56,7 @@ bin/argus.js              CLI: serve | doctor | reset-admin
 src/
   kernel/                 config, result, errors, logger, process_guard, event_bus
   platform/               paths, ffmpeg, media_tools, version
-  storage/                database, migrations/
+  storage/                database, migrations/ (001_core, 002_exports)
   security/               vault, password, sessions, rbac, guards, audit
   http/                   server, router, http_utils, static_files, rate_limit, websocket
   features/<nome>/        <nome>_service.js, <nome>_routes.js, <nome>_repository.js
@@ -197,6 +197,20 @@ Divisione dei compiti:
 
 ---
 
+## 5g. Esportazione con catena di custodia (F3b)
+
+`src/features/export/`. E' il codice che produce prove: trattalo di conseguenza.
+
+- **`custody.js` e' puro e non fa I/O.** Costruisce il manifesto, incatena i segmenti e sigilla. Coperto da 11 test. Non introdurre lettura di file al suo interno.
+- **La catena**: ogni segmento produce un anello `sha256(anello_precedente || posizione || sha_segmento || istante || byte)`. Cambiare, riordinare o sostituire un segmento cambia la radice. Verificato dai test.
+- **Il sigillo e' un HMAC-SHA256** con una chiave derivata dalla master key con HKDF (`deriveKey('argus.export.custody.v1')`). La master key non viene mai usata direttamente. Un manifesto sigillato altrove non passa la verifica.
+- **Doppio hash dei segmenti**: quello registrato al momento della registrazione e quello ricalcolato al momento dell'esportazione. Se differiscono, il manifesto marca il segmento `intact: false` e l'esportazione `sourcesIntact: false`. L'esportazione **non viene bloccata**: si esporta quello che c'e', dichiarando cosa non torna.
+- **Nessuna ricodifica**: `-f concat -c copy`. Il manifesto lo dichiara con `reencoded: false`. Se un giorno servisse la ricodifica, quel campo deve diventare `true`: e' un'informazione legale, non cosmetica.
+- Limiti volutamente stretti: sei ore per intervallo, 720 segmenti, due esportazioni in parallelo. Servono a impedire che un'esportazione saturi la macchina mentre registra.
+- `export_paths.js` confina tutto con `resolveInside` e valida l'id come UUID. Verificato: una parte di download inesistente risponde 404.
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -250,6 +264,12 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | POST | `/api/updates/check` | `system.manage`, rate limit 10/10min |
 | POST | `/api/updates/apply` | `system.manage`, rate limit 5/1h |
 | POST | `/api/updates/cancel` | `system.manage` |
+| GET | `/api/exports` | `archive.export` |
+| POST | `/api/exports` | `archive.export`, rate limit 10/10min |
+| GET | `/api/exports/:id` | `archive.export` |
+| GET | `/api/exports/:id/verify` | `archive.export` |
+| GET | `/api/exports/:id/download/:part` | `archive.export` |
+| DELETE | `/api/exports/:id` | `archive.export` |
 | WS | `/api/stream/:id` | `live.view` |
 
 Risposta di errore: `{ "error": { "code", "message", "details" } }`.
@@ -258,7 +278,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico verificato su repository di prova**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**.
 
 **Non ancora implementato:** esportazione con catena di custodia, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 
@@ -273,9 +293,10 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | F0 | Kernel, sicurezza, HTTP, UI, telecamere | completata |
 | F1 | Pipeline ffmpeg, diretta, fMP4 su WebSocket | completata |
 | F2 | Registrazione, segmentazione, indice, ritenzione | completata |
-| F3 | Playback e timeline (export ancora da fare) | parziale |
+| F3 | Playback, timeline ed esportazione | completata |
 | FA | Autoinstaller Linux, console locale a schermo intero | completata |
 | FU | Autoaggiornamento da GitHub con ripristino automatico | completata |
+| F3b | Esportazione con catena di custodia | completata |
 | F4 | Pianificazione oraria, motion detection, zone | da fare |
 | F5 | NAS, tiering, allarmi, audio | da fare |
 | F6 | Salute, watchdog, conformita' | da fare |

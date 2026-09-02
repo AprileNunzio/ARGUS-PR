@@ -77,6 +77,11 @@ export function serveFile(req, res, root, relativePath, options = {}) {
         'Last-Modified': stat.mtime.toUTCString()
     };
 
+    if (typeof options.download === 'string' && options.download.length > 0) {
+        const safe = options.download.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120);
+        headers['Content-Disposition'] = `attachment; filename="${safe}"`;
+    }
+
     const range = parseRange(req.headers.range, stat.size);
 
     if (range) {

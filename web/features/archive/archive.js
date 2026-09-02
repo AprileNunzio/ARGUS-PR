@@ -1,6 +1,7 @@
 import { el, chip, empty, notice, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { createTimeline } from './timeline.js';
+import { renderExportPanel } from './export_panel.js';
 
 function dayBounds(dayKey) {
     const [year, month, day] = dayKey.split('-').map(Number);
@@ -13,7 +14,7 @@ function todayKey() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-export async function renderArchive({ api }) {
+export async function renderArchive({ api, session }) {
     const { cameras } = await api.get('/api/cameras');
 
     const video = el('video', { className: 'archive__video', controls: 'controls', preload: 'metadata' });
@@ -29,6 +30,12 @@ export async function renderArchive({ api }) {
     let bounds = dayBounds(todayKey());
 
     const timeline = createTimeline((time) => playAt(time));
+
+    const exportPanel = renderExportPanel({
+        api,
+        session,
+        getContext: () => ({ cameraId: cameraSelect.value })
+    });
 
     const playAt = (time) => {
         const target = segments.find((segment) =>
@@ -89,6 +96,7 @@ export async function renderArchive({ api }) {
         }
 
         feedback.replaceChildren();
+        exportPanel.setRange?.(segments[0].startedAt, segments[segments.length - 1].startedAt + segments[segments.length - 1].durationMs);
         playAt(segments[0].startedAt);
     };
 
@@ -121,7 +129,8 @@ export async function renderArchive({ api }) {
                         stats
                     ]),
                     el('div', { className: 'panel__body' }, [timeline.element, feedback])
-                ])
+                ]),
+                exportPanel.hidden ? null : exportPanel.element
             ])
     ]);
 
@@ -130,6 +139,7 @@ export async function renderArchive({ api }) {
             daySelect.value = await loadDays();
             await loadSegments();
             timeline.redraw();
+            await exportPanel.refresh();
         });
     }
 
