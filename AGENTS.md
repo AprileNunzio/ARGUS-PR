@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.2.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.3.0
 
 ---
 
@@ -63,7 +63,8 @@ src/
   app.js                  composizione: avvio, registrazione rotte
 web/
   index.html
-  assets/                 app.js, shell.js, dom.js, api.js, app.css
+  assets/                 app.js, shell.js, dom.js, api.js, icons.js,
+                          tokens.css, base.css, components.css, views.css
   features/<nome>/        vista della funzionalita'
 deploy/
   systemd/ windows/ linux/ docker/
@@ -102,10 +103,16 @@ Nei log e nelle risposte API le credenziali negli URL passano da `redactCredenti
 
 ### HTTP
 
-CSP stretta senza `unsafe-inline`. **Conseguenza pratica: nessun attributo `style` nel DOM generato da JS.** Usa le classi di utilita' in `web/assets/app.css` (`.stack`, `.row`, `.span-all`, `.form-grid`, ...). Aggiungerne di nuove e' preferibile a indebolire il CSP.
+CSP stretta senza `unsafe-inline`. **Conseguenza pratica: nessun attributo `style` nel DOM generato da JS.** Usa le classi di utilita' in `base.css`/`components.css` (`.stack`, `.row`, `.span-all`, `.form-grid`, ...). Per i valori dinamici usa `element.style.setProperty('--token', valore)`: le proprieta' personalizzate non violano la CSP. Aggiungere classi e' preferibile a indebolire il CSP.
 Le rotte mutanti verificano l'`Origin`. Le rotte sensibili hanno rate limit.
 
 ### Frontend
+
+Fogli di stile in quattro file caricati da `index.html`: `tokens.css` (colori, spaziature, ombre), `base.css` (reset, primitive di layout, animazioni), `components.css` (bottoni, pannelli, chip, form, tabelle), `views.css` (guscio, dashboard, wizard, login). Nessun file supera le 500 righe.
+
+Icone: `web/assets/icons.js` genera SVG inline da tracciati locali. Nessuna CDN, nessun font di icone: la CSP resta intatta. Per aggiungerne una basta un tracciato nel dizionario `PATHS`.
+
+**Tema unico chiaro**, per scelta del proprietario: nessun interruttore, nessun blocco `data-theme`. Ogni colore passa comunque dai token in `tokens.css`: mai valori letterali nei componenti.
 
 Nessun framework, nessun build step. ESM nativo servito staticamente.
 `el()` in `web/assets/dom.js` costruisce il DOM: usa `textContent`, mai `innerHTML`, per i dati.

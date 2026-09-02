@@ -1,4 +1,5 @@
-import { el, brandMark } from './dom.js';
+import { el } from './dom.js';
+import { icon } from './icons.js';
 
 let linkDot = null;
 let linkLabel = null;
@@ -6,8 +7,9 @@ let navButtons = new Map();
 
 export function setLinkState(status) {
     if (!linkDot || !linkLabel) return;
-    linkDot.className = status === 'online' ? 'dot dot--online' : 'dot dot--offline';
-    linkLabel.textContent = status === 'online' ? 'Eventi attivi' : 'Riconnessione…';
+    const online = status === 'online';
+    linkDot.className = online ? 'dot dot--live' : 'dot dot--off';
+    linkLabel.textContent = online ? 'Live' : 'Offline';
 }
 
 export function setActiveRoute(name) {
@@ -20,58 +22,62 @@ export function setActiveRoute(name) {
     }
 }
 
+function navButton(name, route, onNavigate) {
+    return el('button', {
+        className: 'nav__item',
+        type: 'button',
+        title: route.label,
+        onclick: () => onNavigate(name)
+    }, [icon(route.icon), el('span', { className: 'nav__label', textContent: route.label })]);
+}
+
 export function renderShell({ session, routes, onNavigate, onLogout }) {
     navButtons = new Map();
 
     const nav = el('nav', { className: 'nav' });
+    const tabs = el('nav', { className: 'tabbar' });
+
     for (const [name, route] of Object.entries(routes)) {
-        const button = el('button', {
-            className: 'nav__item',
+        const primary = navButton(name, route, onNavigate);
+        navButtons.set(name, primary);
+        nav.append(primary);
+
+        tabs.append(el('button', {
+            className: 'tabbar__item',
             type: 'button',
-            textContent: route.label,
             onclick: () => onNavigate(name)
-        });
-        navButtons.set(name, button);
-        nav.append(button);
+        }, [icon(route.icon, { className: 'icon--lg' }), el('span', { textContent: route.label })]));
     }
 
     linkDot = el('span', { className: 'dot' });
-    linkLabel = el('span', { textContent: 'Connessione…' });
+    linkLabel = el('span', { textContent: '…' });
 
-    const topbar = el('header', { className: 'topbar' }, [
+    const header = el('header', { className: 'topbar' }, [
         el('div', { className: 'brand' }, [
-            brandMark(),
-            el('span', {}, [
-                el('span', { textContent: 'ARGUS-PR' }),
-                el('br'),
-                el('small', { textContent: session.role.toUpperCase() })
+            el('span', { className: 'brand__mark' }, [icon('shield')]),
+            el('span', { className: 'brand__text' }, [
+                el('span', { className: 'brand__name', textContent: 'ARGUS-PR' }),
+                el('span', { className: 'brand__role', textContent: 'by NunzioTech' })
             ])
         ]),
         nav,
         el('span', { className: 'spacer' }),
         el('span', { className: 'link-status' }, [linkDot, linkLabel]),
         el('button', {
-            className: 'btn btn--sm',
+            className: 'btn btn--sm user-chip',
             type: 'button',
-            textContent: session.username,
-            title: 'Esci',
+            title: `Esci da ${session.username}`,
             onclick: onLogout
-        })
+        }, [
+            el('span', { className: 'user-chip__avatar', textContent: session.username.slice(0, 1).toUpperCase() }),
+            el('span', { className: 'user-chip__name', textContent: session.username }),
+            icon('logout')
+        ])
     ]);
 
-    const main = el('main', {}, [el('div', { id: 'outlet' })]);
-
-    const banner = session.mustChangePassword
-        ? el('div', {
-            className: 'notice notice--warn shell-banner',
-            textContent: 'La password iniziale è ancora attiva. Cambiala prima di mettere il sistema in servizio.'
-        })
-        : null;
+    const main = el('main', { className: 'shell__main' }, [el('div', { id: 'outlet' })]);
 
     const fragment = document.createDocumentFragment();
-    fragment.append(topbar);
-    if (banner) fragment.append(banner);
-    fragment.append(main);
-
+    fragment.append(el('div', { className: 'shell' }, [header, main, tabs]));
     return fragment;
 }

@@ -7,8 +7,8 @@ import { renderCameras } from '/features/cameras/cameras.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 
 const ROUTES = {
-    dashboard: { label: 'Riepilogo', render: renderDashboard },
-    cameras: { label: 'Telecamere', render: renderCameras }
+    dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
+    cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras }
 };
 
 const state = {
@@ -18,6 +18,7 @@ const state = {
 };
 
 const root = document.getElementById('app');
+
 
 function currentRoute() {
     const hash = location.hash.replace('#/', '').trim();

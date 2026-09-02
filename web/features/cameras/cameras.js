@@ -1,4 +1,5 @@
 import { el, chip, field, empty, notice } from '/assets/dom.js';
+import { icon } from '/assets/icons.js';
 
 function canManage(session) {
     return session.permissions.includes('camera.manage');
@@ -168,7 +169,7 @@ export async function renderCameras({ api, session }) {
                                 : result.devices.map((device) => el('div', { className: 'device-row' }, [
                                     el('div', {}, [
                                         el('strong', { textContent: device.name ?? device.host }),
-                                        el('div', { className: 'card__hint', textContent: `${device.host}:${device.onvifPort} · ${device.hardware ?? 'sconosciuto'}` })
+                                        el('div', { className: 'section__hint', textContent: `${device.host}:${device.onvifPort} · ${device.hardware ?? 'sconosciuto'}` })
                                     ]),
                                     chip('onvif', 'info')
                                 ]))

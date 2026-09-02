@@ -1,5 +1,6 @@
 import { api } from '/assets/api.js';
-import { el, field, notice, brandMark } from '/assets/dom.js';
+import { el, field, notice } from '/assets/dom.js';
+import { icon } from '/assets/icons.js';
 
 export function renderChangePassword({ session, onComplete }) {
     const current = el('input', { className: 'input', type: 'password', autocomplete: 'current-password' });
@@ -52,10 +53,10 @@ export function renderChangePassword({ session, onComplete }) {
 
     const card = el('div', { className: 'login__card' }, [
         el('div', { className: 'login__brand' }, [
-            brandMark(),
+            el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('div', {}, [
                 el('h1', { className: 'login__title', textContent: 'ARGUS-PR' }),
-                el('p', { className: 'login__sub', textContent: 'Sicurezza account' })
+                el('p', { className: 'login__sub', textContent: 'Network Video Recorder by NunzioTech' })
             ])
         ]),
         form

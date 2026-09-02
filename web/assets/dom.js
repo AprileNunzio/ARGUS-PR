@@ -1,4 +1,4 @@
-const SVG_NS = 'http://www.w3.org/2000/svg';
+
 
 export function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
@@ -42,35 +42,6 @@ export function notice(kind, text) {
 
 export function empty(text) {
     return el('div', { className: 'empty', textContent: text });
-}
-
-export function brandMark() {
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 32 32');
-    svg.setAttribute('aria-hidden', 'true');
-
-    const rect = document.createElementNS(SVG_NS, 'rect');
-    rect.setAttribute('width', '32');
-    rect.setAttribute('height', '32');
-    rect.setAttribute('rx', '7');
-    rect.setAttribute('fill', '#0f6fa8');
-
-    const ring = document.createElementNS(SVG_NS, 'circle');
-    ring.setAttribute('cx', '16');
-    ring.setAttribute('cy', '16');
-    ring.setAttribute('r', '7.5');
-    ring.setAttribute('fill', 'none');
-    ring.setAttribute('stroke', '#ffffff');
-    ring.setAttribute('stroke-width', '2.4');
-
-    const pupil = document.createElementNS(SVG_NS, 'circle');
-    pupil.setAttribute('cx', '16');
-    pupil.setAttribute('cy', '16');
-    pupil.setAttribute('r', '2.6');
-    pupil.setAttribute('fill', '#ffffff');
-
-    svg.append(rect, ring, pupil);
-    return svg;
 }
 
 export function formatBytes(bytes) {

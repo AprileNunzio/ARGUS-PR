@@ -1,0 +1,78 @@
+:root {
+    --brand-50: #eaf4fb;
+    --brand-100: #cfe6f6;
+    --brand-200: #a3d0ee;
+    --brand-400: #3d9fd6;
+    --brand-500: #1a7fbd;
+    --brand-600: #0f6398;
+    --brand-700: #0b4d78;
+
+    --violet: #7c5cf0;
+    --violet-soft: #ede9fe;
+    --cyan: #06a6c9;
+    --cyan-soft: #dff5fa;
+    --amber: #c2790a;
+    --amber-soft: #fdf1dc;
+    --rose: #d6336c;
+    --rose-soft: #fde7ef;
+    --emerald: #12855b;
+    --emerald-soft: #dcf5ea;
+    --crimson: #c62828;
+    --crimson-soft: #fdeaea;
+
+    --accent: var(--brand-500);
+    --accent-soft: var(--brand-50);
+    --accent-line: var(--brand-200);
+    --ok: var(--emerald);
+    --ok-soft: var(--emerald-soft);
+    --warn: var(--amber);
+    --warn-soft: var(--amber-soft);
+    --bad: var(--crimson);
+    --bad-soft: var(--crimson-soft);
+
+    --paper: #eef2f7;
+    --paper-deep: #e3e9f1;
+    --surface: #ffffff;
+    --surface-2: #f4f7fb;
+    --surface-3: #e9eff6;
+    --ink: #0d1522;
+    --ink-2: #2c3a4d;
+    --muted: #64748b;
+    --rule: #dce4ee;
+    --rule-soft: #eaeff6;
+    --void: #070b12;
+
+    --grad-brand: linear-gradient(135deg, var(--brand-500), var(--cyan));
+    --grad-violet: linear-gradient(135deg, var(--violet), var(--brand-400));
+    --grad-surface: linear-gradient(180deg, #ffffff, #f7fafd);
+    --grad-sheen: linear-gradient(120deg, rgba(255, 255, 255, 0) 25%, rgba(255, 255, 255, .55) 50%, rgba(255, 255, 255, 0) 75%);
+
+    --shadow-xs: 0 1px 2px rgba(13, 21, 34, .06);
+    --shadow-sm: 0 1px 2px rgba(13, 21, 34, .05), 0 4px 10px -6px rgba(13, 21, 34, .28);
+    --shadow-md: 0 2px 4px rgba(13, 21, 34, .05), 0 14px 30px -18px rgba(13, 21, 34, .45);
+    --shadow-lg: 0 8px 20px -10px rgba(13, 21, 34, .28), 0 30px 60px -35px rgba(13, 21, 34, .55);
+    --glow-accent: 0 0 0 1px var(--accent-line), 0 8px 24px -12px rgba(26, 127, 189, .65);
+
+    --radius-xs: 6px;
+    --radius-sm: 9px;
+    --radius: 13px;
+    --radius-lg: 18px;
+    --radius-pill: 999px;
+
+    --gap-1: 0.25rem;
+    --gap-2: 0.45rem;
+    --gap-3: 0.7rem;
+    --gap-4: 1rem;
+    --gap-5: 1.5rem;
+    --pad: clamp(0.65rem, 0.45rem + 0.5vw, 1.05rem);
+    --shell-pad: clamp(0.85rem, 0.4rem + 1.6vw, 1.9rem);
+
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    --display: "Segoe UI Variable Display", "Segoe UI", -apple-system, "Inter", system-ui, sans-serif;
+
+    --ease: cubic-bezier(.22, 1, .36, 1);
+    --speed: .22s;
+
+    color-scheme: light;
+}

@@ -1,5 +1,6 @@
 import { api } from '/assets/api.js';
-import { el, brandMark, notice } from '/assets/dom.js';
+import { el, notice } from '/assets/dom.js';
+import { icon } from '/assets/icons.js';
 import { welcomeStep, accountStep, mediaStep, storageStep, reviewStep } from './setup_steps.js';
 
 export function renderSetup({ status, onComplete }) {
@@ -100,10 +101,10 @@ export function renderSetup({ status, onComplete }) {
     return el('div', { className: 'wizard' }, [
         el('aside', { className: 'wizard__aside' }, [
             el('div', { className: 'wizard__brand' }, [
-                brandMark(),
+                el('span', { className: 'brand__mark' }, [icon('shield')]),
                 el('div', {}, [
                     el('strong', { textContent: 'ARGUS-PR' }),
-                    el('span', { className: 'wizard__brandsub', textContent: 'Configurazione iniziale' })
+                    el('span', { className: 'wizard__brandsub', textContent: 'Network Video Recorder by NunzioTech' })
                 ])
             ]),
             railList
