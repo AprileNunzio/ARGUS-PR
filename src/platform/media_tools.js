@@ -1,4 +1,5 @@
 import { discoverFfmpeg, listHardwareAccelerators } from './ffmpeg.js';
+import { installationSupported, installFfmpeg } from './dependencies/ffmpeg_installer.js';
 import { isFail } from '../kernel/result.js';
 import { internal } from '../kernel/errors.js';
 import { createLogger } from '../kernel/logger.js';
@@ -6,8 +7,11 @@ import { createLogger } from '../kernel/logger.js';
 const log = createLogger('media-tools');
 
 let tools = null;
+let lastConfig = null;
 
 export async function initMediaTools(config) {
+    lastConfig = config;
+
     const found = await discoverFfmpeg({
         ffmpegPath: config.ffmpegPath || undefined,
         ffprobePath: config.ffprobePath || undefined
@@ -38,6 +42,15 @@ export async function initMediaTools(config) {
     return tools;
 }
 
+export async function provisionMediaTools() {
+    if (tools?.available) return mediaToolsStatus();
+
+    await installFfmpeg();
+    await initMediaTools(lastConfig ?? { ffmpegPath: '', ffprobePath: '' });
+
+    return mediaToolsStatus();
+}
+
 export function getMediaTools() {
     if (!tools) throw internal('Media tools accessed before initialisation');
     if (!tools.available) throw internal(`ffmpeg is not available: ${tools.reason}`);
@@ -45,10 +58,13 @@ export function getMediaTools() {
 }
 
 export function mediaToolsStatus() {
-    if (!tools) return { available: false, reason: 'not initialised' };
+    if (!tools) {
+        return { available: false, reason: 'not initialised', installable: installationSupported(), accelerators: [] };
+    }
     return {
         available: tools.available,
         reason: tools.reason,
+        installable: installationSupported(),
         ffmpegVersion: tools.ffmpeg?.version ?? null,
         ffmpegPath: tools.ffmpeg?.path ?? null,
         accelerators: tools.accelerators

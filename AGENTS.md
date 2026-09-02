@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.1.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.2.0
 
 ---
 
@@ -113,6 +113,23 @@ Ricorda `[hidden] { display: none !important; }`: senza, `display:flex` di un co
 
 ---
 
+## 5b. Primo avvio e dipendenze
+
+**Setup guidato.** Se la tabella `users` e' vuota il sistema entra in *setup mode* e l'interfaccia mostra una procedura in 5 passi (`web/features/setup/`): benvenuto con rilevamento hardware, account amministratore con requisiti verificati in tempo reale, motore video, archiviazione, riepilogo. Le rotte `/api/setup/*` sono anonime e restano aperte finche' non esiste alcun utente; dopo `claimInstance()` rispondono 409 per sempre.
+
+Nota di sicurezza consapevole: per scelta del proprietario **non c'e' codice di rivendicazione**. Nella finestra tra il primo avvio e il completamento del setup, chiunque raggiunga l'indirizzo puo' creare l'amministratore. Il banner di avvio lo dichiara. Non reintrodurre un token senza chiederlo.
+
+**Cambio password imposto.** Se `must_change_password` e' attivo, il pipeline HTTP (`src/http/server.js`) blocca ogni rotta tranne quelle marcate `allowWhilePasswordPending: true` (sessione, logout, cambio password). Non e' un avviso: e' un blocco.
+
+**Installazione automatica di ffmpeg.** `src/platform/dependencies/` installa il binario in `vendor/ffmpeg/` senza richiedere elevazione. Il flusso e' deliberato:
+
+1. Scarica `checksums.sha256` dalla release **immutabile** fissata in `catalog.js`.
+2. Individua l'asset per la piattaforma corrente con `selectAsset()` — il nome contiene l'hash della build e **non va mai scritto a mano**: si ricava dal file dei checksum, che e' l'unica fonte di verita'.
+3. Scarica l'archivio e confronta lo SHA-256. **Discordanza = installazione annullata**, senza eccezioni.
+4. Estrae con `Expand-Archive` su Windows e `tar -xf` altrove: nessuna libreria di decompressione aggiunta.
+
+Per aggiornare la versione basta cambiare `tag` e `series` in `catalog.js`. Non esistono hash da mantenere a mano.
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -140,6 +157,10 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 
 | Metodo | Rotta | Permesso |
 |---|---|---|
+| GET | `/api/setup/status` | anonimo |
+| POST | `/api/setup/claim` | anonimo + codice, rate limit 6/10min |
+| POST | `/api/setup/dependencies/ffmpeg` | anonimo + codice, rate limit 3/10min |
+| POST | `/api/system/dependencies/ffmpeg` | `system.manage` |
 | POST | `/api/auth/login` | anonimo, rate limit 8/5min |
 | POST | `/api/auth/logout` | autenticato |
 | GET | `/api/auth/session` | autenticato |
@@ -162,7 +183,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con login/riepilogo/telecamere.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere.
 
 **Non ancora implementato:** registrazione video, segmentazione, indice archivio, playback, timeline, esportazione, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 

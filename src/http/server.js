@@ -75,6 +75,9 @@ async function dispatch(router, req, res, config) {
 
     if (!route.anonymous) {
         if (!actor) throw unauthenticated();
+        if (actor.mustChangePassword && !route.allowWhilePasswordPending) {
+            throw new AppError(ErrorCode.FORBIDDEN, 'Change the initial password before using the system');
+        }
         if (route.permission && !can(actor.role, route.permission)) {
             throw forbidden(`Missing permission: ${route.permission}`);
         }

@@ -37,7 +37,7 @@ export function registerAuthRoutes(router) {
             maxAge: 0
         });
         return { status: 200, headers: { 'Set-Cookie': cookie }, body: { ok: true } };
-    });
+    }, { allowWhilePasswordPending: true });
 
     router.get('/api/auth/session', async (ctx) => ({
         body: {
@@ -46,7 +46,7 @@ export function registerAuthRoutes(router) {
             permissions: ctx.actor.permissions,
             mustChangePassword: ctx.actor.mustChangePassword
         }
-    }));
+    }), { allowWhilePasswordPending: true });
 
     router.post('/api/auth/password', async (ctx) => {
         const currentPassword = requireString(ctx.body.currentPassword, 'Current password', { max: 200 });
@@ -60,5 +60,5 @@ export function registerAuthRoutes(router) {
         });
 
         return { body: { ok: true } };
-    }, { rateLimit: { limit: 5, windowMs: 10 * 60 * 1000 } });
+    }, { rateLimit: { limit: 5, windowMs: 10 * 60 * 1000 }, allowWhilePasswordPending: true });
 }

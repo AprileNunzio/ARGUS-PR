@@ -12,7 +12,8 @@ export const Topic = Object.freeze({
     SEGMENT_CLOSED: 'segment.closed',
     ALARM: 'alarm.raised',
     STORAGE_PRESSURE: 'storage.pressure',
-    SYSTEM_HEALTH: 'system.health'
+    SYSTEM_HEALTH: 'system.health',
+    DEPENDENCY_PROGRESS: 'dependency.progress'
 });
 
 export function publish(topic, payload) {

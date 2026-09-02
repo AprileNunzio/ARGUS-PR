@@ -19,7 +19,8 @@ export function createRouter() {
             handler,
             permission: options.permission ?? null,
             anonymous: options.anonymous === true,
-            rateLimit: options.rateLimit ?? null
+            rateLimit: options.rateLimit ?? null,
+            allowWhilePasswordPending: options.allowWhilePasswordPending === true
         });
     }
 

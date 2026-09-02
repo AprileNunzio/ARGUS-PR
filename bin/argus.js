@@ -13,22 +13,28 @@ import { readPackageVersion } from '../src/platform/version.js';
 
 const command = process.argv[2] ?? 'serve';
 
-function printBanner(config, credentials) {
+function printBanner(config, setup) {
+    const address = config.host === '0.0.0.0' ? 'localhost' : config.host;
     const lines = [
         '',
         `  ARGUS-PR ${readPackageVersion()}`,
-        `  Interface   http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}`,
+        `  Interface   http://${address}:${config.port}`,
         `  Data        ${config.dataDir}`,
         `  Media       ${config.mediaDir}`,
         ''
     ];
 
-    if (credentials) {
+    if (setup) {
         lines.push(
-            '  First run: an administrator account was created.',
-            `  Username   ${credentials.username}`,
-            `  Password   ${credentials.password}`,
-            '  This password is shown once. Change it at first login.',
+            '  ────────────────────────────────────────────────────',
+            '  CONFIGURAZIONE INIZIALE RICHIESTA',
+            '',
+            `  Apri  http://${address}:${config.port}`,
+            '  e segui la procedura guidata.',
+            '',
+            '  Finche\' non e\' completata, chiunque raggiunga questo',
+            '  indirizzo puo\' creare l\'amministratore: completala subito.',
+            '  ────────────────────────────────────────────────────',
             ''
         );
     }
@@ -37,8 +43,8 @@ function printBanner(config, credentials) {
 }
 
 async function serve() {
-    const { config, credentials } = await bootstrap();
-    printBanner(config, credentials);
+    const { config, setup } = await bootstrap();
+    printBanner(config, setup);
 }
 
 async function doctor() {

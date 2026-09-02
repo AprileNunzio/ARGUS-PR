@@ -1,5 +1,7 @@
 import { api, ApiError, connectEvents } from './api.js';
 import { renderLogin } from '/features/login/login.js';
+import { renderSetup } from '/features/setup/setup.js';
+import { renderChangePassword } from '/features/account/change_password.js';
 import { renderDashboard } from '/features/dashboard/dashboard.js';
 import { renderCameras } from '/features/cameras/cameras.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
@@ -68,7 +70,30 @@ async function showLogin(message) {
     }));
 }
 
+async function showSetup(status) {
+    state.disconnect?.();
+    root.replaceChildren(renderSetup({
+        status,
+        onComplete: async () => { await start(); }
+    }));
+}
+
+async function showPasswordChange(session) {
+    state.disconnect?.();
+    root.replaceChildren(renderChangePassword({
+        session,
+        onComplete: async () => { await start(); }
+    }));
+}
+
 async function start() {
+    const setup = await api.get('/api/setup/status');
+
+    if (setup.required) {
+        await showSetup(setup);
+        return;
+    }
+
     const session = await api.get('/api/auth/session').catch((error) => {
         if (error instanceof ApiError && error.status === 401) return null;
         throw error;
@@ -76,6 +101,12 @@ async function start() {
 
     if (!session) {
         await showLogin(null);
+        return;
+    }
+
+    if (session.mustChangePassword) {
+        state.session = session;
+        await showPasswordChange(session);
         return;
     }
 

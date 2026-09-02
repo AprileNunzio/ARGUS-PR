@@ -7,7 +7,8 @@ import { purgeExpiredSessions } from './security/sessions.js';
 import { initMediaTools } from './platform/media_tools.js';
 import { createHttpServer, listen } from './http/server.js';
 import { attachEventSocket } from './http/websocket.js';
-import { ensureBootstrapAdmin } from './features/auth/auth_service.js';
+import { prepareSetup } from './features/setup/setup_service.js';
+import { registerSetupRoutes } from './features/setup/setup_routes.js';
 import { registerAuthRoutes } from './features/auth/auth_routes.js';
 import { registerCameraRoutes } from './features/cameras/camera_routes.js';
 import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.js';
@@ -17,6 +18,7 @@ import { readPackageVersion } from './platform/version.js';
 const log = createLogger('app');
 
 function registerRoutes(router) {
+    registerSetupRoutes(router);
     registerAuthRoutes(router);
     registerCameraRoutes(router);
     registerDiscoveryRoutes(router);
@@ -48,7 +50,7 @@ export async function bootstrap(overrides = {}) {
     initVault(config);
     openDatabase(config);
 
-    const credentials = await ensureBootstrapAdmin();
+    const setup = prepareSetup();
     await initMediaTools(config);
 
     startSessionJanitor();
@@ -57,5 +59,5 @@ export async function bootstrap(overrides = {}) {
     attachEventSocket(server);
     await listen(server, config);
 
-    return { config, credentials };
+    return { config, setup };
 }
