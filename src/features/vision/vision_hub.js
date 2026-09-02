@@ -7,8 +7,11 @@ import { voteOnPlate } from './plates.js';
 import { findBestMatch } from './face_matcher.js';
 import { evaluateAccess } from '../access/access_rules.js';
 import { createVisionProcess } from './vision_process.js';
+import { getSetting } from '../settings/settings_repository.js';
+import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
 
 const log = createLogger('vision-hub');
+
 
 export function installVisionHub({ config, cameraRepository, detectionsRepository, peopleRepository, accessRepository }) {
 
@@ -29,6 +32,8 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             }
         }
 
+        const performanceSettings = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
+
         for (const camera of cameras) {
             if (!processes.has(camera.id)) {
                 const tracker = new Tracker({ iouThreshold: 0.3, minHits: 2, maxMisses: 4 });
@@ -38,12 +43,14 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
                     camera,
                     ffmpegPath: config.ffmpegPath,
                     modelsDir,
+                    performanceSettings,
                     onDetections: handleDetections
                 });
                 processes.set(camera.id, proc);
                 log.info('started vision analysis', { cameraId: camera.id });
             }
         }
+
     }
 
     function handleDetections({ cameraId, timestamp, detections }) {

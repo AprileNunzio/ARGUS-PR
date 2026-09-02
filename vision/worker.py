@@ -56,7 +56,7 @@ def nms(boxes, scores, iou_threshold=0.45):
     return keep
 
 class VisionEngine:
-    def __init__(self, models_dir, conf_thresh=0.35):
+    def __init__(self, models_dir, conf_thresh=0.35, provider='auto', intra_threads=0, inter_threads=0):
         self.models_dir = models_dir
         self.conf_thresh = conf_thresh
         self.ort_session = None
@@ -66,11 +66,23 @@ class VisionEngine:
         yolox_path = os.path.join(models_dir, 'yolox_nano.onnx')
         if os.path.isfile(yolox_path):
             try:
-                providers = ['CUDAExecutionProvider', 'DmlExecutionProvider', 'CPUExecutionProvider']
                 available = ort.get_available_providers()
-                active_providers = [p for p in providers if p in available]
-                self.ort_session = ort.InferenceSession(yolox_path, providers=active_providers)
-                sys.stderr.write(f"Vision: loaded {yolox_path} with {active_providers}\n")
+                if provider and provider != 'auto' and provider in available:
+                    active_providers = [provider, 'CPUExecutionProvider']
+                else:
+                    candidates = ['CUDAExecutionProvider', 'TensorrtExecutionProvider', 'DmlExecutionProvider', 'OpenVINOExecutionProvider', 'CPUExecutionProvider']
+                    active_providers = [p for p in candidates if p in available]
+
+                so = ort.SessionOptions()
+                so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+                if intra_threads > 0:
+                    so.intra_op_num_threads = intra_threads
+                if inter_threads > 0:
+                    so.inter_op_num_threads = inter_threads
+                    so.execution_mode = ort.ExecutionMode.ORT_PARALLEL
+
+                self.ort_session = ort.InferenceSession(yolox_path, sess_options=so, providers=active_providers)
+                sys.stderr.write(f"Vision: loaded {yolox_path} with {active_providers} (intra={intra_threads}, inter={inter_threads})\n")
             except Exception as e:
                 sys.stderr.write(f"Vision warning: could not load YOLOX: {e}\n")
 
@@ -81,9 +93,16 @@ class VisionEngine:
                 self.face_detector = cv2.FaceDetectorYN.create(yunet_path, "", (640, 360), 0.6, 0.3, 5000)
                 if os.path.isfile(sface_path) and hasattr(cv2, 'FaceRecognizerSF'):
                     self.face_recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
+                if 'CUDAExecutionProvider' in active_providers and hasattr(cv2, 'dnn') and hasattr(cv2.dnn, 'DNN_BACKEND_CUDA'):
+                    try:
+                        self.face_detector.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+                        self.face_detector.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+                    except Exception:
+                        pass
                 sys.stderr.write("Vision: loaded YuNet/SFace face models\n")
             except Exception as e:
                 sys.stderr.write(f"Vision warning: could not load face models: {e}\n")
+
 
     def infer_objects(self, frame):
         if self.ort_session is None:
@@ -192,6 +211,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--models-dir', default=os.path.join(os.path.dirname(__file__), 'models'))
     parser.add_argument('--confidence', type=float, default=0.35)
+    parser.add_argument('--provider', default='auto')
+    parser.add_argument('--intra-threads', type=int, default=0)
+    parser.add_argument('--inter-threads', type=int, default=0)
     parser.add_argument('--probe', action='store_true')
     args = parser.parse_args()
 
@@ -211,7 +233,8 @@ def main():
         print(json.dumps({'ok': True, 'providers': providers}))
         sys.exit(0)
 
-    engine = VisionEngine(args.models_dir, args.confidence)
+    engine = VisionEngine(args.models_dir, args.confidence, args.provider, args.intra_threads, args.inter_threads)
+
     sys.stderr.write("Vision engine ready on stdin\n")
 
     frame_w, frame_h = 640, 360

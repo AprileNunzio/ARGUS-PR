@@ -2,9 +2,13 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { mediaToolsStatus, provisionMediaTools } from '../../platform/media_tools.js';
 import { getDatabase } from '../../storage/database.js';
-import { queryAudit } from '../../security/audit.js';
+import { queryAudit, recordAudit } from '../../security/audit.js';
 import { Permission } from '../../security/rbac.js';
 import { readPackageVersion } from '../../platform/version.js';
+import { getHardwareProfile } from '../../platform/hardware.js';
+import { sanitizePerformanceSettings, applySqlitePerformance, DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
+import { getSetting, setSetting } from '../settings/settings_repository.js';
+
 
 function diskUsage(target) {
     const stat = (() => {
@@ -71,4 +75,31 @@ export function registerSystemRoutes(router) {
         permission: Permission.SYSTEM_MANAGE,
         rateLimit: { limit: 3, windowMs: 10 * 60 * 1000 }
     });
+
+    router.get('/api/system/hardware', async () => ({
+        body: { hardware: getHardwareProfile() }
+    }), { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/system/performance', async () => {
+        const hardware = getHardwareProfile();
+        const performance = sanitizePerformanceSettings(getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS), hardware);
+        return { body: { performance, hardware } };
+    }, { permission: Permission.LIVE_VIEW });
+
+    router.put('/api/system/performance', async (ctx) => {
+        const hardware = getHardwareProfile();
+        const sanitized = sanitizePerformanceSettings(ctx.body, hardware);
+        setSetting('performance', sanitized);
+        applySqlitePerformance(getDatabase(), sanitized);
+
+        recordAudit(getDatabase(), {
+            userId: ctx.actor?.id,
+            action: 'system.performance.update',
+            resource: 'performance',
+            details: sanitized
+        });
+
+        return { body: { performance: sanitized } };
+    }, { permission: Permission.SYSTEM_MANAGE });
 }
+

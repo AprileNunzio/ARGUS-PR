@@ -1,6 +1,7 @@
 import { el, chip, formatBytes, formatDuration } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { renderUpdatesPanel } from './updates_panel.js';
+import { renderPerformancePanel } from './performance_panel.js';
 
 function statCard(config, delay) {
     const card = el('div', { className: `stat rise rise-${delay}` }, [
@@ -25,6 +26,7 @@ function spec(key, value) {
 export async function renderSystem({ api }) {
     const outlet = el('div', { className: 'view' });
     const updates = renderUpdatesPanel({ api });
+    const performance = renderPerformancePanel({ api });
     const info = await api.get('/api/system/info');
     const disk = info.storage.mediaDisk;
 
@@ -50,7 +52,9 @@ export async function renderSystem({ api }) {
             statCard({ icon: 'activity', label: 'Attivo da', value: formatDuration(info.uptimeSeconds), hint: 'senza interruzioni', color: 'var(--emerald)' }, 4)
         ]),
 
+        performance.element,
         updates.element,
+
 
         el('section', { className: 'panel rise rise-5' }, [
             el('div', { className: 'panel__head' }, [

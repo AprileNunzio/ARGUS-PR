@@ -16,18 +16,53 @@ export function buildInputArgs(camera) {
     return args;
 }
 
-export function buildPreviewArgs(camera, probe, accelerators = []) {
+export function buildPreviewArgs(camera, probe, accelerators = [], options = {}) {
     const args = buildInputArgs(camera);
     const canCopy = probe && COPYABLE_VIDEO.has(String(probe.codec ?? '').toLowerCase());
+
+    const hwaccel = options.hwaccelBackend ?? 'auto';
+    if (hwaccel !== 'none') {
+        const targetAccel = hwaccel !== 'auto' && accelerators.includes(hwaccel)
+            ? hwaccel
+            : accelerators.find((a) => ['cuda', 'qsv', 'd3d11va', 'vaapi', 'videotoolbox'].includes(a));
+        if (targetAccel) {
+            args.splice(args.indexOf('-i'), 0, '-hwaccel', targetAccel);
+        }
+    }
+
+    if (options.cpuThreads) {
+        args.splice(args.indexOf('-i'), 0, '-threads', String(options.cpuThreads));
+    }
 
     args.push('-an', '-map', '0:v:0');
 
     if (canCopy) {
         args.push('-c:v', 'copy');
     } else {
-        args.push('-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency');
-        args.push('-profile:v', 'main', '-pix_fmt', 'yuv420p');
-        args.push('-g', '50', '-sc_threshold', '0');
+        const preferredEncoder = options.videoEncoder && options.videoEncoder !== 'auto'
+            ? options.videoEncoder
+            : (accelerators.includes('cuda') ? 'h264_nvenc'
+                : accelerators.includes('qsv') ? 'h264_qsv'
+                : accelerators.includes('amf') ? 'h264_amf'
+                : accelerators.includes('vaapi') ? 'h264_vaapi'
+                : accelerators.includes('videotoolbox') ? 'h264_videotoolbox'
+                : 'libx264');
+
+        if (preferredEncoder === 'h264_nvenc') {
+            args.push('-c:v', 'h264_nvenc', '-preset', 'p4', '-tune', 'll', '-profile:v', 'main');
+        } else if (preferredEncoder === 'h264_qsv') {
+            args.push('-c:v', 'h264_qsv', '-preset', 'veryfast');
+        } else if (preferredEncoder === 'h264_amf') {
+            args.push('-c:v', 'h264_amf', '-usage', 'lowlatency');
+        } else if (preferredEncoder === 'h264_vaapi') {
+            args.push('-c:v', 'h264_vaapi');
+        } else if (preferredEncoder === 'h264_videotoolbox') {
+            args.push('-c:v', 'h264_videotoolbox', '-realtime', '1');
+        } else {
+            args.push('-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'main');
+        }
+
+        args.push('-pix_fmt', 'yuv420p', '-g', '50');
         if (probe?.height && probe.height > 720) args.push('-vf', 'scale=-2:720');
         args.push('-b:v', '2500k', '-maxrate', '3000k', '-bufsize', '4000k');
     }
@@ -39,6 +74,7 @@ export function buildPreviewArgs(camera, probe, accelerators = []) {
 
     return { args, transcoded: !canCopy, accelerators };
 }
+
 
 export function buildRecordArgs(camera, options) {
     const args = buildInputArgs(camera);
@@ -68,9 +104,19 @@ export function buildThumbnailArgs(camera, destination) {
     return args;
 }
 
-export function buildMotionArgs(camera) {
+export function buildMotionArgs(camera, accelerators = [], options = {}) {
     const args = buildInputArgs(camera);
+    const hwaccel = options.hwaccelBackend ?? 'auto';
+    if (hwaccel !== 'none') {
+        const targetAccel = hwaccel !== 'auto' && accelerators.includes(hwaccel)
+            ? hwaccel
+            : accelerators.find((a) => ['cuda', 'qsv', 'd3d11va', 'vaapi', 'videotoolbox'].includes(a));
+        if (targetAccel) {
+            args.splice(args.indexOf('-i'), 0, '-hwaccel', targetAccel);
+        }
+    }
     args.push('-an', '-vf', 'fps=5,scale=160:90,format=gray', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1');
     return args;
 }
+
 

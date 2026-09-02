@@ -4,7 +4,10 @@ import { getCameraSecrets } from '../cameras/camera_repository.js';
 import { authenticatedStreamUrl } from '../cameras/camera_url.js';
 import { buildMotionArgs } from '../streaming/ffmpeg_args.js';
 import { MotionDetector, FRAME_BYTES } from './motion_detector.js';
+import { getSetting } from '../settings/settings_repository.js';
+import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
 import { createLogger } from '../../kernel/logger.js';
+
 import { notFound } from '../../kernel/errors.js';
 
 const log = createLogger('motion-process');
@@ -43,12 +46,14 @@ export class MotionProcess {
         const source = camera.subStreamUrl ?? camera.mainStreamUrl;
         const url = authenticatedStreamUrl(source, camera.username, camera.password);
 
+        const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
         const args = buildMotionArgs({
             url,
             transport: camera.transport
-        });
+        }, tools.accelerators, perf);
 
         const child = spawn(tools.ffmpeg.path, args, {
+
             windowsHide: true,
             shell: false,
             stdio: ['ignore', 'pipe', 'pipe']

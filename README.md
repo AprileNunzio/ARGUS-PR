@@ -13,17 +13,15 @@ Registra le tue telecamere IP su hardware tuo. Nessun abbonamento, nessun serviz
 </div>
 
 ---
-
 ## Che cos'è
 
 ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete completo. Un demone Node.js acquisisce i flussi RTSP delle telecamere, li registra su disco e li rende consultabili da un'interfaccia web che si apre da qualsiasi dispositivo della rete: computer, tablet o telefono.
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.8.0.** Il ciclo NVR è completo con analisi AI: acquisizione RTSP, diretta a bassa latenza, registrazione con segmentazione e indice, riproduzione, rilevamento movimento con zone, tracciamento oggetti, rilevamento persone, veicoli e animali, biometria facciale con conformità GDPR, lettura targhe ANPR a voto pesato, controllo varchi e regole di accesso con blacklist prioritaria. Installatori autonomi per Linux e Windows. Vedi [Roadmap](#roadmap).
+> **Stato attuale: 0.9.0.** Massime prestazioni hardware (GPU, CPU, RAM): accelerazione video GPU (CUDA/NVENC, QSV, D3D11VA, VAAPI, VideoToolbox, AMF), inferenza AI ONNX multithread, tuning estremo RAM per SQLite (fino a 2GB cache, 4GB mmap), rilevamento persone/veicoli/animali, biometria volti GDPR, ANPR e installatori autonomi Windows/Linux. Vedi [Roadmap](#roadmap).
 
 ---
-
 ## Perché esiste
 
 I sistemi di videosorveglianza commerciali hanno tre problemi ricorrenti: obbligano al cloud del produttore, smettono di ricevere aggiornamenti dopo pochi anni, e costano un abbonamento per funzioni che l'hardware già possiede.
@@ -31,7 +29,6 @@ I sistemi di videosorveglianza commerciali hanno tre problemi ricorrenti: obblig
 ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su hardware modesto, e restare ispezionabile: il codice è aperto e le registrazioni sono file normali su un disco che controlli tu.
 
 ---
-
 ## Caratteristiche
 
 ### Disponibili oggi
@@ -61,6 +58,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
+| **Accelerazione GPU e tuning RAM** | Decodifica/codifica GPU (CUDA/NVENC, QSV, D3D11VA, VAAPI), inferenza AI multithread, tuning RAM SQLite fino a 2GB cache e preset rapidi |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
 ### In sviluppo
@@ -68,7 +66,6 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 Notifiche push Telegram e MQTT · Integrazione relè fisici di apertura varchi · Ricerca forense unificata · Planimetria con barriere virtuali
 
 ---
-
 ## Requisiti
 
 | | Minimo | Consigliato |
@@ -84,7 +81,6 @@ Sistemi supportati: **Windows 10/11 e Server**, **Linux** (Debian, Ubuntu, Fedor
 Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza difficoltà 4-8 canali, perché i flussi vengono copiati così come arrivano dalla telecamera, senza ricodifica.
 
 ---
-
 ## Installazione
 
 ### Windows — prova rapida
@@ -106,7 +102,6 @@ powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
 ```
 
 Installa e verifica autonomamente Node.js, ffmpeg, Python, dipendenze AI e modelli ONNX con SHA-256, crea il servizio Windows `ArgusPR` e configura il firewall.
-
 
 ### Linux — installazione automatica (consigliata)
 
@@ -192,7 +187,6 @@ sudo systemctl edit argus-pr --setenv=ARGUS_MEDIA_DIR=/srv/registrazioni
 sudo systemctl restart argus-pr
 ```
 
-
 </details>
 
 ### Docker
@@ -215,7 +209,6 @@ npm start
 ```
 
 ---
-
 ## Esportazione con catena di custodia
 
 Un filmato estratto da un impianto di videosorveglianza può finire davanti a un'assicurazione o a un giudice. Lì la domanda non è "si vede bene", è "come dimostri che è quello originale". ARGUS-PR risponde con un manifesto.
@@ -243,7 +236,6 @@ Esportazione integra: video, manifesto e sigillo corrispondono. Catena cc759b599
 Limiti voluti: sei ore per intervallo, 720 segmenti, due esportazioni in parallelo. Servono a impedire che un'esportazione saturi la macchina mentre sta registrando.
 
 ---
-
 ## Aggiornamenti automatici da GitHub
 
 Un videoregistratore resta acceso per anni. Se aggiornarlo richiede una sessione SSH, non verrà aggiornato mai. ARGUS-PR si aggiorna dalla pagina **Sistema**, e se la nuova versione non parte torna da sola alla precedente.
@@ -291,7 +283,6 @@ L'aggiornamento automatico richiede che l'installazione sia un clone git, come q
 Su Windows la ricerca degli aggiornamenti e la notifica funzionano allo stesso modo; l'applicazione automatica con ripristino è specifica di systemd e quindi solo Linux.
 
 ---
-
 ## Console locale — la macchina diventa un'appliance
 
 Un NVR chiuso in un armadio con un monitor davanti dovrebbe mostrare le telecamere, non un prompt di login. La **console locale** fa esattamente questo: all'accensione, sul monitor collegato al server, parte a schermo intero il muro video con tutte le telecamere attive.
@@ -330,7 +321,6 @@ systemctl enable --now getty@tty1        # riattiva il terminale su tty1
 Il muro è raggiungibile anche da un altro PC all'indirizzo `http://<indirizzo>:8088/wall`, ma da remoto serve il login normale: la scorciatoia loopback non si applica.
 
 ---
-
 ## Primo avvio
 
 Al primo avvio ARGUS-PR entra in **configurazione guidata**. Apri `http://<indirizzo-del-server>:8088` e segui cinque passi:
@@ -352,7 +342,6 @@ npm run reset-admin
 ```
 
 ---
-
 ## Configurazione
 
 Variabili d'ambiente, oppure un file `argus.env` nella cartella dati.
@@ -371,7 +360,6 @@ Variabili d'ambiente, oppure un file `argus.env` nella cartella dati.
 Cartella dati predefinita: `%PROGRAMDATA%\ARGUS-PR` su Windows, `/var/lib/argus-pr` su Linux con systemd, `~/.local/share/argus-pr` altrimenti.
 
 ---
-
 ## Sicurezza
 
 Il progetto adotta un approccio Zero-Trust: ogni input è ostile finché non è validato.
@@ -391,7 +379,6 @@ Il progetto adotta un approccio Zero-Trust: ogni input è ostile finché non è 
 Per segnalare una vulnerabilità apri una issue senza dettagli sfruttabili e chiedi un contatto privato.
 
 ---
-
 ## Architettura
 
 ```
@@ -423,7 +410,6 @@ Il codice segue la Clean Architecture con colocation per funzionalità: ogni mod
 Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 
 ---
-
 ## Roadmap
 
 | Fase | Contenuto | Stato |
@@ -441,7 +427,6 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 Il motore di visione AI opera tramite worker Python dedicato alimentato da flussi rawvideo ffmpeg su pipe standard. Esegue YOLOX per rilevamento oggetti, YuNet per volti, SFace per biometria e OCR pesato per targhe ANPR, senza appesantire il processo Node.js.
 
 ---
-
 ## Risoluzione dei problemi
 
 <details>
@@ -483,13 +468,11 @@ Richiede accesso locale alla macchina, che è il presupposto corretto per un rec
 </details>
 
 ---
-
 ## Contribuire
 
 Le pull request sono benvenute. Prima di aprirne una leggi **[AGENTS.md](AGENTS.md)**: contiene i vincoli architetturali del progetto, che sono stretti e applicati con rigore — niente commenti nel codice, nessun file oltre 500 righe, nessuna dipendenza aggiunta senza necessità dimostrata, CSP mai indebolita.
 
 ---
-
 ## Licenza
 
 MIT — vedi [LICENSE](LICENSE).

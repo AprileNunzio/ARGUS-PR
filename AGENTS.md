@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.8.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.9.0
 
 
 
@@ -240,6 +240,19 @@ Divisione dei compiti:
 
 ---
 
+## 5j. Accelerazione hardware totale e ottimizzazione prestazioni (GPU, RAM, CPU)
+
+`src/platform/hardware.js` + `src/features/settings/performance_tuning.js` + `web/features/system/performance_panel.js`.
+
+- **Sfruttamento totale dell'hardware**: rilevamento dinamico delle risorse della macchina host (CPU modello e core logici, RAM totale/libera, acceleratori ffmpeg GPU rilevati, provider di inferenza AI disponibili).
+- **Accelerazione decodifica e codifica GPU**: supporto per `-hwaccel` su flussi di anteprima, motion detection e visione AI (`cuda`, `qsv`, `vaapi`, `d3d11va`, `videotoolbox`, `amf`). Supporto encoder GPU per transcodifica (`h264_nvenc`, `h264_qsv`, `h264_amf`, `h264_vaapi`, `h264_videotoolbox`, `libx264`).
+- **AI Execution Providers e multithreading**: worker Python configurabile via CLI per esecuzione su provider hardware prioritario (NVIDIA CUDA / TensorRT, DirectML su Windows, OpenVINO su Intel, CPU multi-core con `intra_op_num_threads` e `inter_op_num_threads`). Supporto backend CUDA in OpenCV DNN per YuNet e SFace.
+- **Tuning estremo SQLite in RAM**: applicazione dinamica a caldo di `cache_size` (fino a 2048 MB in RAM), `mmap_size` (memoria mappata I/O fino a 4096 MB), `threads` e `temp_store = MEMORY`.
+- **Preset rapidi di sistema**: 'Massime Prestazioni (Full GPU + RAM)', 'Bilanciato', 'Risparmio Energetico' e personalizzato, applicabili a caldo dall'interfaccia delle impostazioni.
+
+---
+
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -311,6 +324,9 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | GET | `/api/people/logs/faces` | `live.view` |
 | GET | `/api/system/health` | anonimo |
 | GET | `/api/system/info` | `live.view` |
+| GET | `/api/system/hardware` | `live.view` |
+| GET | `/api/system/performance` | `live.view` |
+| PUT | `/api/system/performance` | `system.manage` |
 | GET | `/api/system/audit` | `audit.view` |
 | POST | `/api/console/session` | anonimo, solo loopback, rate limit 30/1min |
 | GET | `/api/console/status` | anonimo, solo loopback |
@@ -333,7 +349,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
+
 
 **Non ancora implementato:** relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.
 

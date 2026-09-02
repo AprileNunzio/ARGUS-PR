@@ -14,7 +14,10 @@ function applyPragmas(db) {
     db.pragma('foreign_keys = ON');
     db.pragma('busy_timeout = 5000');
     db.pragma('temp_store = MEMORY');
+    db.pragma('cache_size = -131072');
+    db.pragma('mmap_size = 536870912');
 }
+
 
 function currentVersion(db) {
     return db.pragma('user_version', { simple: true });

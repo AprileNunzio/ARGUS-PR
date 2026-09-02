@@ -5,7 +5,7 @@ import { createLogger } from '../../kernel/logger.js';
 
 const log = createLogger('vision-process');
 
-export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', modelsDir, onDetections, onError }) {
+export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', modelsDir, performanceSettings = {}, onDetections, onError }) {
     let ffmpegChild = null;
     let workerChild = null;
     let isTerminated = false;
@@ -20,7 +20,12 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', 
         const ffmpegArgs = [
             '-hide_banner',
             '-loglevel', 'error',
-            '-nostdin',
+            '-nostdin'
+        ];
+        if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
+            ffmpegArgs.push('-hwaccel', performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend);
+        }
+        ffmpegArgs.push(
             '-rtsp_transport', camera.transport === 'udp' ? 'udp' : 'tcp',
             '-i', streamUrl,
             '-an',
@@ -28,11 +33,22 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', 
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
             'pipe:1'
-        ];
+        );
+
+        const workerArgs = [workerScript, '--models-dir', modelsDir];
+        if (performanceSettings.aiExecutionProvider) {
+            workerArgs.push('--provider', performanceSettings.aiExecutionProvider);
+        }
+        if (performanceSettings.aiIntraThreads) {
+            workerArgs.push('--intra-threads', String(performanceSettings.aiIntraThreads));
+        }
+        if (performanceSettings.aiInterThreads) {
+            workerArgs.push('--inter-threads', String(performanceSettings.aiInterThreads));
+        }
 
         try {
             ffmpegChild = spawn(ffmpegPath, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-            workerChild = spawn(pythonBin, [workerScript, '--models-dir', modelsDir], {
+            workerChild = spawn(pythonBin, workerArgs, {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
         } catch (err) {
@@ -43,6 +59,7 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', 
         }
 
         ffmpegChild.stdout.pipe(workerChild.stdin);
+
 
         ffmpegChild.stderr.on('data', (d) => {
             log.debug('ffmpeg vision stderr', { msg: d.toString().trim() });

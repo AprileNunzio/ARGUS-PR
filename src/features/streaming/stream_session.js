@@ -9,6 +9,9 @@ import { createLogger } from '../../kernel/logger.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
 import { AppError, ErrorCode, notFound } from '../../kernel/errors.js';
 import { redactCredentials } from '../../security/guards.js';
+import { getSetting } from '../settings/settings_repository.js';
+import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
+
 
 const log = createLogger('stream');
 
@@ -91,11 +94,14 @@ export class StreamSession {
             .then((result) => result.video)
             .catch(() => null);
 
+        const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
         const { args, transcoded } = buildPreviewArgs(
             { url, transport: camera.transport },
             probe,
-            tools.accelerators
+            tools.accelerators,
+            perf
         );
+
 
         log.info('stream starting', {
             camera: this.cameraId,
