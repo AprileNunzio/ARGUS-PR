@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.3.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
+> **Stato attuale: 0.4.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto e trasforma la macchina in un'appliance che mostra il muro video sul monitor collegato. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
 
 ---
 
@@ -50,6 +50,8 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Registrazione continua** | Segmenti MP4 senza ricodifica, con hash SHA-256 di ogni file per l'integrità |
 | **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
 | **Ritenzione automatica** | Per giorni, per quota e per spazio libero; i segmenti protetti non vengono mai cancellati |
+| **Installazione automatica Linux** | Un comando solo: rileva la distribuzione, installa Node.js e ffmpeg, registra il servizio, apre il firewall e stampa l'indirizzo web. Nessuna domanda |
+| **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
 ### In sviluppo
@@ -97,7 +99,53 @@ winget install NSSM.NSSM
 
 Il servizio parte da solo all'accensione del PC. Registra anche la regola del firewall sulla porta scelta.
 
-### Linux — installazione come servizio
+### Linux — installazione automatica (consigliata)
+
+Un solo comando. Non fa domande e non chiede conferme: riconosce la distribuzione, installa quello che manca, registra il servizio e ti restituisce l'indirizzo a cui collegarti.
+
+```bash
+wget -qO- https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/autoinstaller.sh | sudo bash
+```
+
+Se preferisci leggere lo script prima di eseguirlo — abitudine sana, visto che gira come root:
+
+```bash
+wget https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/autoinstaller.sh
+less autoinstaller.sh
+sudo bash autoinstaller.sh
+```
+
+**Cosa fa, nell'ordine:**
+
+1. Si rieleva a root con `sudo` se non lo è già.
+2. Riconosce il gestore pacchetti: `apt`, `dnf`, `yum`, `pacman`, `zypper` o `apk`. Copre Debian, Ubuntu, Fedora, RHEL, Rocky, Alma, Arch, openSUSE e Alpine.
+3. Installa i prerequisiti: `curl`, `git`, `xz`, `python3`, la toolchain di compilazione (serve a `better-sqlite3` sulle architetture senza binario precompilato) e `ffmpeg`.
+4. **Node.js**: se ne trova già uno ≥ 20 lo usa; altrimenti scarica la build ufficiale LTS da nodejs.org in `/usr/local/lib/argus-node` e la collega in `/usr/local/bin`. Riconosce x86-64, ARM64, ARMv7, ppc64le e s390x — quindi funziona anche su Raspberry Pi.
+5. Clona il repository in `/opt/argus-pr` e mette in checkout **l'ultimo tag di release**, non il ramo di sviluppo.
+6. Crea l'utente di servizio `argus`, la directory dati `/var/lib/argus-pr` con permessi `750` e il file di configurazione `/etc/argus-pr/argus.env` con permessi `640`, leggibile solo da root e dal servizio.
+7. Scrive l'unità systemd con isolamento rinforzato (`ProtectSystem=strict`, `NoNewPrivileges`, nessuna capability, scrittura consentita solo su dati e `vendor/`), la abilita e la avvia.
+8. Apre la porta su `ufw` o `firewalld`, se attivi.
+9. Se la macchina ha una scheda video, installa anche la **console locale** (vedi la sezione dedicata più avanti).
+10. Stampa un riepilogo con indirizzo web, versione installata e percorsi.
+
+**Opzioni**, tutte facoltative — il default va bene nella grande maggioranza dei casi:
+
+| Opzione | Effetto |
+|---|---|
+| `--port 9443` | Porta HTTP diversa da 8088 |
+| `--dir /srv/argus` | Directory di installazione del codice |
+| `--data /srv/registrazioni` | Directory di dati e registrazioni: usala per puntare a un disco dedicato |
+| `--ref v0.4.0` | Installa un tag o un ramo preciso invece dell'ultima release |
+| `--kiosk` | Forza la console locale anche se lo script non rileva una scheda video |
+| `--no-kiosk` | Solo servizio, nessuna interfaccia locale — tipico per un server in armadio |
+
+```bash
+sudo bash autoinstaller.sh --port 9443 --data /srv/registrazioni --no-kiosk
+```
+
+Rilanciare lo script su una macchina già installata è sicuro: aggiorna il codice all'ultima release, riscrive l'unità systemd e riavvia il servizio **senza toccare database e registrazioni**.
+
+### Linux — installazione manuale come servizio
 
 ```bash
 git clone https://github.com/AprileNunzio/ARGUS-PR.git
@@ -165,6 +213,45 @@ npm install
 npm run doctor
 npm start
 ```
+
+---
+
+## Console locale — la macchina diventa un'appliance
+
+Un NVR chiuso in un armadio con un monitor davanti dovrebbe mostrare le telecamere, non un prompt di login. La **console locale** fa esattamente questo: all'accensione, sul monitor collegato al server, parte a schermo intero il muro video con tutte le telecamere attive.
+
+L'autoinstaller la attiva da solo quando rileva una scheda video (`/dev/dri/card0`, `/dev/fb0` o una scheda in `/sys/class/drm`) e la macchina non è un container. Puoi forzarla con `--kiosk` o escluderla con `--no-kiosk`.
+
+**Come appare**
+
+- Griglia che si dispone da sola: 1 riquadro con una telecamera, 2 affiancati con due, poi 2×2, 3×3, 4×4 e così via. Nessuna configurazione: il layout segue il numero di canali attivi.
+- Ogni riquadro porta il nome della telecamera e un pallino di stato — verde in diretta, ambra in connessione, rosso se il flusso non è riproducibile.
+- In basso una barra di stato con l'indirizzo web da digitare sugli altri dispositivi, il numero di canali, quanti stanno registrando, la versione e l'orologio.
+- Se la configurazione iniziale non è ancora stata fatta, al posto dei riquadri compare l'indirizzo a cui collegarsi per farla. Stessa cosa se non è ancora presente nessuna telecamera.
+- La griglia si riallinea da sola: aggiungi una telecamera dal web e compare sul monitor entro dieci secondi, senza riavviare niente.
+
+**Bassa risoluzione, per scelta**
+
+Il muro usa il **flusso secondario** della telecamera quando è configurato (`subStreamUrl`), cioè quello a bassa risoluzione. Serve a mostrare molti riquadri senza saturare CPU e rete: il flusso principale in alta definizione resta per la registrazione e per la visione a pieno schermo dal web. Se una telecamera non ha flusso secondario viene usato il principale, ridimensionato a 720p solo nel caso in cui serva comunque una ricodifica.
+
+**Come è fatta, e perché è sicura**
+
+La console non ha credenziali scritte da nessuna parte. La pagina `/wall` chiede una sessione a `POST /api/console/session`, e il server la concede **solo se la richiesta arriva da loopback** (`127.0.0.1`, `::1`): cioè solo dal browser che gira sulla macchina stessa. Da qualunque altro indirizzo la stessa chiamata risponde `403`, anche dalla rete locale.
+
+La sessione emessa appartiene a un utente di servizio `__kiosk__` con ruolo **osservatore**: può vedere diretta e archivio, non può aggiungere telecamere, cambiare impostazioni o gestire utenti. Chi ha accesso fisico al monitor vede le immagini e nient'altro. Finché la configurazione iniziale non è completata la console non emette alcuna sessione.
+
+**Sotto il cofano**
+
+L'unità systemd `argus-pr-kiosk.service` avvia una sessione X minimale su `tty1` con l'utente dedicato `argus-kiosk` — di sistema, senza privilegi — e lancia Chromium in modalità kiosk su `http://127.0.0.1:8088/wall`. Se Chromium non è disponibile ripiega su Firefox; se non c'è nessun browser installabile l'installazione prosegue lo stesso e lo segnala: il NVR resta raggiungibile via web.
+
+```bash
+systemctl status argus-pr-kiosk          # stato della console
+systemctl restart argus-pr-kiosk         # riavvia il muro video
+systemctl disable --now argus-pr-kiosk   # spegni la console, il NVR continua
+systemctl enable --now getty@tty1        # riattiva il terminale su tty1
+```
+
+Il muro è raggiungibile anche da un altro PC all'indirizzo `http://<indirizzo>:8088/wall`, ma da remoto serve il login normale: la scorciatoia loopback non si applica.
 
 ---
 
@@ -269,6 +356,7 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **F1** | Pipeline ffmpeg, diretta video, trasporto fMP4 su WebSocket | ✅ completata |
 | **F2** | Registrazione, segmentazione, indice archivio, ritenzione | ✅ completata |
 | **F3** | Riproduzione e timeline | ✅ completata · esportazione ⬜ |
+| **FA** | Autoinstaller Linux e console locale a schermo intero | ✅ completata |
 | **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | 🔜 in corso |
 | **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |
 | **F6** | Monitoraggio salute, watchdog, conformità GDPR | ⬜ |

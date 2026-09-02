@@ -18,6 +18,7 @@ import { installStreamHub } from './features/streaming/stream_hub.js';
 import { registerRecordingRoutes } from './features/recording/recording_routes.js';
 import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
 import { installRecordingHub } from './features/recording/recording_hub.js';
+import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
@@ -31,6 +32,7 @@ function registerRoutes(router) {
     registerStreamRoutes(router);
     registerRecordingRoutes(router);
     registerPlaybackRoutes(router);
+    registerKioskRoutes(router);
 }
 
 function startSessionJanitor() {

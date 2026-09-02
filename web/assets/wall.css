@@ -1,0 +1,71 @@
+.wall-body { background: #04070c; overflow: hidden; }
+
+.console { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+.console__boot { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: #8496ab; font-family: var(--mono); }
+
+.console__grid {
+    flex: 1;
+    display: grid;
+    gap: 2px;
+    padding: 2px;
+    min-height: 0;
+    background: #04070c;
+}
+
+.console__cell {
+    position: relative;
+    background: #05070c;
+    overflow: hidden;
+    min-height: 0;
+    border-radius: 4px;
+}
+
+.console__cell video { width: 100%; height: 100%; object-fit: contain; display: block; background: #05070c; }
+
+.console__tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(3, 7, 13, .72);
+    color: #e6edf6;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.console__state { width: 7px; height: 7px; border-radius: 50%; background: #e3a44b; }
+.console__state--live { background: #45d39a; }
+.console__state--down { background: #f28080; }
+
+.console__empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #64748b; font-family: var(--mono); font-size: 0.95rem; text-align: center; padding: 2rem; }
+
+.statusbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 0.55rem 1.1rem;
+    background: linear-gradient(180deg, #0b1119, #060a11);
+    border-top: 1px solid #1b2634;
+    color: #c3cedd;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+}
+
+.statusbar__brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.statusbar__mark { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(135deg, #1a7fbd, #06a6c9); display: grid; place-items: center; }
+.statusbar__mark svg { width: 14px; height: 14px; color: #fff; }
+.statusbar__item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.statusbar__label { color: #6b7c90; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; }
+.statusbar__value { color: #e6edf6; font-weight: 600; }
+.statusbar__ip { color: #58bdf0; font-weight: 700; font-size: 0.95rem; }
+.statusbar__spacer { flex: 1 1 auto; }
+.statusbar__clock { color: #fff; font-weight: 700; font-size: 1rem; }
+
+.console__empty { white-space: pre-line; line-height: 1.6; }

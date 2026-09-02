@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.3.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.4.0
 
 ---
 
@@ -13,7 +13,7 @@ NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce fluss
 
 **Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
 
-Stato reale: **fondamenta, diretta, registrazione, archivio e riproduzione funzionanti.** Vedi §9.
+Stato reale: **fondamenta, diretta, registrazione, archivio, riproduzione, console locale e installazione automatica Linux funzionanti.** Vedi §9.
 
 ---
 
@@ -65,9 +65,12 @@ web/
   index.html
   assets/                 app.js, shell.js, dom.js, api.js, icons.js,
                           tokens.css, base.css, components.css, views.css
+  wall.html               console locale a schermo intero (rotta /wall)
   features/<nome>/        vista della funzionalita'
+autoinstaller.sh          installatore Linux non presidiato (entry point del wget)
 deploy/
-  systemd/ windows/ linux/ docker/
+  systemd/ windows/ docker/
+  linux/                  install.sh, kiosk-session.sh
 ```
 
 Regola di dipendenza: `features` → `security`/`storage`/`platform` → `kernel`. Mai al contrario. `kernel` non importa nulla del progetto tranne se stesso.
@@ -160,12 +163,26 @@ Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun e
 - **La ritenzione e' una funzione pura** (`retention.js`), coperta da test. Non introdurre I/O al suo interno: e' il codice che cancella prove, e deve restare verificabile su scenari limite. Un segmento `protected` non si cancella mai, per nessun motivo.
 - La riproduzione passa da `/api/archive/:id/media`, che serve i file con supporto Range tramite `serveFile` e confina ogni percorso con `resolveInside`. Il traversal e' verificato: risponde 403.
 
+## 5e. Console locale e installazione Linux (FA)
+
+`src/features/kiosk/` + `web/features/wall/` + `autoinstaller.sh` + `deploy/linux/kiosk-session.sh`.
+
+- **La console si autentica solo da loopback.** `POST /api/console/session` e' anonima ma `assertLocalConsole()` accetta esclusivamente `127.0.0.1`, `::1`, `::ffff:127.0.0.1`, `localhost`. Da qualsiasi altro indirizzo: 403. Non allargare questa lista, e non fidarti mai di `X-Forwarded-For` qui: l'indirizzo arriva da `clientAddress()`, che onora il proxy solo se `ARGUS_TRUST_PROXY` e' attivo — se lo diventa, questa rotta va riesaminata.
+- La sessione emessa appartiene all'utente di servizio `__kiosk__`, creato al volo con ruolo `viewer`. **Non promuoverlo**: chi ha accesso fisico al monitor non deve poter riconfigurare l'impianto. Verificato: `POST /api/cameras` con quel cookie risponde 403.
+- **Prima del setup la console non emette sessioni** (409). Motivo non estetico: `isSetupRequired()` e' `countUsers() === 0`, quindi creare `__kiosk__` prima del claim renderebbe l'installazione impossibile da configurare. Se un giorno il conteggio cambia, questo vincolo va rivisto.
+- Il muro usa il flusso secondario perche' `StreamSession` gia' preferisce `subStreamUrl`. Non aggiungere un parametro di qualita' al socket senza motivo.
+- `/wall` e' servita da `PAGE_ALIASES` in `src/http/server.js`, non dal fallback SPA.
+- Nessuno stile inline: il CSP resta senza `unsafe-inline`. I valori dinamici della griglia passano da `style.setProperty` su variabili.
+- `autoinstaller.sh` gira come root e **non fa domande**. Se aggiungi un passo, deve avere un default sicuro: nessun prompt, mai. Fa checkout dell'**ultimo tag**, non di `main`.
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
 - Permessi separati per `live.view`, `archive.view`, `archive.export`: vedere il live e portarsi via l'archivio hanno gravita' diverse.
 - Ogni azione sensibile scrive in `audit_log` tramite `recordAudit`.
-- Al primo avvio viene creato l'utente `admin` con password casuale mostrata **una sola volta** sullo stdout, con `must_change_password = 1`.
+- Al primo avvio non esiste alcun utente: l'installazione e' "non reclamata" e la procedura guidata web crea l'amministratore. Nessuna password viene stampata sui log. Il codice di installazione e' stato rimosso su richiesta esplicita dell'utente: **non reintrodurlo senza chiederlo**.
 - Path traversal: ogni percorso da input passa da `resolveInside()` (`src/platform/paths.js`).
 
 ---
@@ -188,8 +205,8 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | Metodo | Rotta | Permesso |
 |---|---|---|
 | GET | `/api/setup/status` | anonimo |
-| POST | `/api/setup/claim` | anonimo + codice, rate limit 6/10min |
-| POST | `/api/setup/dependencies/ffmpeg` | anonimo + codice, rate limit 3/10min |
+| POST | `/api/setup/claim` | anonimo, rate limit 10/10min |
+| POST | `/api/setup/dependencies/ffmpeg` | anonimo, solo a setup aperto |
 | POST | `/api/system/dependencies/ffmpeg` | `system.manage` |
 | POST | `/api/auth/login` | anonimo, rate limit 8/5min |
 | POST | `/api/auth/logout` | autenticato |
@@ -205,7 +222,10 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | GET | `/api/system/health` | anonimo |
 | GET | `/api/system/info` | `live.view` |
 | GET | `/api/system/audit` | `audit.view` |
+| POST | `/api/console/session` | anonimo, solo loopback, rate limit 30/1min |
+| GET | `/api/console/status` | anonimo, solo loopback |
 | WS | `/api/events` | `live.view` |
+| WS | `/api/stream/:id` | `live.view` |
 
 Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
@@ -213,7 +233,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**.
 
 **Non ancora implementato:** esportazione con catena di custodia, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 
@@ -229,6 +249,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | F1 | Pipeline ffmpeg, diretta, fMP4 su WebSocket | completata |
 | F2 | Registrazione, segmentazione, indice, ritenzione | completata |
 | F3 | Playback e timeline (export ancora da fare) | parziale |
+| FA | Autoinstaller Linux, console locale a schermo intero | completata |
 | F4 | Pianificazione oraria, motion detection, zone | da fare |
 | F5 | NAS, tiering, allarmi, audio | da fare |
 | F6 | Salute, watchdog, conformita' | da fare |

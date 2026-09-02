@@ -24,6 +24,7 @@ export const SESSION_COOKIE = 'argus_session';
 
 const WEB_ROOT = path.join(projectRoot, 'web');
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const PAGE_ALIASES = new Map([['/', 'index.html'], ['/wall', 'wall.html'], ['/wall/', 'wall.html']]);
 
 function applyBaseHeaders(req, res) {
     const secure = req.socket.encrypted === true;
@@ -60,7 +61,7 @@ async function dispatch(router, req, res, config) {
     const isApi = url.pathname.startsWith('/api/');
 
     if (!isApi) {
-        const relative = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+        const relative = PAGE_ALIASES.get(url.pathname) ?? url.pathname.slice(1);
         if (serveFile(req, res, WEB_ROOT, relative)) return;
         if (serveFile(req, res, WEB_ROOT, 'index.html')) return;
         throw new AppError(ErrorCode.NOT_FOUND, 'Not found');
