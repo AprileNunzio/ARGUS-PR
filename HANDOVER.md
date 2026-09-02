@@ -1,7 +1,8 @@
 # HANDOVER — cosa resta da fare su ARGUS-PR
 
 Documento di consegna per l'assistente che prosegue il lavoro.
-Leggi **prima** [AGENTS.md](AGENTS.md): contiene i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca** e **come farlo**.
+Leggi **prima** [AGENTS.md](AGENTS.md): contiene i vincoli non negoziabili e le convenzioni.
+Questo file dice **cosa manca**. Per **come costruirlo davvero**, punto per punto, vai in [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md).
 
 Stato alla consegna: **v0.6.0**, 33 test verdi, tutto pubblicato su GitHub.
 
@@ -84,6 +85,10 @@ Il vecchio programma aveva **19 moduli** e **14 tabelle**. Ecco la mappatura com
 ---
 
 ## 4. Le fasi da fare, in ordine
+
+> Le istruzioni operative dettagliate — algoritmi, modelli, comandi ffmpeg, schemi SQL, test di verifica — stanno in **[docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md)** e nei tre documenti che indicizza:
+> [docs/MOVIMENTO.md](docs/MOVIMENTO.md), [docs/VISIONE.md](docs/VISIONE.md), [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
+> Quella e' la guida da seguire. Questa sezione resta come quadro d'insieme.
 
 ### F4 — Pianificazione e rilevamento movimento (v0.7.0)
 

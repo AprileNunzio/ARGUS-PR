@@ -442,7 +442,7 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 
 Il riconoscimento di targhe e volti richiede un motore di inferenza separato. ARGUS-PR non lo simula: quando arriverà, sarà un ingresso reale che accetta rilevamenti da un motore esterno o dall'analitica di bordo delle telecamere, che molte già hanno. Preferisco un NVR che registra in modo affidabile a uno che promette intelligenza artificiale e perde fotogrammi.
 
-Chi prosegue lo sviluppo trova il piano completo in **[HANDOVER.md](HANDOVER.md)**.
+Chi prosegue lo sviluppo trova il piano completo in **[HANDOVER.md](HANDOVER.md)** e le istruzioni operative in **[docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md)**.
 
 ---
 
