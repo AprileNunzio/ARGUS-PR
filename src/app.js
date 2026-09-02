@@ -19,6 +19,8 @@ import { registerRecordingRoutes } from './features/recording/recording_routes.j
 import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
 import { installRecordingHub } from './features/recording/recording_hub.js';
 import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
+import { registerUpdateRoutes } from './features/updates/update_routes.js';
+import { installUpdateWatchdog } from './features/updates/update_service.js';
 import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
@@ -33,6 +35,7 @@ function registerRoutes(router) {
     registerRecordingRoutes(router);
     registerPlaybackRoutes(router);
     registerKioskRoutes(router);
+    registerUpdateRoutes(router);
 }
 
 function startSessionJanitor() {
@@ -66,6 +69,7 @@ export async function bootstrap(overrides = {}) {
     startSessionJanitor();
     installStreamHub();
     installRecordingHub(config);
+    installUpdateWatchdog(config);
 
     const { server } = createHttpServer(config, registerRoutes);
     attachEventSocket(server);

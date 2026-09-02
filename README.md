@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.4.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto e trasforma la macchina in un'appliance che mostra il muro video sul monitor collegato. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
+> **Stato attuale: 0.5.0.** Il ciclo completo funziona: le telecamere si vedono in diretta, si registrano su disco e l'archivio è navigabile con una linea temporale. Su Linux un solo comando installa tutto, la macchina diventa un'appliance che mostra il muro video sul monitor collegato, e il sistema si aggiorna da GitHub con ripristino automatico se qualcosa va storto. Mancano ancora esportazione, rilevamento movimento e pianificazione oraria. Vedi [Roadmap](#roadmap) per il quadro onesto.
 
 ---
 
@@ -51,6 +51,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
 | **Ritenzione automatica** | Per giorni, per quota e per spazio libero; i segmenti protetti non vengono mai cancellati |
 | **Installazione automatica Linux** | Un comando solo: rileva la distribuzione, installa Node.js e ffmpeg, registra il servizio, apre il firewall e stampa l'indirizzo web. Nessuna domanda |
+| **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
@@ -216,6 +217,54 @@ npm start
 
 ---
 
+## Aggiornamenti automatici da GitHub
+
+Un videoregistratore resta acceso per anni. Se aggiornarlo richiede una sessione SSH, non verrà aggiornato mai. ARGUS-PR si aggiorna dalla pagina **Sistema**, e se la nuova versione non parte torna da sola alla precedente.
+
+### Come si aggiorna
+
+Apri **Sistema → Aggiornamenti**, premi *Cerca aggiornamenti*, e se ne esiste una nuova premi *Installa*. Il servizio si riavvia e torna su da solo. Non c'è altro da fare.
+
+Il sistema controlla comunque da sé la presenza di nuove versioni ogni sei ore e lo annota nel registro, senza installare niente: l'installazione resta una decisione tua.
+
+### Perché è sicuro
+
+Il punto delicato di ogni autoaggiornamento è che il programma riscrive sé stesso. Se il processo che serve la rete può modificare il proprio codice, chi riesce a comprometterlo ottiene persistenza. Qui non può:
+
+- **Il servizio non ha permessi di scrittura sul proprio codice.** `/opt/argus-pr` appartiene a root; il servizio gira come utente `argus` e può scrivere solo su dati, registrazioni e `vendor/`.
+- **L'applicazione può soltanto *chiedere* un aggiornamento.** Scrive `update-state.json` nella directory dati e si spegne con codice 75. Nient'altro.
+- **Chi applica l'aggiornamento è `ExecStartPre`**, uno script che systemd esegue come root prima di ogni avvio (con il prefisso `+`, quindi fuori dal sandbox del servizio).
+- **Il riferimento richiesto è validato due volte**, dall'applicazione e di nuovo dallo script privilegiato, contro l'espressione `^v[0-9]+\.[0-9]+\.[0-9]+$`. Un ramo, un commit, un percorso o una stringa con un `;` dentro vengono rifiutati e non arrivano mai a `git`.
+- **Il remoto viene riscritto sull'URL ufficiale prima del fetch**, quindi il codice arriva da questo repository e da nessun altro, anche se qualcuno avesse manomesso la configurazione git.
+- **I downgrade sono rifiutati**: si può solo salire di versione.
+- **Solo un amministratore** (`system.manage`) vede e usa questa pagina. Un osservatore riceve `403`.
+- **L'integrità la garantisce git**: ogni oggetto è indirizzato dal proprio SHA, quindi un file alterato in transito non corrisponde al commit del tag e il checkout fallisce.
+
+### Il ripristino automatico
+
+Questo è il pezzo che rende l'aggiornamento tranquillo su una macchina che nessuno guarda.
+
+1. Applicato l'aggiornamento, lo stato diventa `pending` con un contatore di tentativi.
+2. Se il nuovo processo resta in piedi **90 secondi**, si marca da solo `healthy`. Fine.
+3. Se invece va in crash, systemd lo riavvia; a ogni riavvio `ExecStartPre` incrementa il contatore.
+4. Al **terzo avvio fallito** lo script rimette in checkout il commit precedente — salvato prima di partire — reinstalla le dipendenze e marca `rolled-back`.
+5. Riapri l'interfaccia e trovi la versione vecchia in funzione, con scritto perché.
+
+Lo stato è visibile in `Sistema → Aggiornamenti` e nei log:
+
+```bash
+journalctl -u argus-pr | grep argus-pre-start
+cat /var/lib/argus-pr/update-state.json
+```
+
+### Se non è un clone git
+
+L'aggiornamento automatico richiede che l'installazione sia un clone git, come quella fatta dall'autoinstaller. Se hai scompattato uno zip, la pagina Sistema te lo dice e il pulsante *Installa* non compare: aggiorni scaricando la nuova versione, oppure passi all'installazione automatica, che è anche il modo per ottenere il ripristino automatico.
+
+Su Windows la ricerca degli aggiornamenti e la notifica funzionano allo stesso modo; l'applicazione automatica con ripristino è specifica di systemd e quindi solo Linux.
+
+---
+
 ## Console locale — la macchina diventa un'appliance
 
 Un NVR chiuso in un armadio con un monitor davanti dovrebbe mostrare le telecamere, non un prompt di login. La **console locale** fa esattamente questo: all'accensione, sul monitor collegato al server, parte a schermo intero il muro video con tutte le telecamere attive.
@@ -357,6 +406,7 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **F2** | Registrazione, segmentazione, indice archivio, ritenzione | ✅ completata |
 | **F3** | Riproduzione e timeline | ✅ completata · esportazione ⬜ |
 | **FA** | Autoinstaller Linux e console locale a schermo intero | ✅ completata |
+| **FU** | Aggiornamento da GitHub con ripristino automatico | ✅ completata |
 | **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | 🔜 in corso |
 | **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |
 | **F6** | Monitoraggio salute, watchdog, conformità GDPR | ⬜ |

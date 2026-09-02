@@ -6,13 +6,15 @@ import { renderDashboard } from '/features/dashboard/dashboard.js';
 import { renderCameras } from '/features/cameras/cameras.js';
 import { renderLive } from '/features/live/live.js';
 import { renderArchive } from '/features/archive/archive.js';
+import { renderSystem } from '/features/system/system.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 
 const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
     live: { label: 'Diretta', icon: 'play', render: renderLive },
     archive: { label: 'Archivio', icon: 'archive', render: renderArchive },
-    cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras }
+    cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras },
+    system: { label: 'Sistema', icon: 'settings', render: renderSystem, permission: 'system.manage' }
 };
 
 const state = {
@@ -24,9 +26,16 @@ const state = {
 const root = document.getElementById('app');
 
 
+function visibleRoutes() {
+    const granted = state.session?.permissions ?? [];
+    return Object.fromEntries(
+        Object.entries(ROUTES).filter(([, route]) => !route.permission || granted.includes(route.permission))
+    );
+}
+
 function currentRoute() {
     const hash = location.hash.replace('#/', '').trim();
-    return ROUTES[hash] ? hash : 'dashboard';
+    return visibleRoutes()[hash] ? hash : 'dashboard';
 }
 
 async function mountRoute() {
@@ -54,7 +63,7 @@ function startEventStream() {
 async function showApp() {
     root.replaceChildren(renderShell({
         session: state.session,
-        routes: ROUTES,
+        routes: visibleRoutes(),
         onNavigate: (name) => { location.hash = `#/${name}`; },
         onLogout: async () => {
             await api.post('/api/auth/logout');

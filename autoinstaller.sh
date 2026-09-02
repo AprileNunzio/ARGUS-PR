@@ -206,8 +206,9 @@ ENVEOF
 
 write_service() {
     log "Registrazione servizio systemd"
-    mkdir -p "${INSTALL_DIR}/vendor"
+    mkdir -p "${INSTALL_DIR}/vendor" "$HELPER_DIR"
     chown -R "$SERVICE_USER":"$SERVICE_USER" "${INSTALL_DIR}/vendor"
+    install -m 0755 "${INSTALL_DIR}/deploy/linux/pre-start.sh" "${HELPER_DIR}/pre-start.sh"
 
     cat > /etc/systemd/system/argus-pr.service <<UNITEOF
 [Unit]
@@ -222,9 +223,15 @@ User=${SERVICE_USER}
 Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
 EnvironmentFile=${ENV_FILE}
+Environment=ARGUS_INSTALL_DIR=${INSTALL_DIR}
+Environment=ARGUS_SERVICE_USER=${SERVICE_USER}
+Environment=ARGUS_NODE_BIN=${NODE_BIN}
+Environment=ARGUS_NPM_BIN=${NPM_BIN}
+ExecStartPre=+${HELPER_DIR}/pre-start.sh
 ExecStart=${NODE_BIN} ${INSTALL_DIR}/bin/argus.js serve
 Restart=always
 RestartSec=5
+SuccessExitStatus=75
 KillSignal=SIGTERM
 TimeoutStopSec=20
 

@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.4.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.5.0
 
 ---
 
@@ -13,7 +13,7 @@ NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce fluss
 
 **Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
 
-Stato reale: **fondamenta, diretta, registrazione, archivio, riproduzione, console locale e installazione automatica Linux funzionanti.** Vedi §9.
+Stato reale: **fondamenta, diretta, registrazione, archivio, riproduzione, console locale, installazione automatica Linux e autoaggiornamento funzionanti.** Vedi §9.
 
 ---
 
@@ -67,10 +67,11 @@ web/
                           tokens.css, base.css, components.css, views.css
   wall.html               console locale a schermo intero (rotta /wall)
   features/<nome>/        vista della funzionalita'
+                          system/ ospita la pagina Sistema e il pannello aggiornamenti
 autoinstaller.sh          installatore Linux non presidiato (entry point del wget)
 deploy/
   systemd/ windows/ docker/
-  linux/                  install.sh, kiosk-session.sh
+  linux/                  install.sh, kiosk-session.sh, pre-start.sh
 ```
 
 Regola di dipendenza: `features` → `security`/`storage`/`platform` → `kernel`. Mai al contrario. `kernel` non importa nulla del progetto tranne se stesso.
@@ -177,6 +178,25 @@ Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun e
 
 ---
 
+## 5f. Aggiornamento automatico (FU)
+
+`src/features/updates/` + `deploy/linux/pre-start.sh` + `web/features/system/`.
+
+Il principio che regge tutto: **il servizio non puo' riscrivere il proprio codice.** `/opt/argus-pr` appartiene a root, il servizio gira come `argus`, e l'unita' systemd concede scrittura solo su `DATA_DIR` e `vendor/`. Non "sistemare" questo dando la proprieta' del codice al servizio: e' il motivo per cui l'autoaggiornamento qui non e' un vettore di persistenza.
+
+Divisione dei compiti:
+
+- **L'applicazione chiede.** `POST /api/updates/apply` valida il riferimento, scrive `update-state.json` in `dataDir` e chiama `scheduleRestart()`, che esce con **codice 75**. Non tocca nient'altro. L'unita' dichiara `SuccessExitStatus=75`.
+- **Lo script privilegiato applica.** `ExecStartPre=+/usr/local/lib/argus-pr/pre-start.sh` gira come root (il prefisso `+` scavalca `User=` e il sandbox). Rivalida il riferimento, riscrive il remoto sull'URL ufficiale, fa fetch, verifica che il tag esista, fa checkout e reinstalla le dipendenze.
+- **La validazione e' doppia e identica**: `^v[0-9]+\.[0-9]+\.[0-9]+$`, in `semver.js` e di nuovo nello script. Rami, commit, percorsi e stringhe con metacaratteri non raggiungono mai `git`. Se aggiungi un canale beta, cambia **entrambe** le espressioni e i test.
+- **I downgrade sono rifiutati** da `requestUpdate`: `isNewer` e' l'unico cancello.
+- **Ripristino automatico**: applicato l'aggiornamento la fase e' `pending` con un contatore. Se il processo resta vivo 90 secondi si marca `healthy` da solo. Altrimenti `pre-start.sh` incrementa il contatore a ogni riavvio e al superamento di `MAX_ATTEMPTS` rimette in checkout `previousRef` (il SHA salvato prima di partire) e marca `rolled-back`.
+- `update_state.js` **sanifica in lettura**, non solo in scrittura: il file sta in una directory scrivibile dal servizio, quindi va trattato come input ostile. Fase sconosciuta, ref non conforme, SHA non esadecimale e campi lunghi vengono scartati o troncati. Coperto da test.
+- Le rotte richiedono `system.manage`. Verificato: un `viewer` riceve 403, un anonimo 401.
+- Su Windows funzionano ricerca e notifica; l'applicazione con ripristino dipende da systemd. `isGitInstall()` fa da interruttore e l'interfaccia lo dichiara.
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -194,6 +214,7 @@ npm install            # con allowScripts gia' configurato
 npm start              # avvia il server
 npm run doctor         # verifica ambiente, vault, DB, ffmpeg
 npm run reset-admin    # rigenera la password amministratore
+node --test test/*.test.js   # su Windows serve il glob: "node --test test/" fallisce
 ```
 
 Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARGUS_FFMPEG_PATH`, `ARGUS_LOG_LEVEL`, `ARGUS_TRUST_PROXY`, `ARGUS_SESSION_TTL_HOURS`.
@@ -225,6 +246,10 @@ Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARG
 | POST | `/api/console/session` | anonimo, solo loopback, rate limit 30/1min |
 | GET | `/api/console/status` | anonimo, solo loopback |
 | WS | `/api/events` | `live.view` |
+| GET | `/api/updates/status` | `system.manage` |
+| POST | `/api/updates/check` | `system.manage`, rate limit 10/10min |
+| POST | `/api/updates/apply` | `system.manage`, rate limit 5/1h |
+| POST | `/api/updates/cancel` | `system.manage` |
 | WS | `/api/stream/:id` | `live.view` |
 
 Risposta di errore: `{ "error": { "code", "message", "details" } }`.
@@ -233,7 +258,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico verificato su repository di prova**.
 
 **Non ancora implementato:** esportazione con catena di custodia, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 
@@ -250,6 +275,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | F2 | Registrazione, segmentazione, indice, ritenzione | completata |
 | F3 | Playback e timeline (export ancora da fare) | parziale |
 | FA | Autoinstaller Linux, console locale a schermo intero | completata |
+| FU | Autoaggiornamento da GitHub con ripristino automatico | completata |
 | F4 | Pianificazione oraria, motion detection, zone | da fare |
 | F5 | NAS, tiering, allarmi, audio | da fare |
 | F6 | Salute, watchdog, conformita' | da fare |
