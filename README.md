@@ -85,13 +85,10 @@ Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza
 
 ### Windows — installazione autonoma (consigliata)
 
-Scarica il pacchetto pronto da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.9.0-Windows-Setup.zip`), estrailo e fai **doppio clic** su:
+Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.9.0-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
 
-```cmd
-install-windows.bat
-```
+In alternativa, puoi eseguire da **PowerShell** (avviato come Amministratore):
 
-Oppure esegui un solo comando da **PowerShell** (avviato come Amministratore):
 
 ```powershell
 irm https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/deploy/windows/install.ps1 | iex
