@@ -1,0 +1,19 @@
+services:
+  argus-pr:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: argus-pr:latest
+    container_name: argus-pr
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      ARGUS_PORT: "8088"
+      ARGUS_LOG_LEVEL: info
+    volumes:
+      - argus-data:/var/lib/argus-pr
+    tmpfs:
+      - /tmp
+
+volumes:
+  argus-data:

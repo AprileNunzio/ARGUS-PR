@@ -1,0 +1,15 @@
+node_modules/
+npm-debug.log*
+.env
+data/
+media/
+*.db
+*.db-wal
+*.db-shm
+*.key
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+vendor/ffmpeg/

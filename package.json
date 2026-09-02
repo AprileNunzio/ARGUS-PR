@@ -1,0 +1,50 @@
+{
+  "name": "argus-pr",
+  "version": "0.1.0",
+  "description": "Self-hosted Network Video Recorder with ONVIF discovery, RTSP recording and AI-assisted analytics",
+  "type": "module",
+  "license": "MIT",
+  "author": "Nunzio Aprile",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AprileNunzio/ARGUS-PR.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AprileNunzio/ARGUS-PR/issues"
+  },
+  "homepage": "https://github.com/AprileNunzio/ARGUS-PR#readme",
+  "main": "src/app.js",
+  "bin": {
+    "argus": "bin/argus.js"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "os": [
+    "win32",
+    "linux",
+    "darwin"
+  ],
+  "scripts": {
+    "start": "node bin/argus.js serve",
+    "doctor": "node bin/argus.js doctor",
+    "reset-admin": "node bin/argus.js reset-admin",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "nvr",
+    "video-surveillance",
+    "rtsp",
+    "onvif",
+    "cctv",
+    "ffmpeg",
+    "self-hosted"
+  ],
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}

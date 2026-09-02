@@ -1,0 +1,198 @@
+# AGENTS.md
+
+Contesto operativo per assistenti AI che lavorano su questo repository.
+Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
+
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.1.0
+
+---
+
+## 1. Cos'e' ARGUS-PR
+
+NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce flussi RTSP da telecamere IP, li registra su disco, li rende riproducibili e li analizza. L'interfaccia e' una web app servita dallo stesso processo.
+
+**Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
+
+Stato reale: **fondamenta complete e funzionanti, pipeline video non ancora implementata.** Vedi §9.
+
+---
+
+## 2. Vincoli di progetto non negoziabili
+
+Imposti dal proprietario del repository. Valgono per ogni contributo.
+
+1. **Clean Architecture**, Separation of Concerns, Single Responsibility.
+2. **Nessun commento nel codice.** Il codice sorgente non contiene commenti, salvo richiesta esplicita. La documentazione vive nei file `.md`. Questo file e il README sono le uniche sedi delle spiegazioni.
+3. **Nessun file oltre 500 righe.** Superato il limite, si modularizza.
+4. **UI totalmente responsive**, nativa sia mobile sia desktop.
+5. **Zero-Trust**: prevenzione OWASP, sanitizzazione totale degli input, cifratura di ogni dato sensibile.
+6. **Error handling senza abuso di try/catch.** Solo ai confini di I/O (rete, filesystem, processi, DB). Mai sopprimere un'eccezione in silenzio.
+7. **Colocation per funzionalita'**, non per strato tecnico.
+
+---
+
+## 3. Ambiente
+
+| Voce | Valore |
+|---|---|
+| Runtime | Node.js >= 20.11 (sviluppato su 24.x) |
+| Moduli | ESM (`"type": "module"`) — usa `import`, mai `require` nel codice sorgente |
+| Database | better-sqlite3, file su disco, WAL |
+| Dipendenze runtime | `better-sqlite3`, `ws`. Nient'altro. |
+| Video | ffmpeg/ffprobe come **eseguibili esterni**, mai come libreria |
+| Piattaforme | Windows, Linux (x64 e arm64), macOS |
+| Repository | https://github.com/AprileNunzio/ARGUS-PR (pubblico) |
+
+**Attenzione npm 11+**: `better-sqlite3` ha uno script di install che npm blocca per default. Il campo `allowScripts` in `package.json` lo autorizza. Se il binding non si compila: `npm rebuild better-sqlite3`.
+
+**Il repository e' pubblico.** Nessun segreto, nessuna chiave, nessun percorso personale nei file versionati.
+
+---
+
+## 4. Struttura
+
+```
+bin/argus.js              CLI: serve | doctor | reset-admin
+src/
+  kernel/                 config, result, errors, logger, process_guard, event_bus
+  platform/               paths, ffmpeg, media_tools, version
+  storage/                database, migrations/
+  security/               vault, password, sessions, rbac, guards, audit
+  http/                   server, router, http_utils, static_files, rate_limit, websocket
+  features/<nome>/        <nome>_service.js, <nome>_routes.js, <nome>_repository.js
+  app.js                  composizione: avvio, registrazione rotte
+web/
+  index.html
+  assets/                 app.js, shell.js, dom.js, api.js, app.css
+  features/<nome>/        vista della funzionalita'
+deploy/
+  systemd/ windows/ linux/ docker/
+```
+
+Regola di dipendenza: `features` → `security`/`storage`/`platform` → `kernel`. Mai al contrario. `kernel` non importa nulla del progetto tranne se stesso.
+
+---
+
+## 5. Convenzioni obbligatorie
+
+### Errori
+
+- Dominio e logica: nessun `try/catch`. Le condizioni previste sono valori di ritorno (`src/kernel/result.js`) oppure `AppError` lanciato.
+- `AppError` (`src/kernel/errors.js`) porta `code`, `status`, `details`, `exposable`. Solo gli errori `exposable` mostrano il messaggio al client.
+- Ai confini di I/O: `try/catch` ammesso, ma **traduci** in `AppError` conservando `cause`.
+- Il pipeline HTTP cattura tutto in un punto solo (`src/http/server.js`, `handleFailure`). Non gestire errori nelle rotte.
+- `process_guard.js` intercetta `uncaughtException` e `unhandledRejection` e chiude in modo pulito.
+- Il pattern `.catch(() => null)` e' ammesso **solo** dove l'assenza di valore e' un esito legittimo, mai per nascondere guasti.
+
+### Validazione
+
+Ogni input esterno passa da `src/security/guards.js`. Mai fidarsi del body.
+`requireStreamUrl` limita gli schemi a rtsp/rtsps/http/https: e' la difesa contro l'iniezione via URL.
+
+### Processi esterni
+
+`execFile`/`spawn` **sempre** con array di argomenti e `shell: false`. Mai interpolare stringhe in un comando. `rtsp_url` e' input utente: trattalo come ostile.
+
+### Segreti
+
+Password telecamere: `encryptSecret`/`decryptSecret` (AES-256-GCM, chiave in `<dataDir>/secrets/master.key`, permessi 0600).
+Password utenti: `scrypt` con salt per utente.
+Sessioni: token casuale a 256 bit, in DB solo l'hash SHA-256, cookie `HttpOnly; SameSite=Strict`.
+Nei log e nelle risposte API le credenziali negli URL passano da `redactCredentials`.
+
+### HTTP
+
+CSP stretta senza `unsafe-inline`. **Conseguenza pratica: nessun attributo `style` nel DOM generato da JS.** Usa le classi di utilita' in `web/assets/app.css` (`.stack`, `.row`, `.span-all`, `.form-grid`, ...). Aggiungerne di nuove e' preferibile a indebolire il CSP.
+Le rotte mutanti verificano l'`Origin`. Le rotte sensibili hanno rate limit.
+
+### Frontend
+
+Nessun framework, nessun build step. ESM nativo servito staticamente.
+`el()` in `web/assets/dom.js` costruisce il DOM: usa `textContent`, mai `innerHTML`, per i dati.
+Ricorda `[hidden] { display: none !important; }`: senza, `display:flex` di un componente vince sull'attributo.
+
+---
+
+## 6. Modello di sicurezza
+
+- Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
+- Permessi separati per `live.view`, `archive.view`, `archive.export`: vedere il live e portarsi via l'archivio hanno gravita' diverse.
+- Ogni azione sensibile scrive in `audit_log` tramite `recordAudit`.
+- Al primo avvio viene creato l'utente `admin` con password casuale mostrata **una sola volta** sullo stdout, con `must_change_password = 1`.
+- Path traversal: ogni percorso da input passa da `resolveInside()` (`src/platform/paths.js`).
+
+---
+
+## 7. Comandi
+
+```bash
+npm install            # con allowScripts gia' configurato
+npm start              # avvia il server
+npm run doctor         # verifica ambiente, vault, DB, ffmpeg
+npm run reset-admin    # rigenera la password amministratore
+```
+
+Variabili: `ARGUS_HOST`, `ARGUS_PORT`, `ARGUS_DATA_DIR`, `ARGUS_MEDIA_DIR`, `ARGUS_FFMPEG_PATH`, `ARGUS_LOG_LEVEL`, `ARGUS_TRUST_PROXY`, `ARGUS_SESSION_TTL_HOURS`.
+
+---
+
+## 8. API attuali
+
+| Metodo | Rotta | Permesso |
+|---|---|---|
+| POST | `/api/auth/login` | anonimo, rate limit 8/5min |
+| POST | `/api/auth/logout` | autenticato |
+| GET | `/api/auth/session` | autenticato |
+| POST | `/api/auth/password` | autenticato, rate limit 5/10min |
+| GET | `/api/cameras` | `live.view` |
+| GET | `/api/cameras/:id` | `live.view` |
+| POST | `/api/cameras` | `camera.manage` |
+| PUT | `/api/cameras/:id` | `camera.manage` |
+| DELETE | `/api/cameras/:id` | `camera.manage` |
+| POST | `/api/cameras/:id/probe` | `camera.manage` |
+| POST | `/api/discovery/onvif` | `camera.manage` |
+| GET | `/api/system/health` | anonimo |
+| GET | `/api/system/info` | `live.view` |
+| GET | `/api/system/audit` | `audit.view` |
+| WS | `/api/events` | `live.view` |
+
+Risposta di errore: `{ "error": { "code", "message", "details" } }`.
+
+---
+
+## 9. Stato reale: cosa esiste e cosa no
+
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con login/riepilogo/telecamere.
+
+**Non ancora implementato:** registrazione video, segmentazione, indice archivio, playback, timeline, esportazione, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
+
+Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
+
+---
+
+## 10. Roadmap
+
+| Fase | Contenuto | Stato |
+|---|---|---|
+| F0 | Kernel, sicurezza, HTTP, UI, telecamere | completata |
+| F1 | Pipeline ffmpeg, live view, HLS/fMP4 | da fare |
+| F2 | Registrazione, segmentazione, indice, ritenzione | da fare |
+| F3 | Playback, timeline, export con catena di custodia | da fare |
+| F4 | Pianificazione oraria, motion detection, zone | da fare |
+| F5 | NAS, tiering, allarmi, audio | da fare |
+| F6 | Salute, watchdog, conformita' | da fare |
+
+**Vincolo architetturale per F2**: l'indice dei segmenti non va nella tabella SQLite se supera l'ordine di 10^5 righe. Usa file JSONL append-only per canale e per giorno; in SQLite tieni solo configurazione e rollup giornalieri.
+
+---
+
+## 11. Regole per te, assistente
+
+- Non introdurre dipendenze senza necessita' dimostrata. Ogni pacchetto e' superficie d'attacco.
+- Non aggiungere commenti nel codice.
+- Non superare 500 righe per file.
+- Non indebolire il CSP per comodita'.
+- Non usare `shell: true`.
+- Non inventare funzionalita' assenti: consulta §9.
+- Verifica sempre con `npm run doctor` e un avvio reale prima di dichiarare qualcosa completo.
+- **Aggiorna questo file** quando cambi struttura, API, dipendenze, convenzioni o stato di §9 e §10.
