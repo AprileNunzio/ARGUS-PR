@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { getCameraSecrets } from './camera_repository.js';
+import { authenticatedStreamUrl } from './camera_url.js';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { notFound, AppError, ErrorCode } from '../../kernel/errors.js';
 import { redactCredentials } from '../../security/guards.js';
@@ -7,14 +8,6 @@ import { createLogger } from '../../kernel/logger.js';
 
 const log = createLogger('probe');
 const PROBE_TIMEOUT_MS = 15000;
-
-function buildAuthenticatedUrl(rawUrl, username, password) {
-    if (!username) return rawUrl;
-    const parsed = new URL(rawUrl);
-    parsed.username = encodeURIComponent(username);
-    if (password) parsed.password = encodeURIComponent(password);
-    return parsed.toString();
-}
 
 function runFfprobe(binary, args) {
     return new Promise((resolve) => {
@@ -29,12 +22,16 @@ function runFfprobe(binary, args) {
     });
 }
 
-export async function probeStream(cameraId) {
+export async function probeStream(cameraId, options = {}) {
     const camera = getCameraSecrets(cameraId);
     if (!camera) throw notFound('Camera');
 
+    const source = options.preferSub
+        ? (camera.subStreamUrl ?? camera.mainStreamUrl)
+        : camera.mainStreamUrl;
+
     const tools = getMediaTools();
-    const target = buildAuthenticatedUrl(camera.mainStreamUrl, camera.username, camera.password);
+    const target = authenticatedStreamUrl(source, camera.username, camera.password);
 
     const args = [
         '-hide_banner',
@@ -53,10 +50,10 @@ export async function probeStream(cameraId) {
     if (outcome.error) {
         log.warn('probe failed', {
             camera: cameraId,
-            url: redactCredentials(camera.mainStreamUrl),
+            url: redactCredentials(source),
             detail: outcome.stderr?.slice(0, 300) ?? outcome.error.message
         });
-        throw new AppError(ErrorCode.MEDIA, 'Stream unreachable or rejected the credentials', {
+        throw new AppError(ErrorCode.MEDIA, 'Stream unreachable or credentials rejected', {
             details: { hint: outcome.stderr?.slice(0, 200) ?? null }
         });
     }
@@ -69,9 +66,7 @@ export async function probeStream(cameraId) {
         }
     })();
 
-    if (!parsed) {
-        throw new AppError(ErrorCode.MEDIA, 'Stream responded with unreadable metadata');
-    }
+    if (!parsed) throw new AppError(ErrorCode.MEDIA, 'Stream returned unreadable metadata');
 
     const video = (parsed.streams ?? []).find((stream) => stream.codec_type === 'video') ?? null;
     const audio = (parsed.streams ?? []).find((stream) => stream.codec_type === 'audio') ?? null;

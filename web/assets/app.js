@@ -4,10 +4,12 @@ import { renderSetup } from '/features/setup/setup.js';
 import { renderChangePassword } from '/features/account/change_password.js';
 import { renderDashboard } from '/features/dashboard/dashboard.js';
 import { renderCameras } from '/features/cameras/cameras.js';
+import { renderLive } from '/features/live/live.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 
 const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
+    live: { label: 'Diretta', icon: 'play', render: renderLive },
     cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras }
 };
 
@@ -33,6 +35,7 @@ async function mountRoute() {
     const outlet = document.getElementById('outlet');
     if (!outlet) return;
 
+    outlet.firstElementChild?.dispatchEvent(new CustomEvent("argus:teardown"));
     outlet.replaceChildren();
     const view = await ROUTES[name].render({ session: state.session, api });
     outlet.append(view);

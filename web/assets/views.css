@@ -105,7 +105,6 @@
 .step__hint { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
 
 .tile { position: relative; aspect-ratio: 16 / 9; background: var(--void); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; display: grid; place-items: center; }
-.tile__name { position: absolute; top: 8px; left: 8px; padding: 0.15rem 0.45rem; border-radius: var(--radius-xs); background: rgba(3, 7, 13, .72); color: #f1f5f9; font-size: 0.72rem; font-weight: 600; backdrop-filter: blur(4px); }
 
 @media (min-width: 960px) {
     .wizard { grid-template-columns: 320px minmax(0, 1fr); }
@@ -115,3 +114,58 @@
     .wizard__label { display: block; }
     .wizard__main { margin: 0; padding-top: 2rem; }
 }
+
+.wall { display: grid; gap: var(--gap-3); }
+.wall--auto { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.wall--one { grid-template-columns: minmax(0, 1fr); }
+.wall--two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.wall--three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+
+.tile--live { background: #05070c; box-shadow: var(--shadow-md); }
+.tile__video { width: 100%; height: 100%; object-fit: cover; display: block; background: #05070c; }
+
+.tile__overlay {
+    position: absolute;
+    inset: 0 0 auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-2);
+    padding: 0.5rem 0.6rem;
+    background: linear-gradient(180deg, rgba(3,7,13,.78), transparent);
+    pointer-events: none;
+}
+
+.tile__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #f1f5f9;
+    font-size: 0.78rem;
+    font-weight: 650;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    min-width: 0;
+}
+
+.tile__name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile--offline .tile__video { opacity: .35; filter: grayscale(1); }
+
+.seg__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 650;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--speed) var(--ease);
+}
+
+.seg__btn:hover { color: var(--ink); border-color: var(--accent-line); }
+.seg__btn--on { background: var(--grad-brand); border-color: transparent; color: #fff; box-shadow: var(--glow-accent); }

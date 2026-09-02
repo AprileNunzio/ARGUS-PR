@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.3.0
+Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.2.0
 
 ---
 
@@ -13,7 +13,7 @@ NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce fluss
 
 **Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
 
-Stato reale: **fondamenta complete e funzionanti, pipeline video non ancora implementata.** Vedi §9.
+Stato reale: **fondamenta e diretta video funzionanti; registrazione su disco non ancora implementata.** Vedi §9.
 
 ---
 
@@ -137,6 +137,18 @@ Nota di sicurezza consapevole: per scelta del proprietario **non c'e' codice di 
 
 Per aggiornare la versione basta cambiare `tag` e `series` in `catalog.js`. Non esistono hash da mantenere a mano.
 
+## 5c. Pipeline video (F1)
+
+`src/features/streaming/` gestisce la diretta. Scelte da non ribaltare senza motivo:
+
+- **fMP4 su WebSocket, non HLS.** HLS avrebbe imposto hls.js (dipendenza esterna) o segmenti su disco con latenza di secondi. Con fMP4 frammentato inviato su WebSocket e riprodotto con Media Source Extensions la latenza scende sotto il secondo e non serve alcuna libreria.
+- **Un processo ffmpeg per canale, con conteggio dei visualizzatori.** Parte al primo spettatore, si ferma 12 secondi dopo l'ultimo. Riavvio con backoff esponenziale e rilevamento di stallo a 20 secondi.
+- **Nessuna ricodifica se il codec e' gia' H.264** (`-c:v copy`). Solo H.265 e simili vengono transcodificati, perche' MSE non li accetta in modo affidabile.
+- **Il segmento di inizializzazione viene memorizzato** e inviato a ogni nuovo spettatore: senza, chi entra a flusso avviato vedrebbe frammenti non decodificabili. `mp4_splitter.js` separa init e frammenti leggendo i box MP4.
+- Il protocollo del socket e' binario: primo byte 1 = init, 2 = frammento.
+
+Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun errore.
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -190,7 +202,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato con codice**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**.
 
 **Non ancora implementato:** registrazione video, segmentazione, indice archivio, playback, timeline, esportazione, motion detection, pianificazione oraria, ritenzione, target NAS, uscite di allarme, uscite audio, riconoscimento AI.
 
@@ -203,7 +215,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | Fase | Contenuto | Stato |
 |---|---|---|
 | F0 | Kernel, sicurezza, HTTP, UI, telecamere | completata |
-| F1 | Pipeline ffmpeg, live view, HLS/fMP4 | da fare |
+| F1 | Pipeline ffmpeg, diretta, fMP4 su WebSocket | completata |
 | F2 | Registrazione, segmentazione, indice, ritenzione | da fare |
 | F3 | Playback, timeline, export con catena di custodia | da fare |
 | F4 | Pianificazione oraria, motion detection, zone | da fare |

@@ -13,6 +13,8 @@ import { registerAuthRoutes } from './features/auth/auth_routes.js';
 import { registerCameraRoutes } from './features/cameras/camera_routes.js';
 import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.js';
 import { registerSystemRoutes } from './features/system/system_routes.js';
+import { registerStreamRoutes } from './features/streaming/stream_routes.js';
+import { installStreamHub } from './features/streaming/stream_hub.js';
 import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
@@ -23,6 +25,7 @@ function registerRoutes(router) {
     registerCameraRoutes(router);
     registerDiscoveryRoutes(router);
     registerSystemRoutes(router);
+    registerStreamRoutes(router);
 }
 
 function startSessionJanitor() {
@@ -54,6 +57,7 @@ export async function bootstrap(overrides = {}) {
     await initMediaTools(config);
 
     startSessionJanitor();
+    installStreamHub();
 
     const { server } = createHttpServer(config, registerRoutes);
     attachEventSocket(server);

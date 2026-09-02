@@ -20,7 +20,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.1.0.** Le fondamenta sono complete e funzionanti — autenticazione, database, sicurezza, interfaccia, gestione telecamere, scoperta ONVIF. **La registrazione video non è ancora implementata**: è la prossima fase. Vedi [Roadmap](#roadmap) per il quadro onesto di cosa c'è e cosa manca.
+> **Stato attuale: 0.2.0.** Fondamenta e **diretta video** funzionanti: autenticazione, database, sicurezza, interfaccia, gestione telecamere, scoperta ONVIF, riproduzione dei flussi RTSP nel browser. **La registrazione su disco non è ancora implementata**: è la fase in corso. Vedi [Roadmap](#roadmap) per il quadro onesto di cosa c'è e cosa manca.
 
 ---
 
@@ -45,6 +45,8 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Registro di controllo** | Ogni accesso, modifica e operazione sensibile viene tracciata con utente, orario e indirizzo |
 | **Eventi in tempo reale** | Canale WebSocket autenticato che spinge gli eventi al browser senza interrogazioni continue |
 | **Interfaccia responsive** | Stessa interfaccia su desktop, tablet e telefono, senza app da installare |
+| **Diretta video** | Flussi RTSP riprodotti nel browser con latenza sotto il secondo, senza plugin e senza librerie esterne |
+| **Muro video** | Griglia adattiva 1/4/9 riquadri, riconnessione automatica, stato per canale |
 | **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
 
 ### In sviluppo
@@ -105,7 +107,7 @@ Installa in `/opt/argus-pr`, crea l'utente di servizio, prepara `/var/lib/argus-
 ```bash
 systemctl status argus-pr
 journalctl -u argus-pr -f
-journalctl -u argus-pr | grep -A3 'First run'   # password iniziale
+journalctl -u argus-pr -n 40            # banner iniziale
 ```
 
 <details>
@@ -165,22 +167,23 @@ npm start
 
 ## Primo avvio
 
-Al primo avvio viene creato l'utente `admin` con una password casuale, stampata **una sola volta**:
+Al primo avvio ARGUS-PR entra in **configurazione guidata**. Apri `http://<indirizzo-del-server>:8088` e segui cinque passi:
 
-```
-  First run: an administrator account was created.
-  Username   admin
-  Password   HMSCTKqdDbgfFWB9ZcyN
-  This password is shown once. Change it at first login.
-```
+1. **Benvenuto** — riepilogo dell'hardware rilevato
+2. **Amministratore** — crei tu l'account, con requisiti di password verificati mentre scrivi
+3. **Motore video** — se ffmpeg manca, lo installa il sistema con verifica SHA-256
+4. **Archiviazione** — percorsi e spazio disponibile
+5. **Riepilogo** — conferma finale
 
-Annotala e cambiala subito. Se la perdi:
+Terminata la procedura non è più ripetibile: le rotte di configurazione si chiudono definitivamente.
+
+> **Completa la configurazione subito dopo il primo avvio.** Finché non esiste un amministratore, chiunque raggiunga l'indirizzo può crearlo. Il banner nel terminale te lo ricorda.
+
+Se perdi la password:
 
 ```bash
 npm run reset-admin
 ```
-
-Apri poi `http://<indirizzo-del-server>:8088`.
 
 ---
 
@@ -260,8 +263,8 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | Fase | Contenuto | Stato |
 |---|---|---|
 | **F0** | Kernel, sicurezza, HTTP, interfaccia, telecamere, scoperta ONVIF | ✅ completata |
-| **F1** | Pipeline ffmpeg, diretta video, trasporto HLS/fMP4 | 🔜 in corso |
-| **F2** | Registrazione, segmentazione, indice archivio, ritenzione | ⬜ |
+| **F1** | Pipeline ffmpeg, diretta video, trasporto fMP4 su WebSocket | ✅ completata |
+| **F2** | Registrazione, segmentazione, indice archivio, ritenzione | 🔜 in corso |
 | **F3** | Riproduzione, timeline, esportazione con catena di custodia | ⬜ |
 | **F4** | Pianificazione oraria e per data, rilevamento movimento, zone | ⬜ |
 | **F5** | NAS con tiering, uscite di allarme, uscite audio | ⬜ |

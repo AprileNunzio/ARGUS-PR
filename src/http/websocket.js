@@ -6,60 +6,78 @@ import { resolveSession } from '../security/sessions.js';
 import { can, Permission } from '../security/rbac.js';
 import { parseCookies } from './http_utils.js';
 import { SESSION_COOKIE } from './server.js';
+import { isStreamPath, cameraIdFromPath, authoriseStream, attachStreamViewer } from '../features/streaming/stream_socket.js';
 
 const log = createLogger('websocket');
 const HEARTBEAT_MS = 30000;
 
-function authoriseUpgrade(req) {
+function authorise(req) {
     const cookies = parseCookies(req.headers.cookie);
     const actor = resolveSession(cookies[SESSION_COOKIE]);
     if (!actor) return null;
+    if (actor.mustChangePassword) return null;
     if (!can(actor.role, Permission.LIVE_VIEW)) return null;
     return actor;
 }
 
+function reject(socket, status, message) {
+    socket.write(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\n\r\n`);
+    socket.destroy();
+}
+
 export function attachEventSocket(server) {
-    const wss = new WebSocketServer({ noServer: true });
+    const events = new WebSocketServer({ noServer: true });
+    const streams = new WebSocketServer({ noServer: true });
     const clients = new Set();
 
     server.on('upgrade', (req, socket, head) => {
         const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-        if (url.pathname !== '/api/events') {
-            socket.destroy();
+        const actor = authorise(req);
+
+        if (url.pathname === '/api/events') {
+            if (!actor) {
+                reject(socket, 401, 'Unauthorized');
+                return;
+            }
+
+            events.handleUpgrade(req, socket, head, (ws) => {
+                ws.isAlive = true;
+                clients.add(ws);
+                log.info('event client connected', { user: actor.username, clients: clients.size });
+
+                ws.on('pong', () => { ws.isAlive = true; });
+                ws.on('close', () => clients.delete(ws));
+                ws.on('error', () => clients.delete(ws));
+
+                ws.send(JSON.stringify({
+                    topic: 'session.ready',
+                    at: Date.now(),
+                    payload: { username: actor.username, role: actor.role }
+                }));
+            });
             return;
         }
 
-        const actor = authoriseUpgrade(req);
-        if (!actor) {
-            socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
-            socket.destroy();
+        if (isStreamPath(url.pathname)) {
+            if (!authoriseStream(actor)) {
+                reject(socket, 401, 'Unauthorized');
+                return;
+            }
+
+            streams.handleUpgrade(req, socket, head, (ws) => {
+                attachStreamViewer(ws, actor, cameraIdFromPath(url.pathname));
+            });
             return;
         }
 
-        wss.handleUpgrade(req, socket, head, (ws) => {
-            ws.actor = actor;
-            ws.isAlive = true;
-            clients.add(ws);
-            log.info('client connected', { user: actor.username, clients: clients.size });
-
-            ws.on('pong', () => { ws.isAlive = true; });
-            ws.on('close', () => {
-                clients.delete(ws);
-                log.debug('client disconnected', { user: actor.username, clients: clients.size });
-            });
-            ws.on('error', (error) => {
-                log.warn('client error', { user: actor.username, message: error.message });
-            });
-
-            ws.send(JSON.stringify({ topic: 'session.ready', at: Date.now(), payload: { username: actor.username, role: actor.role } }));
-        });
+        socket.destroy();
     });
 
     const unsubscribe = subscribeAll((event) => {
+        if (clients.size === 0) return;
         const message = JSON.stringify(event);
         for (const client of clients) {
-            if (client.readyState !== client.OPEN) continue;
-            client.send(message);
+            if (client.readyState === client.OPEN) client.send(message);
         }
     });
 
@@ -80,7 +98,8 @@ export function attachEventSocket(server) {
         clearInterval(heartbeat);
         unsubscribe();
         for (const client of clients) client.close(1001, 'server shutting down');
-        wss.close();
+        events.close();
+        streams.close();
     });
 
     return { clientCount: () => clients.size };
