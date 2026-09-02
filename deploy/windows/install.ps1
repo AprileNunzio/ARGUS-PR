@@ -1,5 +1,3 @@
-#Requires -RunAsAdministrator
-
 param(
     [string]$InstallPath = "$env:ProgramFiles\ARGUS-PR",
     [string]$DataPath = "$env:ProgramData\ARGUS-PR",
@@ -8,6 +6,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "[ELEVATE] Riavvio in corso con privilegi di Amministratore..." -ForegroundColor Yellow
+    if ($PSCommandPath) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    } else {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/deploy/windows/install.ps1 | iex`""
+    }
+    exit
+}
 
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Cyan
@@ -49,9 +58,21 @@ New-Item -ItemType Directory -Force -Path (Join-Path $DataPath 'media') | Out-Nu
 New-Item -ItemType Directory -Force -Path (Join-Path $DataPath 'models') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $DataPath 'vision') | Out-Null
 
-$sourceDir = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$sourceDir = if ($PSScriptRoot) { Resolve-Path (Join-Path $PSScriptRoot '..\..') } else { $null }
+if (-not $sourceDir -or -not (Test-Path (Join-Path $sourceDir 'package.json'))) {
+    Write-Host "[DOWNLOAD] Download pacchetto ARGUS-PR v0.9.0 da GitHub..." -ForegroundColor Cyan
+    $zipUrl = "https://github.com/AprileNunzio/ARGUS-PR/archive/refs/tags/v0.9.0.zip"
+    $tempZip = Join-Path $env:TEMP "argus-pr-v0.9.0.zip"
+    $tempExtract = Join-Path $env:TEMP "argus-pr-extract-$([System.Guid]::NewGuid().ToString('N'))"
+    Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+    $extractedFolder = Get-ChildItem -Path $tempExtract -Directory | Select-Object -First 1
+    $sourceDir = $extractedFolder.FullName
+}
+
 Write-Host "[DEPLOY] Copia file di programma in $InstallPath..." -ForegroundColor Cyan
 Copy-Item -Path "$sourceDir\*" -Destination $InstallPath -Recurse -Force -Exclude @('.git', 'node_modules', 'data')
+
 
 Push-Location $InstallPath
 Write-Host "[NPM] Installazione dipendenze Node.js..." -ForegroundColor Cyan

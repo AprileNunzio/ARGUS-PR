@@ -83,25 +83,28 @@ Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza
 ---
 ## Installazione
 
-### Windows — prova rapida
+### Windows — installazione autonoma (consigliata)
 
-Il modo più veloce per vedere il programma funzionare.
+Scarica il pacchetto pronto da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.9.0-Windows-Setup.zip`), estrailo e fai **doppio clic** su:
 
-1. Installa Node.js: `winget install OpenJS.NodeJS.LTS`
-2. Installa ffmpeg: `winget install Gyan.FFmpeg`
-3. Scarica il progetto e fai **doppio clic** su `deploy\windows\quick-start.bat`
-
-Lo script controlla i prerequisiti, installa le dipendenze, avvia il server e apre il browser. La password dell'amministratore compare nella finestra del terminale al primo avvio.
-
-### Windows — installazione autonoma come servizio
-
-Da PowerShell eseguita come Amministratore:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
+```cmd
+install-windows.bat
 ```
 
-Installa e verifica autonomamente Node.js, ffmpeg, Python, dipendenze AI e modelli ONNX con SHA-256, crea il servizio Windows `ArgusPR` e configura il firewall.
+Oppure esegui un solo comando da **PowerShell** (avviato come Amministratore):
+
+```powershell
+irm https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/deploy/windows/install.ps1 | iex
+```
+
+L'installatore configura autonomamente Node.js, FFmpeg, Python, virtualenv con modelli ONNX (SHA-256 verificato), crea il servizio Windows `ArgusPR` e imposta la regola firewall per la porta 8088.
+
+### Windows — avvio rapido portatile (senza servizio)
+
+Se vuoi solo testarlo senza creare il servizio di sistema:
+1. Installa i prerequisiti: `winget install OpenJS.NodeJS.LTS Gyan.FFmpeg`
+2. Fai **doppio clic** su `deploy\windows\quick-start.bat`
+
 
 ### Linux — installazione automatica (consigliata)
 
