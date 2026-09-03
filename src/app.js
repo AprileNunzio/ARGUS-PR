@@ -4,8 +4,11 @@ import { installProcessGuard, onShutdown } from './kernel/process_guard.js';
 import { openDatabase } from './storage/database.js';
 import { initVault } from './security/vault.js';
 import { purgeExpiredSessions } from './security/sessions.js';
+import { purgeLockouts } from './security/lockout.js';
+import { initSecurityEvents } from './security/security_events.js';
+import { tlsStatus } from './platform/tls.js';
 import { initMediaTools } from './platform/media_tools.js';
-import { createHttpServer, listen } from './http/server.js';
+import { createHttpServer, createRedirectServer, listen, listenRedirect } from './http/server.js';
 import { attachEventSocket } from './http/websocket.js';
 import { prepareSetup } from './features/setup/setup_service.js';
 import { registerSetupRoutes } from './features/setup/setup_routes.js';
@@ -21,7 +24,8 @@ import { installRecordingHub } from './features/recording/recording_hub.js';
 import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
-import { installUpdateWatchdog } from './features/updates/update_service.js';
+import { installUpdateWatchdog, onPeriodicCheck } from './features/updates/update_service.js';
+import { runAutomaticUpgrade, Outcome } from './features/updates/auto_update.js';
 import { registerSchedulingRoutes } from './features/scheduling/scheduling_routes.js';
 import { registerMotionRoutes } from './features/motion/motion_routes.js';
 import { installMotionHub } from './features/motion/motion_hub.js';
@@ -61,7 +65,8 @@ function registerRoutes(router, { db, accessRepository, peopleRepository }) {
 function startSessionJanitor() {
     const timer = setInterval(() => {
         const removed = purgeExpiredSessions();
-        if (removed > 0) log.debug('expired sessions purged', { removed });
+        const unlocked = purgeLockouts();
+        if (removed > 0 || unlocked > 0) log.debug('security janitor', { removed, unlocked });
     }, 15 * 60 * 1000);
     timer.unref();
     onShutdown('session-janitor', () => clearInterval(timer));
@@ -81,7 +86,15 @@ export async function bootstrap(overrides = {}) {
     });
 
     initVault(config);
+    initSecurityEvents(config);
     const db = openDatabase(config);
+
+    const upgrade = await runAutomaticUpgrade(config, 'startup');
+
+    if (upgrade.outcome === Outcome.UPGRADING) {
+        log.warn('startup interrupted to apply the upgrade', { target: upgrade.target });
+        return { config, upgrading: true, target: upgrade.target };
+    }
 
     const setup = prepareSetup();
     await initMediaTools(config);
@@ -91,6 +104,7 @@ export async function bootstrap(overrides = {}) {
     installRecordingHub(config);
     installMotionHub(config);
     installUpdateWatchdog(config);
+    onPeriodicCheck((current) => runAutomaticUpgrade(current, 'periodic'));
 
     const accessRepository = createAccessRepository(db);
     const peopleRepository = createPeopleRepository(db);
@@ -107,9 +121,25 @@ export async function bootstrap(overrides = {}) {
 
 
     const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository }));
-    attachEventSocket(server);
+    attachEventSocket(server, config);
     await listen(server, config);
 
-    return { config, setup };
+    let redirecting = false;
+    if (config.httpPort > 0 && config.httpPort !== config.port) {
+        redirecting = await listenRedirect(createRedirectServer(config), config);
+    }
+
+    const tls = tlsStatus();
+
+    log.info('security posture', {
+        autoUpdate: upgrade.outcome,
+        tls: tls.source,
+        certificateTrusted: tls.trusted,
+        remoteAccess: config.publicAccess,
+        trustedNetworks: config.trustedNetworkList.length,
+        redirect: redirecting
+    });
+
+    return { config, setup, tls, redirecting, upgrading: false, upgrade: upgrade.outcome };
 }
 

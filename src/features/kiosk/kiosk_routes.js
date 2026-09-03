@@ -5,6 +5,8 @@ import { listCameras } from '../cameras/camera_repository.js';
 import { recordingStates } from '../recording/recording_hub.js';
 import { readPackageVersion } from '../../platform/version.js';
 import { isSetupRequired } from '../setup/setup_service.js';
+import { Exposure } from '../../security/net_zones.js';
+import { liveMetrics } from '../../platform/metrics.js';
 
 export function registerKioskRoutes(router) {
     router.post('/api/console/session', async (ctx) => {
@@ -20,7 +22,7 @@ export function registerKioskRoutes(router) {
             headers: { 'Set-Cookie': cookie },
             body: { expiresAt: session.expiresAt }
         };
-    }, { anonymous: true, rateLimit: { limit: 30, windowMs: 60000 } });
+    }, { anonymous: true, rateLimit: { limit: 30, windowMs: 60000 }, exposure: Exposure.LOCAL });
 
     router.get('/api/console/status', async (ctx) => {
         assertLocalConsole(ctx.address);
@@ -38,8 +40,9 @@ export function registerKioskRoutes(router) {
                 cameras: cameras.length,
                 enabled: cameras.filter((camera) => camera.enabled).length,
                 recording: recorders.filter((item) => item.state === 'recording').length,
-                uptimeSeconds: Math.round(process.uptime())
+                uptimeSeconds: Math.round(process.uptime()),
+                metrics: liveMetrics()
             }
         };
-    }, { anonymous: true });
+    }, { anonymous: true, exposure: Exposure.LOCAL });
 }

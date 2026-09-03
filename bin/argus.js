@@ -10,30 +10,53 @@ import { isFail } from '../src/kernel/result.js';
 import { generatePassword, hashPassword } from '../src/security/password.js';
 import { getDatabase } from '../src/storage/database.js';
 import { readPackageVersion } from '../src/platform/version.js';
+import { ensureTlsMaterial, desiredAltNames } from '../src/platform/tls.js';
 
 const command = process.argv[2] ?? 'serve';
 
-function printBanner(config, setup) {
+function interfaceUrl(config) {
     const address = config.host === '0.0.0.0' ? 'localhost' : config.host;
+    const suffix = config.port === 443 ? '' : `:${config.port}`;
+    return `https://${address}${suffix}`;
+}
+
+function printBanner(config, setup, tls) {
+    const url = interfaceUrl(config);
+    const provided = tls.source === 'provided';
+
     const lines = [
         '',
         `  ARGUS-PR ${readPackageVersion()}`,
-        `  Interface   http://${address}:${config.port}`,
-        `  Data        ${config.dataDir}`,
-        `  Media       ${config.mediaDir}`,
+        `  Interfaccia   ${url}`,
+        `  Certificato   ${provided ? 'fornito' : 'interno autofirmato'}`,
+        `  Impronta      ${tls.fingerprint}`,
+        `  Accesso WAN   ${config.publicAccess ? 'attivo, sola visione' : 'disabilitato'}`,
+        `  Dati          ${config.dataDir}`,
+        `  Media         ${config.mediaDir}`,
         ''
     ];
+
+    if (!provided) {
+        lines.push(
+            '  Il certificato non e\' emesso da un ente pubblico: il browser',
+            '  avvisa finche\' non installi l\'autorita\' interna sui client.',
+            `  Autorita\'     ${tls.authorityFile ?? '-'}`,
+            '  Confronta sempre l\'impronta prima di accettare.',
+            ''
+        );
+    }
 
     if (setup) {
         lines.push(
             '  ────────────────────────────────────────────────────',
             '  CONFIGURAZIONE INIZIALE RICHIESTA',
             '',
-            `  Apri  http://${address}:${config.port}`,
+            `  Apri  ${url}  dalla rete locale`,
             '  e segui la procedura guidata.',
             '',
             '  Finche\' non e\' completata, chiunque raggiunga questo',
-            '  indirizzo puo\' creare l\'amministratore: completala subito.',
+            '  indirizzo dalla rete locale puo\' creare l\'amministratore:',
+            '  completala subito.',
             '  ────────────────────────────────────────────────────',
             ''
         );
@@ -43,8 +66,40 @@ function printBanner(config, setup) {
 }
 
 async function serve() {
-    const { config, setup } = await bootstrap();
-    printBanner(config, setup);
+    const outcome = await bootstrap();
+
+    if (outcome.upgrading) {
+        process.stdout.write([
+            '',
+            `  ARGUS-PR ${readPackageVersion()}`,
+            `  Aggiornamento a ${outcome.target} in corso.`,
+            '  Il servizio si riavvia da solo; se la nuova versione non parte',
+            '  viene ripristinata automaticamente quella precedente.',
+            ''
+        ].join('\n') + '\n');
+        return;
+    }
+
+    printBanner(outcome.config, outcome.setup, outcome.tls);
+}
+
+async function cert() {
+    const config = loadConfig();
+    setLogLevel('warn');
+
+    const material = ensureTlsMaterial(config);
+
+    process.stdout.write([
+        '',
+        `  Origine       ${material.source === 'provided' ? 'certificato fornito' : 'autorita interna'}`,
+        `  Impronta      ${material.fingerprint}`,
+        `  Scadenza      ${material.notAfter}`,
+        `  Autorita      ${material.authorityFile ?? '-'}`,
+        `  Nomi          ${desiredAltNames(config).join(', ')}`,
+        ''
+    ].join('\n') + '\n');
+
+    process.exit(0);
 }
 
 async function doctor() {
@@ -126,12 +181,13 @@ function usage() {
     argus serve            Start the NVR server
     argus doctor           Verify environment and dependencies
     argus reset-admin [u]  Reset a user password (default: admin)
+    argus cert             Show the TLS certificate fingerprint and authority
 
 `);
     process.exit(0);
 }
 
-const commands = { serve, doctor, 'reset-admin': resetAdmin, help: usage, '--help': usage, '-h': usage };
+const commands = { serve, doctor, cert, 'reset-admin': resetAdmin, help: usage, '--help': usage, '-h': usage };
 const handler = commands[command];
 
 if (!handler) {

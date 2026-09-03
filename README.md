@@ -96,7 +96,7 @@ In alternativa, puoi eseguire da **PowerShell** (avviato come Amministratore):
 irm https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/deploy/windows/install.ps1 | iex
 ```
 
-L'installatore configura autonomamente Node.js, FFmpeg, Python, virtualenv con modelli ONNX (SHA-256 verificato), crea il servizio Windows `ArgusPR` e imposta la regola firewall per la porta 8088. Prima di dichiarare il successo attende che la porta risponda davvero. Registro completo dell'installazione: `%ProgramData%\ARGUS-PR\install.log`.
+L'installatore configura autonomamente Node.js, FFmpeg, Python, virtualenv con modelli ONNX (SHA-256 verificato), crea il servizio Windows `ArgusPR` e imposta la regola firewall per la porta 443. Prima di dichiarare il successo attende che la porta risponda davvero. Registro completo dell'installazione: `%ProgramData%\ARGUS-PR\install.log`.
 
 ### Windows — avvio rapido portatile (senza servizio)
 
@@ -138,7 +138,7 @@ sudo bash autoinstaller.sh
 
 | Opzione | Effetto |
 |---|---|
-| `--port 9443` | Porta HTTP diversa da 8088 |
+| `--port 9443` | Porta HTTPS diversa da 443 |
 | `--dir /srv/argus` | Directory di installazione del codice |
 | `--data /srv/registrazioni` | Directory di dati e registrazioni: usala per puntare a un disco dedicato |
 | `--ref v0.4.0` | Installa un tag o un ramo preciso invece dell'ultima release |
@@ -176,7 +176,7 @@ sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs ffmpeg git rsync
 git clone https://github.com/AprileNunzio/ARGUS-PR.git
-cd ARGUS-PR && sudo ./deploy/linux/install.sh && sudo ufw allow 8088/tcp
+cd ARGUS-PR && sudo ./deploy/linux/install.sh
 ```
 
 Per un disco dedicato alle registrazioni:
@@ -311,7 +311,7 @@ La sessione emessa appartiene a un utente di servizio `__kiosk__` con ruolo **os
 
 **Sotto il cofano**
 
-L'unità systemd `argus-pr-kiosk.service` avvia una sessione X minimale su `tty1` con l'utente dedicato `argus-kiosk` — di sistema, senza privilegi — e lancia Chromium in modalità kiosk su `http://127.0.0.1:8088/wall`. Se Chromium non è disponibile ripiega su Firefox; se non c'è nessun browser installabile l'installazione prosegue lo stesso e lo segnala: il NVR resta raggiungibile via web.
+L'unità systemd `argus-pr-kiosk.service` avvia una sessione X minimale su `tty1` con l'utente dedicato `argus-kiosk` — di sistema, senza privilegi — e lancia Chromium in modalità kiosk su `https://127.0.0.1/wall`, dopo avere installato l'autorità interna nel profilo del browser. Se Chromium non è disponibile ripiega su Firefox; se non c'è nessun browser installabile l'installazione prosegue lo stesso e lo segnala: il NVR resta raggiungibile via web.
 
 ```bash
 systemctl status argus-pr-kiosk          # stato della console
@@ -320,12 +320,12 @@ systemctl disable --now argus-pr-kiosk   # spegni la console, il NVR continua
 systemctl enable --now getty@tty1        # riattiva il terminale su tty1
 ```
 
-Il muro è raggiungibile anche da un altro PC all'indirizzo `http://<indirizzo>:8088/wall`, ma da remoto serve il login normale: la scorciatoia loopback non si applica.
+Il muro è raggiungibile anche da un altro PC all'indirizzo `https://<indirizzo>/wall`, ma da remoto serve il login normale: la scorciatoia loopback non si applica.
 
 ---
 ## Primo avvio
 
-Al primo avvio ARGUS-PR entra in **configurazione guidata**. Apri `http://<indirizzo-del-server>:8088` e segui cinque passi:
+Al primo avvio ARGUS-PR entra in **configurazione guidata**. Apri `https://<indirizzo-del-server>` **dalla rete locale** e segui cinque passi. Il browser mostrerà un avviso sul certificato: è atteso, vedi [Certificato e HTTPS](#certificato-e-https).
 
 1. **Benvenuto** — riepilogo dell'hardware rilevato
 2. **Amministratore** — crei tu l'account, con requisiti di password verificati mentre scrivi
@@ -351,13 +351,23 @@ Variabili d'ambiente, oppure un file `argus.env` nella cartella dati.
 | Variabile | Default | Descrizione |
 |---|---|---|
 | `ARGUS_HOST` | `0.0.0.0` | Indirizzo di ascolto |
-| `ARGUS_PORT` | `8088` | Porta HTTP |
+| `ARGUS_PORT` | `443` | Porta HTTPS |
+| `ARGUS_HTTP_PORT` | `80` | Porta del solo redirect verso HTTPS; `0` la disattiva |
 | `ARGUS_DATA_DIR` | dipende dal sistema | Database, chiavi, configurazione |
 | `ARGUS_MEDIA_DIR` | `<dati>/media` | Registrazioni video |
 | `ARGUS_FFMPEG_PATH` | rilevato dal PATH | Percorso esplicito a ffmpeg |
 | `ARGUS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, `silent` |
 | `ARGUS_TRUST_PROXY` | `false` | Attivalo **solo** dietro un reverse proxy tuo |
 | `ARGUS_SESSION_TTL_HOURS` | `12` | Durata della sessione |
+| `ARGUS_AUTO_UPDATE` | `true` | Aggiorna da solo all'avvio e ogni 6 ore |
+| `ARGUS_AUTO_UPDATE_MIN_INTERVAL` | `60` | Minuti minimi fra due tentativi automatici |
+| `ARGUS_UPDATE_KEYRING` | `/etc/argus-pr/update-key.asc` | Chiave pubblica per verificare la firma delle release |
+| `ARGUS_PUBLIC_ACCESS` | `false` | Consente da internet la **sola visione** delle telecamere |
+| `ARGUS_PUBLIC_HOSTS` | vuoto | Nomi DNS pubblici da includere nel certificato |
+| `ARGUS_TRUSTED_NETWORKS` | vuoto | Reti trattate come locali, es. la subnet WireGuard |
+| `ARGUS_TLS_CERT` | vuoto | Certificato pubblico, se ne possiedi uno |
+| `ARGUS_TLS_KEY` | vuoto | Chiave privata del certificato |
+| `ARGUS_TLS_CA` | vuoto | Catena intermedia del certificato |
 
 Cartella dati predefinita: `%PROGRAMDATA%\ARGUS-PR` su Windows, `/var/lib/argus-pr` su Linux con systemd, `~/.local/share/argus-pr` altrimenti.
 
@@ -366,17 +376,61 @@ Cartella dati predefinita: `%PROGRAMDATA%\ARGUS-PR` su Windows, `/var/lib/argus-
 
 Il progetto adotta un approccio Zero-Trust: ogni input è ostile finché non è validato.
 
+### Certificato e HTTPS
+
+**ARGUS-PR non parla mai in chiaro.** La porta 80 esiste solo per rispondere `308` verso HTTPS: non serve contenuti, non legge cookie, non tocca il database.
+
+Al primo avvio il sistema genera da solo una piccola autorità di certificazione interna e le fa firmare il certificato del server — chiavi ECDSA P-256, nessuna dipendenza esterna, nessun `openssl` da installare. Il certificato copre `localhost`, l'hostname, tutti gli indirizzi IP locali e ogni nome dichiarato in `ARGUS_PUBLIC_HOSTS`, e si rinnova da solo quando mancano 30 giorni alla scadenza o quando cambia un indirizzo.
+
+Il browser mostrerà un avviso, perché nessun ente pubblico garantisce per quella autorità. Hai due strade:
+
+```bash
+argus cert     # stampa impronta SHA-256, scadenza e percorso di ca.crt
+```
+
+1. **Confronta l'impronta** mostrata dal browser con quella del comando, poi accetta l'eccezione.
+2. **Installa `ca.crt`** sui dispositivi da cui accedi: l'avviso sparisce e ottieni il lucchetto verde. Il file si trova in `<cartella dati>/secrets/pki/ca.crt`.
+
+Se possiedi un certificato pubblico vero (Let's Encrypt e simili), indicalo con `ARGUS_TLS_CERT` e `ARGUS_TLS_KEY`: ha la precedenza e la PKI interna non viene nemmeno creata.
+
+### Da internet si guarda, non si tocca
+
+Ogni richiesta viene classificata in tre zone di rete — `local`, `lan`, `wan` — e ogni funzione dichiara da dove è raggiungibile. Il valore predefinito di ogni rotta è **privata**: non raggiungibile da internet finché qualcuno non decide esplicitamente il contrario.
+
+Con `ARGUS_PUBLIC_ACCESS=true` da internet passano soltanto login, sessione, elenco telecamere e diretta video. Restano fuori configurazione, archivio, esportazioni, utenti, aggiornamenti e ogni altra funzione amministrativa. Sopra questo agiscono altri tre sbarramenti indipendenti:
+
+- **Nessun account amministrativo può entrare da internet.** Il rifiuto usa lo stesso messaggio di una password sbagliata, per non rivelare quali utenti esistono.
+- **Le sessioni sono legate alla zona in cui sono nate**: un cookie ottenuto in ufficio non funziona da fuori.
+- **L'elenco telecamere è ridotto**: da internet escono id, nome e stato. URL RTSP, indirizzi, porte, marca e modello restano dentro.
+
+Chi accede da fuori ha inoltre un budget di 240 richieste al minuto e limiti di rotta quattro volte più stretti.
+
+> Esporre il NVR su internet resta una scelta che aumenta il rischio. Se puoi, preferisci una VPN (WireGuard, Tailscale) e metti la sua subnet in `ARGUS_TRUSTED_NETWORKS`. Se devi esporlo, tieni `ARGUS_PUBLIC_ACCESS` acceso solo finché serve davvero.
+
+### ARGUS-SHIELD, il firewall perimetrale
+
+Insieme al NVR viene installato [ARGUS-SHIELD](shield/README.md), un applicativo **autonomo** che governa il firewall della macchina e risponde agli attacchi in tempo reale: ruleset nftables con politica di rifiuto, difesa dalle scansioni, limiti di connessione, e blocco automatico degli indirizzi che accumulano comportamenti sospetti — con punteggio a decadimento esponenziale e durata crescente per i recidivi.
+
+La comunicazione fra i due programmi è **a senso unico**: il NVR scrive gli eventi, lo scudo li legge. Non esiste modo per il NVR di comandare il firewall, così un NVR compromesso non si porta dietro anche la difesa perimetrale.
+
+```bash
+argus-shield status     # backend, ruleset, indirizzi bloccati
+argus-shield unban <ip> # sblocco manuale
+```
+
+La rete locale non viene mai bloccata: chiudersi fuori da un impianto che sta registrando sarebbe peggio dell'attacco.
+
+### Il resto delle difese
+
 - **Password utenti** con `scrypt` e salt individuale; confronto a tempo costante.
 - **Password telecamere** cifrate AES-256-GCM con chiave generata alla prima esecuzione, salvata con permessi `0600` e mai inclusa nel repository.
 - **Sessioni** con token da 256 bit; nel database finisce solo l'hash SHA-256. Cookie `HttpOnly`, `SameSite=Strict`, `Secure` sotto HTTPS.
 - **CSP restrittiva** senza `unsafe-inline`, più `X-Frame-Options: DENY` e `nosniff`.
-- **Rate limiting** su login e cambio password.
+- **Rate limiting** su login e cambio password, più **blocco progressivo per account**: dal terzo tentativo fallito l'attesa raddoppia a ogni errore fino a mezz'ora, al decimo scatta un'ora. Il conteggio è per nome utente, così una botnet distribuita su molti indirizzi non lo aggira.
 - **Verifica dell'origine** su tutte le richieste che modificano dati.
 - **Nessuna shell** nell'invocazione di ffmpeg: argomenti passati come array, `shell: false`. Gli URL RTSP sono input utente e vengono validati contro una lista di schemi ammessi.
 - **Percorsi confinati**: ogni percorso derivato da input è verificato come discendente della radice consentita.
 - **Registro di controllo** immutabile per accessi e operazioni sensibili.
-
-> **Esposizione su Internet.** ARGUS-PR è pensato per la rete locale. Se ti serve accedervi da fuori, usa una VPN (WireGuard, Tailscale) oppure mettilo dietro un reverse proxy con TLS e autenticazione propria. Non aprire la porta direttamente sul router.
 
 Per segnalare una vulnerabilità apri una issue senza dettagli sfruttabili e chiedi un contatto privato.
 
@@ -432,7 +486,7 @@ Il motore di visione AI opera tramite worker Python dedicato alimentato da fluss
 ## Risoluzione dei problemi
 
 <details>
-<summary><b>Windows: "Connessione rifiutata" su localhost:8088</b></summary>
+<summary><b>Windows: "Connessione rifiutata" su localhost</b></summary>
 
 Significa che il demone non e' in ascolto: l'installazione si e' fermata prima di creare il servizio. Verifica in quest'ordine:
 

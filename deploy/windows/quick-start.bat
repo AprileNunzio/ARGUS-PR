@@ -50,7 +50,7 @@ if not exist "node_modules\better-sqlite3\build" (
 
 set ARGUS_DATA_DIR=%ProgramData%\ARGUS-PR
 set ARGUS_MEDIA_DIR=%ProgramData%\ARGUS-PR\media
-if not defined ARGUS_PORT set ARGUS_PORT=8088
+if not defined ARGUS_PORT set ARGUS_PORT=443
 
 if exist "%ProgramData%\ARGUS-PR\vision\venv\Scripts" (
     set "PATH=%ProgramData%\ARGUS-PR\vision\venv\Scripts;%PATH%"

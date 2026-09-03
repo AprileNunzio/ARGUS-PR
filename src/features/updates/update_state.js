@@ -14,6 +14,7 @@ export const Phase = Object.freeze({
 
 const FILENAME = 'update-state.json';
 const PHASES = new Set(Object.values(Phase));
+const MAX_QUARANTINE = 10;
 
 export function stateFile(config) {
     return path.join(config.dataDir, FILENAME);
@@ -28,7 +29,10 @@ function blank() {
         attempts: 0,
         requestedAt: null,
         appliedAt: null,
-        message: null
+        message: null,
+        automatic: false,
+        lastAutoAttemptAt: null,
+        quarantine: []
     };
 }
 
@@ -44,6 +48,12 @@ function sanitise(raw) {
     if (typeof raw.requestedAt === 'string') state.requestedAt = raw.requestedAt.slice(0, 40);
     if (typeof raw.appliedAt === 'string') state.appliedAt = raw.appliedAt.slice(0, 40);
     if (typeof raw.message === 'string') state.message = raw.message.slice(0, 500);
+    if (raw.automatic === true) state.automatic = true;
+    if (typeof raw.lastAutoAttemptAt === 'string') state.lastAutoAttemptAt = raw.lastAutoAttemptAt.slice(0, 40);
+
+    if (Array.isArray(raw.quarantine)) {
+        state.quarantine = [...new Set(raw.quarantine.filter(isReleaseTag))].slice(-MAX_QUARANTINE);
+    }
 
     return state;
 }
@@ -79,4 +89,22 @@ export function writeState(config, patch) {
 
 export function clearState(config) {
     return writeState(config, blank());
+}
+
+export function quarantine(config, ref) {
+    const state = readState(config);
+    if (!isReleaseTag(ref)) return state;
+
+    return writeState(config, {
+        quarantine: [...state.quarantine.filter((entry) => entry !== ref), ref].slice(-MAX_QUARANTINE)
+    });
+}
+
+export function isQuarantined(state, ref) {
+    return state.quarantine.includes(ref);
+}
+
+export function pardon(config, ref) {
+    const state = readState(config);
+    return writeState(config, { quarantine: state.quarantine.filter((entry) => entry !== ref) });
 }

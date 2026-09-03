@@ -9,7 +9,7 @@ import { onShutdown } from '../../kernel/process_guard.js';
 import { AppError, ErrorCode } from '../../kernel/errors.js';
 import { fetchLatestRelease, repository } from './release_client.js';
 import { isNewer, isReleaseTag } from './semver.js';
-import { Phase, readState, writeState } from './update_state.js';
+import { Phase, readState, writeState, pardon } from './update_state.js';
 
 const run = promisify(execFile);
 const log = createLogger('updates');
@@ -75,6 +75,9 @@ export function updateStatus(config) {
         requestedAt: state.requestedAt,
         appliedAt: state.appliedAt,
         message: state.message,
+        automatic: state.automatic,
+        quarantine: state.quarantine,
+        lastAutoAttemptAt: state.lastAutoAttemptAt,
         supported: isGitInstall(),
         repository: repository.url,
         lastCheck: cachedCheck?.result ?? null
@@ -134,14 +137,36 @@ function markHealthy(config) {
     const state = readState(config);
     if (state.phase !== Phase.PENDING) return;
 
+    if (state.targetRef) pardon(config, state.targetRef);
+
     writeState(config, {
         phase: Phase.HEALTHY,
         attempts: 0,
+        automatic: false,
         appliedAt: new Date().toISOString(),
         message: `Aggiornato a ${readPackageVersion()}`
     });
 
     log.info('update confirmed healthy', { version: readPackageVersion() });
+}
+
+let periodicHook = null;
+
+export function onPeriodicCheck(handler) {
+    periodicHook = handler;
+}
+
+async function periodicCheck(config) {
+    const result = await checkForUpdate({ force: true }).catch((error) => {
+        log.debug('update check failed', { message: error.message });
+        return null;
+    });
+
+    if (!result || !result.updateAvailable) return;
+
+    log.warn('update available', { latest: result.latest.tag });
+
+    if (config.autoUpdate && periodicHook) await periodicHook(config);
 }
 
 export function installUpdateWatchdog(config) {
@@ -159,11 +184,7 @@ export function installUpdateWatchdog(config) {
     healthTimer.unref();
 
     const checkTimer = setInterval(() => {
-        checkForUpdate({ force: true })
-            .then((result) => {
-                if (result.updateAvailable) log.warn('update available', { latest: result.latest.tag });
-            })
-            .catch((error) => log.debug('update check failed', { message: error.message }));
+        void periodicCheck(config);
     }, CHECK_INTERVAL_MS);
     checkTimer.unref();
 

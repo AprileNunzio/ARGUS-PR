@@ -10,7 +10,7 @@ export function securityHeaders(isSecure) {
             "style-src 'self'",
             "img-src 'self' data: blob:",
             "media-src 'self' blob:",
-            "connect-src 'self' ws: wss:",
+            "connect-src 'self' wss:",
             "font-src 'self'",
             "object-src 'none'",
             "base-uri 'none'",
@@ -22,10 +22,13 @@ export function securityHeaders(isSecure) {
         'Referrer-Policy': 'no-referrer',
         'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
         'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Resource-Policy': 'same-origin'
+        'Cross-Origin-Resource-Policy': 'same-origin',
+        'X-Permitted-Cross-Domain-Policies': 'none',
+        'X-DNS-Prefetch-Control': 'off',
+        'Origin-Agent-Cluster': '?1'
     };
     if (isSecure) {
-        headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+        headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains';
     }
     return headers;
 }
@@ -100,6 +103,9 @@ export function sendJson(res, status, payload, extraHeaders = {}) {
 }
 
 export function sameOriginOk(req) {
+    const fetchSite = req.headers['sec-fetch-site'];
+    if (typeof fetchSite === 'string' && fetchSite !== 'same-origin' && fetchSite !== 'none') return false;
+
     const origin = req.headers.origin;
     if (!origin) return true;
 

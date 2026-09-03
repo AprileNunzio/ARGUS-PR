@@ -1,7 +1,7 @@
 param(
     [string]$InstallPath = "$env:ProgramFiles\ARGUS-PR",
     [string]$DataPath = "$env:ProgramData\ARGUS-PR",
-    [int]$Port = 8088,
+    [int]$Port = 443,
     [string]$ServiceName = "ArgusPR",
     [switch]$SkipService
 )
@@ -261,7 +261,7 @@ if ($SkipService) {
 
     if ($nssmPath) { Install-NssmService } else { Install-ScheduledTask }
 
-    Write-Host "[SERVICE] Attesa risposta su http://localhost:$Port ..." -ForegroundColor Cyan
+    Write-Host "[SERVICE] Attesa risposta su https://localhost:$Port ..." -ForegroundColor Cyan
     if (Wait-ForPort $Port 60) {
         Write-Host "[SERVICE] Servizio attivo e in ascolto sulla porta $Port." -ForegroundColor Green
     } else {
@@ -272,7 +272,7 @@ if ($SkipService) {
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "  ARGUS-PR installato ed operativo con successo!" -ForegroundColor Green
-Write-Host "  Indirizzo Web: http://localhost:$Port" -ForegroundColor Green
+Write-Host "  Indirizzo Web: https://localhost:$Port" -ForegroundColor Green
 Write-Host "  Dati:          $DataPath" -ForegroundColor Green
 Write-Host "  Log servizio:  $DataPath\service.log" -ForegroundColor Green
 Write-Host "  Log installer: $logFile" -ForegroundColor Green

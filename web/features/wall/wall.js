@@ -2,6 +2,7 @@ import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js'
 import { icon } from '/assets/icons.js';
 
 const STATUS_INTERVAL_MS = 10000;
+const METRICS_INTERVAL_MS = 3000;
 
 function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
@@ -38,6 +39,9 @@ function createStatusBar() {
     const endpoint = el('span', { className: 'statusbar__ip', textContent: 'localhost' });
     const channels = el('span', { className: 'statusbar__value', textContent: '0' });
     const recording = el('span', { className: 'statusbar__value', textContent: '0' });
+    const cpu = el('span', { className: 'statusbar__value', textContent: '--' });
+    const ram = el('span', { className: 'statusbar__value', textContent: '--' });
+    const gpu = el('span', { className: 'statusbar__value', textContent: '--' });
     const version = el('span', { className: 'statusbar__value', textContent: '--' });
     const clock = el('span', { className: 'statusbar__clock', textContent: '--:--:--' });
 
@@ -55,6 +59,9 @@ function createStatusBar() {
         item('Canali', channels),
         item('REC', recording),
         el('span', { className: 'statusbar__spacer' }),
+        item('CPU', cpu),
+        item('RAM', ram),
+        item('GPU', gpu),
         item('Versione', version),
         clock
     ]);
@@ -63,18 +70,29 @@ function createStatusBar() {
     tick();
     setInterval(tick, 1000);
 
-    let webUrl = 'http://localhost';
+    let webUrl = 'https://localhost';
+
+    const paintMetrics = (metrics) => {
+        if (!metrics) return;
+        cpu.textContent = metrics.cpuPercent === null ? '--' : `${metrics.cpuPercent}%`;
+        ram.textContent = `${metrics.memory.usedPercent}%`;
+        gpu.textContent = metrics.gpu.label;
+    };
 
     return {
         element,
         get webUrl() { return webUrl; },
+        metrics: paintMetrics,
         update(status) {
             const primary = status.addresses[0];
-            webUrl = `http://${primary ? primary.address : 'localhost'}:${status.port}`;
+            const host = primary ? primary.address : 'localhost';
+            const suffix = status.port === 443 ? '' : `:${status.port}`;
+            webUrl = `https://${host}${suffix}`;
             endpoint.textContent = webUrl;
             channels.textContent = String(status.enabled);
             recording.textContent = String(status.recording);
             version.textContent = status.version;
+            paintMetrics(status.metrics);
         }
     };
 }
@@ -181,8 +199,13 @@ async function boot() {
         grid.message(`Console non disponibile: ${error.message}`);
     });
 
+    const safeMetrics = () => request('/api/console/status')
+        .then((status) => bar.metrics(status.metrics))
+        .catch(() => {});
+
     await safeRefresh();
     setInterval(safeRefresh, STATUS_INTERVAL_MS);
+    setInterval(safeMetrics, METRICS_INTERVAL_MS);
 }
 
 boot().catch((error) => {

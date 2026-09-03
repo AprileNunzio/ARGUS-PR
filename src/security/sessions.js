@@ -17,8 +17,8 @@ export function issueSession(user, ttlHours, context = {}) {
     const expiresAt = new Date(Date.now() + ttlHours * 3600 * 1000).toISOString();
 
     getDatabase()
-        .prepare(`INSERT INTO sessions (id, user_id, token_hash, issued_at, expires_at, remote_addr, user_agent)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .prepare(`INSERT INTO sessions (id, user_id, token_hash, issued_at, expires_at, remote_addr, user_agent, zone)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(
             crypto.randomUUID(),
             user.id,
@@ -26,7 +26,8 @@ export function issueSession(user, ttlHours, context = {}) {
             nowIso(),
             expiresAt,
             context.remoteAddr ?? null,
-            context.userAgent ?? null
+            context.userAgent ?? null,
+            context.zone ?? null
         );
 
     return { token, expiresAt };
@@ -36,7 +37,7 @@ export function resolveSession(token) {
     if (typeof token !== 'string' || token.length < 20) return null;
 
     const row = getDatabase()
-        .prepare(`SELECT s.id AS session_id, s.expires_at, s.revoked_at,
+        .prepare(`SELECT s.id AS session_id, s.expires_at, s.revoked_at, s.zone,
                          u.id, u.username, u.role, u.is_active, u.must_change_password
                   FROM sessions s
                   JOIN users u ON u.id = s.user_id
@@ -53,6 +54,7 @@ export function resolveSession(token) {
         id: row.id,
         username: row.username,
         role: row.role,
+        issuedZone: row.zone ?? null,
         mustChangePassword: row.must_change_password === 1,
         permissions: permissionsFor(row.role)
     };

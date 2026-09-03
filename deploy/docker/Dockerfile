@@ -21,15 +21,15 @@ USER argus
 
 ENV NODE_ENV=production \
     ARGUS_HOST=0.0.0.0 \
-    ARGUS_PORT=8088 \
+    ARGUS_PORT=8443 \
     ARGUS_DATA_DIR=/var/lib/argus-pr \
     ARGUS_MEDIA_DIR=/var/lib/argus-pr/media
 
-EXPOSE 8088
+EXPOSE 8443
 
 VOLUME ["/var/lib/argus-pr"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD node -e "fetch('http://127.0.0.1:8088/api/system/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    CMD NODE_TLS_REJECT_UNAUTHORIZED=0 node -e "fetch('https://127.0.0.1:8443/api/system/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "bin/argus.js", "serve"]

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defaultDataDir, defaultMediaDir, ensureDir, ensureSecureDir } from '../platform/paths.js';
 import { validationError } from './errors.js';
+import { parseNetworks } from '../security/net_zones.js';
 
 function readEnvFile(dataDir) {
     const target = path.join(dataDir, 'argus.env');
@@ -39,6 +40,20 @@ function toBool(value) {
     return value === 'true' || value === '1' || value === 'yes';
 }
 
+function toOptionalPort(value) {
+    if (value === undefined || value === null || String(value).trim().length === 0) return 0;
+    const port = Number.parseInt(value, 10);
+    if (port === 0) return 0;
+    return toPort(value);
+}
+
+function toList(value) {
+    return String(value ?? '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+}
+
 function toPositiveInt(value, name) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -59,9 +74,19 @@ export function loadConfig(overrides = {}) {
     ensureDir(mediaDir);
     ensureSecureDir(path.join(dataDir, 'secrets'));
 
+    const trustedNetworks = toList(pick(sources, 'ARGUS_TRUSTED_NETWORKS', ''));
+
     return Object.freeze({
         host: pick(sources, 'ARGUS_HOST', '0.0.0.0'),
-        port: toPort(pick(sources, 'ARGUS_PORT', '8088')),
+        port: toPort(pick(sources, 'ARGUS_PORT', '443')),
+        httpPort: toOptionalPort(pick(sources, 'ARGUS_HTTP_PORT', '80')),
+        tlsCertFile: pick(sources, 'ARGUS_TLS_CERT', ''),
+        tlsKeyFile: pick(sources, 'ARGUS_TLS_KEY', ''),
+        tlsCaFile: pick(sources, 'ARGUS_TLS_CA', ''),
+        publicAccess: toBool(pick(sources, 'ARGUS_PUBLIC_ACCESS', 'false')),
+        publicHostnames: Object.freeze(toList(pick(sources, 'ARGUS_PUBLIC_HOSTS', ''))),
+        trustedNetworkList: Object.freeze(trustedNetworks),
+        trustedNetworks: Object.freeze(parseNetworks(trustedNetworks)),
         dataDir,
         mediaDir,
         secretsDir: path.join(dataDir, 'secrets'),
@@ -69,6 +94,8 @@ export function loadConfig(overrides = {}) {
         logLevel: pick(sources, 'ARGUS_LOG_LEVEL', 'info'),
         trustProxy: toBool(pick(sources, 'ARGUS_TRUST_PROXY', 'false')),
         sessionTtlHours: toPositiveInt(pick(sources, 'ARGUS_SESSION_TTL_HOURS', '12'), 'session TTL'),
+        autoUpdate: toBool(pick(sources, 'ARGUS_AUTO_UPDATE', 'true')),
+        autoUpdateMinIntervalMinutes: toPositiveInt(pick(sources, 'ARGUS_AUTO_UPDATE_MIN_INTERVAL', '60'), 'auto update interval'),
         ffmpegPath: pick(sources, 'ARGUS_FFMPEG_PATH', ''),
         ffprobePath: pick(sources, 'ARGUS_FFPROBE_PATH', '')
     });

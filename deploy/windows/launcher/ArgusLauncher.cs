@@ -12,7 +12,7 @@ namespace ArgusPr
     {
         private const string ServiceName = "ArgusPR";
         private const string ProductName = "ARGUS-PR";
-        private const int DefaultPort = 8088;
+        private const int DefaultPort = 443;
 
         [STAThread]
         private static int Main(string[] args)
@@ -31,7 +31,7 @@ namespace ArgusPr
 
             if (!WaitForPort(port, 90))
             {
-                Fail("Il servizio non risponde su http://localhost:" + port + " entro il tempo previsto." + Environment.NewLine +
+                Fail("Il servizio non risponde su https://localhost:" + port + " entro il tempo previsto." + Environment.NewLine +
                      "Registro: " + Path.Combine(dataDir, "service.log"));
                 return 2;
             }
@@ -206,7 +206,7 @@ namespace ArgusPr
 
         private static void OpenConsole(int port)
         {
-            string url = "http://localhost:" + port + "/";
+            string url = "https://localhost:" + port + "/";
             foreach (string browser in BrowserCandidates())
             {
                 if (!File.Exists(browser)) continue;

@@ -5,6 +5,7 @@ INSTALL_DIR="${ARGUS_INSTALL_DIR:-/opt/argus-pr}"
 DATA_DIR="${ARGUS_DATA_DIR:-/var/lib/argus-pr}"
 SERVICE_USER="${ARGUS_SERVICE_USER:-argus}"
 STATE_FILE="${DATA_DIR}/update-state.json"
+KEYRING="${ARGUS_UPDATE_KEYRING:-/etc/argus-pr/update-key.asc}"
 MAX_ATTEMPTS=2
 OFFICIAL_REMOTE="https://github.com/AprileNunzio/ARGUS-PR.git"
 NODE_BIN="${ARGUS_NODE_BIN:-$(command -v node || echo /usr/local/bin/node)}"
@@ -43,6 +44,41 @@ install_dependencies() {
     ( cd "$INSTALL_DIR" && "$NPM_BIN" install --omit=dev --no-audit --no-fund --loglevel=error ) >/dev/null 2>&1
 }
 
+verify_signature() {
+    local tag="$1" home status
+
+    if [[ ! -r "$KEYRING" ]]; then
+        log "ATTENZIONE: nessuna chiave di firma in ${KEYRING}, aggiornamento applicato senza verifica"
+        return 0
+    fi
+
+    if ! command -v gpg >/dev/null 2>&1; then
+        log "gpg assente: impossibile verificare la firma di ${tag}"
+        return 1
+    fi
+
+    home="$(mktemp -d)" || return 1
+    chmod 700 "$home"
+
+    if ! GNUPGHOME="$home" gpg --batch --quiet --import "$KEYRING" >/dev/null 2>&1; then
+        log "chiave di firma non importabile"
+        rm -rf "$home"
+        return 1
+    fi
+
+    GNUPGHOME="$home" git -C "$INSTALL_DIR" verify-tag "$tag" >/dev/null 2>&1
+    status=$?
+    rm -rf "$home"
+
+    if (( status != 0 )); then
+        log "firma di ${tag} non valida o assente"
+        return 1
+    fi
+
+    log "firma di ${tag} verificata"
+    return 0
+}
+
 PHASE="$(state_field phase)"
 TARGET="$(state_field targetRef)"
 PREVIOUS="$(state_field previousRef)"
@@ -70,6 +106,11 @@ case "$PHASE" in
         if ! git -C "$INSTALL_DIR" rev-parse --verify --quiet "refs/tags/${TARGET}^{commit}" >/dev/null; then
             log "tag ${TARGET} inesistente sul remoto"
             write_state '{"phase":"failed","message":"Tag non trovato sul repository ufficiale"}'
+            exit 0
+        fi
+
+        if ! verify_signature "$TARGET"; then
+            write_state '{"phase":"failed","message":"Firma della release non verificata"}'
             exit 0
         fi
 

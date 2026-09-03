@@ -1,5 +1,5 @@
 param(
-    [int]$Port = 8088,
+    [int]$Port = 443,
     [string]$ServiceName = "ArgusPR"
 )
 

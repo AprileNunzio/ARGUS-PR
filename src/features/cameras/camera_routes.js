@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { listCameras, getCamera, insertCamera, updateCamera, deleteCamera } from './camera_repository.js';
 import { probeStream } from './stream_probe.js';
 import { Permission } from '../../security/rbac.js';
+import { Exposure, Zone } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
 import { notFound } from '../../kernel/errors.js';
@@ -15,6 +16,15 @@ import {
     requireStreamUrl,
     optionalStreamUrl
 } from '../../security/guards.js';
+
+function publicView(camera) {
+    return {
+        id: camera.id,
+        name: camera.name,
+        enabled: camera.enabled,
+        createdAt: camera.createdAt ?? null
+    };
+}
 
 const SOURCE_KINDS = ['rtsp', 'http'];
 const TRANSPORTS = ['tcp', 'udp'];
@@ -46,9 +56,9 @@ function readCameraInput(body, options = {}) {
 }
 
 export function registerCameraRoutes(router) {
-    router.get('/api/cameras', async () => ({ body: { cameras: listCameras() } }), {
-        permission: Permission.LIVE_VIEW
-    });
+    router.get('/api/cameras', async (ctx) => ({
+        body: { cameras: listCameras().map((camera) => (ctx.zone === Zone.WAN ? publicView(camera) : camera)) }
+    }), { permission: Permission.LIVE_VIEW, exposure: Exposure.PUBLIC });
 
     router.get('/api/cameras/:id', async (ctx) => {
         const camera = getCamera(requireId(ctx.params.id, 'Camera id'));

@@ -3,7 +3,10 @@ import { getDatabase } from '../../storage/database.js';
 import { hashPassword, verifyPassword, assessPassword, generatePassword } from '../../security/password.js';
 import { issueSession, revokeSession, revokeAllForUser } from '../../security/sessions.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
-import { Role, roleExists } from '../../security/rbac.js';
+import { Role, roleExists, can, Permission } from '../../security/rbac.js';
+import { assertNotLocked, recordFailure, recordSuccess } from '../../security/lockout.js';
+import { emitSecurityEvent, SecurityEvent } from '../../security/security_events.js';
+import { Zone } from '../../security/net_zones.js';
 import { validationError, unauthenticated, notFound } from '../../kernel/errors.js';
 import { createLogger } from '../../kernel/logger.js';
 
@@ -48,22 +51,52 @@ export async function ensureBootstrapAdmin() {
     return { username: 'admin', password };
 }
 
-export async function login({ username, password, remoteAddr, userAgent, ttlHours }) {
+export async function login({ username, password, remoteAddr, userAgent, ttlHours, zone = Zone.LAN }) {
+    assertNotLocked(username);
+
     const user = findByUsername(username);
     const stored = user?.password_hash ?? '$scrypt$0$0$0$0$0';
     const matches = await verifyPassword(password, stored);
 
     if (!user || !matches || user.is_active !== 1) {
+        const outcome = recordFailure(username);
+
         recordAudit({
             action: AuditAction.LOGIN_FAILURE,
             actorName: username,
             remoteAddr,
             outcome: 'failure'
         });
+
+        emitSecurityEvent(outcome.locked ? SecurityEvent.AUTH_LOCKED : SecurityEvent.AUTH_FAILURE, {
+            address: remoteAddr,
+            zone,
+            username,
+            detail: `failures=${outcome.failures}`
+        });
+
         throw unauthenticated('Invalid username or password');
     }
 
-    const session = issueSession(user, ttlHours, { remoteAddr, userAgent });
+    if (zone === Zone.WAN && can(user.role, Permission.SYSTEM_MANAGE)) {
+        recordFailure(username);
+
+        recordAudit({
+            action: AuditAction.LOGIN_FAILURE,
+            actorId: user.id,
+            actorName: user.username,
+            remoteAddr,
+            outcome: 'failure'
+        });
+
+        emitSecurityEvent(SecurityEvent.ADMIN_FROM_WAN, { address: remoteAddr, zone, username: user.username });
+
+        throw unauthenticated('Invalid username or password');
+    }
+
+    recordSuccess(username);
+
+    const session = issueSession(user, ttlHours, { remoteAddr, userAgent, zone });
 
     getDatabase().prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(nowIso(), user.id);
 
@@ -74,6 +107,8 @@ export async function login({ username, password, remoteAddr, userAgent, ttlHour
         remoteAddr,
         outcome: 'success'
     });
+
+    emitSecurityEvent(SecurityEvent.AUTH_SUCCESS, { address: remoteAddr, zone, username: user.username });
 
     return {
         session,

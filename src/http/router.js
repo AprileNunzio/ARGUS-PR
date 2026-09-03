@@ -1,4 +1,5 @@
 import { notFound } from '../kernel/errors.js';
+import { Exposure } from '../security/net_zones.js';
 
 function compile(pattern) {
     const segments = pattern.split('/').filter((segment) => segment.length > 0);
@@ -20,6 +21,7 @@ export function createRouter() {
             permission: options.permission ?? null,
             anonymous: options.anonymous === true,
             rateLimit: options.rateLimit ?? null,
+            exposure: options.exposure ?? Exposure.PRIVATE,
             allowWhilePasswordPending: options.allowWhilePasswordPending === true
         });
     }

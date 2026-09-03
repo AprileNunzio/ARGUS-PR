@@ -17,7 +17,8 @@ TimeoutStopSec=20
 
 Environment=NODE_ENV=production
 Environment=ARGUS_HOST=0.0.0.0
-Environment=ARGUS_PORT=8088
+Environment=ARGUS_PORT=443
+Environment=ARGUS_HTTP_PORT=80
 Environment=ARGUS_DATA_DIR=/var/lib/argus-pr
 Environment=ARGUS_MEDIA_DIR=/var/lib/argus-pr/media
 Environment=ARGUS_LOG_LEVEL=info
@@ -34,8 +35,8 @@ RestrictRealtime=true
 LockPersonality=true
 MemoryDenyWriteExecute=false
 ReadWritePaths=/var/lib/argus-pr
-CapabilityBoundingSet=
-AmbientCapabilities=
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 StandardOutput=journal
 StandardError=journal

@@ -4,7 +4,7 @@ set -euo pipefail
 INSTALL_DIR="${INSTALL_DIR:-/opt/argus-pr}"
 DATA_DIR="${DATA_DIR:-/var/lib/argus-pr}"
 SERVICE_USER="${SERVICE_USER:-argus}"
-PORT="${PORT:-8088}"
+PORT="${PORT:-443}"
 
 if [[ $EUID -ne 0 ]]; then
     echo "Esegui come root: sudo $0" >&2
@@ -61,7 +61,7 @@ sleep 2
 
 echo
 echo "ARGUS-PR installato."
-echo "  Interfaccia: http://$(hostname -I | awk '{print $1}'):${PORT}"
+echo "  Interfaccia: https://$(hostname -I | awk '{print $1}'):${PORT}"
 echo "  Stato:       systemctl status argus-pr"
 echo "  Log:         journalctl -u argus-pr -f"
 echo

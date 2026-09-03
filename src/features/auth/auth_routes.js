@@ -1,6 +1,7 @@
 import { login, logout, changePassword } from './auth_service.js';
 import { requireString } from '../../security/guards.js';
 import { buildCookie } from '../../http/http_utils.js';
+import { Exposure, Zone } from '../../security/net_zones.js';
 import { SESSION_COOKIE } from '../../http/server.js';
 
 const LOGIN_RATE_LIMIT = Object.freeze({ limit: 8, windowMs: 5 * 60 * 1000 });
@@ -15,7 +16,8 @@ export function registerAuthRoutes(router) {
             password,
             remoteAddr: ctx.address,
             userAgent: ctx.req.headers['user-agent'] ?? null,
-            ttlHours: ctx.config.sessionTtlHours
+            ttlHours: ctx.config.sessionTtlHours,
+            zone: ctx.zone
         });
 
         const cookie = buildCookie(SESSION_COOKIE, result.session.token, {
@@ -28,7 +30,7 @@ export function registerAuthRoutes(router) {
             headers: { 'Set-Cookie': cookie },
             body: { profile: result.profile, expiresAt: result.session.expiresAt }
         };
-    }, { anonymous: true, rateLimit: LOGIN_RATE_LIMIT });
+    }, { anonymous: true, rateLimit: LOGIN_RATE_LIMIT, exposure: Exposure.PUBLIC });
 
     router.post('/api/auth/logout', async (ctx) => {
         logout(ctx.sessionToken, ctx.actor, ctx.address);
@@ -37,16 +39,18 @@ export function registerAuthRoutes(router) {
             maxAge: 0
         });
         return { status: 200, headers: { 'Set-Cookie': cookie }, body: { ok: true } };
-    }, { allowWhilePasswordPending: true });
+    }, { allowWhilePasswordPending: true, exposure: Exposure.PUBLIC });
 
     router.get('/api/auth/session', async (ctx) => ({
         body: {
             username: ctx.actor.username,
             role: ctx.actor.role,
             permissions: ctx.actor.permissions,
-            mustChangePassword: ctx.actor.mustChangePassword
+            mustChangePassword: ctx.actor.mustChangePassword,
+            zone: ctx.zone,
+            managementAllowed: ctx.zone !== Zone.WAN
         }
-    }), { allowWhilePasswordPending: true });
+    }), { allowWhilePasswordPending: true, exposure: Exposure.PUBLIC });
 
     router.post('/api/auth/password', async (ctx) => {
         const currentPassword = requireString(ctx.body.currentPassword, 'Current password', { max: 200 });

@@ -7,9 +7,18 @@ DATA_DIR="${ARGUS_DATA_DIR:-/var/lib/argus-pr}"
 ENV_FILE="${ARGUS_ENV_FILE:-/etc/argus-pr/argus.env}"
 SERVICE_USER="${ARGUS_SERVICE_USER:-argus}"
 KIOSK_USER="${ARGUS_KIOSK_USER:-argus-kiosk}"
-KIOSK_HOME="/var/lib/argus-kiosk"
+KIOSK_HOME="/home/argus-kiosk"
 HELPER_DIR="/usr/local/lib/argus-pr"
-PORT="${ARGUS_PORT:-8088}"
+SHIELD_DIR="/usr/local/lib/argus-shield"
+SHIELD_STATE_DIR="/var/lib/argus-shield"
+SHIELD_CONFIG="/etc/argus-pr/shield.json"
+PORT="${ARGUS_PORT:-443}"
+HTTP_PORT="${ARGUS_HTTP_PORT:-80}"
+PUBLIC_ACCESS="${ARGUS_PUBLIC_ACCESS:-false}"
+PUBLIC_HOSTS="${ARGUS_PUBLIC_HOSTS:-}"
+TRUSTED_NETS="${ARGUS_TRUSTED_NETWORKS:-}"
+WIREGUARD_PORT="${ARGUS_WIREGUARD_PORT:-0}"
+SHIELD_MODE="${ARGUS_SHIELD:-auto}"
 REF="${ARGUS_REF:-}"
 KIOSK_MODE="${ARGUS_KIOSK:-auto}"
 NODE_SERIES="${ARGUS_NODE_SERIES:-v22.x}"
@@ -31,12 +40,18 @@ ARGUS-PR autoinstaller
   sudo bash autoinstaller.sh [opzioni]
 
 Opzioni:
-  --port <n>        Porta HTTP del NVR (default 8088)
+  --port <n>        Porta HTTPS del NVR (default 443)
+  --http-port <n>   Porta del solo redirect verso HTTPS (default 80, 0 disabilita)
   --dir <path>      Directory di installazione (default /opt/argus-pr)
   --data <path>     Directory dati e registrazioni (default /var/lib/argus-pr)
   --ref <tag>       Tag o branch da installare (default: ultima release)
+  --public          Consente la sola visione delle telecamere da internet
+  --public-host <h> Nome DNS pubblico da inserire nel certificato (ripetibile)
+  --trusted-net <c> Rete aggiuntiva trattata come locale, es. 10.8.0.0/24 (ripetibile)
+  --wireguard <n>   Porta UDP di WireGuard da aprire sul firewall
   --kiosk           Forza il muro video a schermo intero sul monitor collegato
   --no-kiosk        Installa solo il servizio, nessuna interfaccia locale
+  --no-shield       Non installa ARGUS-SHIELD, il firewall perimetrale
   --help            Mostra questo messaggio
 
 Nessuna domanda viene posta: l'installazione e' completamente automatica.
@@ -47,6 +62,12 @@ parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --port) PORT="${2:?}"; shift 2 ;;
+            --http-port) HTTP_PORT="${2:?}"; shift 2 ;;
+            --public) PUBLIC_ACCESS="true"; shift ;;
+            --public-host) PUBLIC_HOSTS="${PUBLIC_HOSTS:+$PUBLIC_HOSTS,}${2:?}"; shift 2 ;;
+            --trusted-net) TRUSTED_NETS="${TRUSTED_NETS:+$TRUSTED_NETS,}${2:?}"; shift 2 ;;
+            --wireguard) WIREGUARD_PORT="${2:?}"; shift 2 ;;
+            --no-shield) SHIELD_MODE="no"; shift ;;
             --dir) INSTALL_DIR="${2:?}"; shift 2 ;;
             --data) DATA_DIR="${2:?}"; shift 2 ;;
             --ref) REF="${2:?}"; shift 2 ;;
@@ -57,6 +78,8 @@ parse_args() {
         esac
     done
     [[ "$PORT" =~ ^[0-9]+$ ]] || die "Porta non valida: $PORT"
+    [[ "$HTTP_PORT" =~ ^[0-9]+$ ]] || die "Porta redirect non valida: $HTTP_PORT"
+    [[ "$WIREGUARD_PORT" =~ ^[0-9]+$ ]] || die "Porta WireGuard non valida: $WIREGUARD_PORT"
 }
 
 require_root() {
@@ -197,9 +220,13 @@ write_environment() {
 NODE_ENV=production
 ARGUS_HOST=0.0.0.0
 ARGUS_PORT=${PORT}
+ARGUS_HTTP_PORT=${HTTP_PORT}
 ARGUS_DATA_DIR=${DATA_DIR}
 ARGUS_MEDIA_DIR=${DATA_DIR}/media
 ARGUS_LOG_LEVEL=info
+ARGUS_PUBLIC_ACCESS=${PUBLIC_ACCESS}
+ARGUS_PUBLIC_HOSTS=${PUBLIC_HOSTS}
+ARGUS_TRUSTED_NETWORKS=${TRUSTED_NETS}
 ENVEOF
     chmod 640 "$ENV_FILE"
     chown root:"$SERVICE_USER" "$ENV_FILE"
@@ -276,8 +303,17 @@ RestrictSUIDSGID=true
 RestrictRealtime=true
 LockPersonality=true
 ReadWritePaths=${DATA_DIR} ${INSTALL_DIR}/vendor
-CapabilityBoundingSet=
-AmbientCapabilities=
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=false
+PrivateDevices=false
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RemoveIPC=true
+UMask=0027
 
 StandardOutput=journal
 StandardError=journal
@@ -291,14 +327,115 @@ UNITEOF
     systemctl enable --now argus-pr.service
 }
 
+want_shield() {
+    case "$SHIELD_MODE" in
+        yes) return 0 ;;
+        no) return 1 ;;
+        *) command -v nft >/dev/null 2>&1 || pkg_try nftables >/dev/null 2>&1; command -v nft >/dev/null 2>&1 ;;
+    esac
+}
+
 open_firewall() {
+    if want_shield; then
+        log "Firewall gestito da ARGUS-SHIELD, gestori esterni disattivati"
+        if command -v ufw >/dev/null 2>&1; then ufw --force disable >/dev/null 2>&1 || true; fi
+        systemctl disable --now firewalld >/dev/null 2>&1 || true
+        return 0
+    fi
+
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
         ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
-        log "Porta ${PORT}/tcp aperta su ufw"
+        [[ "$HTTP_PORT" != "0" ]] && ufw allow "${HTTP_PORT}/tcp" >/dev/null 2>&1 || true
+        log "Porte ${PORT}/tcp e ${HTTP_PORT}/tcp aperte su ufw"
     elif command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
         firewall-cmd --permanent --add-port="${PORT}/tcp" >/dev/null 2>&1 || true
+        [[ "$HTTP_PORT" != "0" ]] && firewall-cmd --permanent --add-port="${HTTP_PORT}/tcp" >/dev/null 2>&1 || true
         firewall-cmd --reload >/dev/null 2>&1 || true
-        log "Porta ${PORT}/tcp aperta su firewalld"
+        log "Porte aperte su firewalld"
+    fi
+}
+
+install_shield() {
+    log "Installazione ARGUS-SHIELD, firewall perimetrale indipendente"
+
+    pkg_try nftables || true
+    command -v nft >/dev/null 2>&1 || { warn "nftables non disponibile: ARGUS-SHIELD non installato"; return 0; }
+
+    mkdir -p "$SHIELD_DIR" "$SHIELD_STATE_DIR" "$(dirname "$SHIELD_CONFIG")"
+    cp -r "${INSTALL_DIR}/shield/." "$SHIELD_DIR/"
+    chmod 0755 "${SHIELD_DIR}/bin/argus-shield.js"
+    chmod 0700 "$SHIELD_STATE_DIR"
+
+    local public_ports lan_extra
+    public_ports="${PORT}"
+    [[ "$HTTP_PORT" != "0" ]] && public_ports="${public_ports}, ${HTTP_PORT}"
+
+    lan_extra=""
+    if [[ -n "$TRUSTED_NETS" ]]; then
+        lan_extra="$(printf '%s' "$TRUSTED_NETS" | awk -F, '{for (i = 1; i <= NF; i++) printf ", \"%s\"", $i}')"
+    fi
+
+    cat > "$SHIELD_CONFIG" <<SHIELDEOF
+{
+    "httpsPort": ${PORT},
+    "httpPort": ${HTTP_PORT},
+    "publicPorts": [${public_ports}],
+    "localOnlyPorts": [22],
+    "wireguardPort": ${WIREGUARD_PORT},
+    "lanNetworks": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "127.0.0.0/8", "fc00::/7", "fe80::/10", "::1/128"${lan_extra}],
+    "allowlist": [],
+    "eventsFile": "${DATA_DIR}/security-events.jsonl",
+    "stateDir": "${SHIELD_STATE_DIR}"
+}
+SHIELDEOF
+    chmod 0640 "$SHIELD_CONFIG"
+
+    cat > /etc/systemd/system/argus-shield.service <<UNITEOF
+[Unit]
+Description=ARGUS-SHIELD perimeter firewall and intrusion response
+Documentation=https://github.com/AprileNunzio/ARGUS-PR
+After=network-pre.target
+Wants=network-pre.target
+Before=argus-pr.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${SHIELD_DIR}
+Environment=ARGUS_SHIELD_CONFIG=${SHIELD_CONFIG}
+ExecStart=${NODE_BIN} ${SHIELD_DIR}/bin/argus-shield.js watch
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+ReadWritePaths=${SHIELD_STATE_DIR}
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argus-shield
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+
+    systemctl daemon-reload
+    systemctl enable --now argus-shield.service
+
+    sleep 2
+    if systemctl is-active --quiet argus-shield.service; then
+        log "ARGUS-SHIELD attivo: politica di rifiuto e risposta automatica agli attacchi"
+    else
+        warn "ARGUS-SHIELD non risulta attivo: controlla journalctl -u argus-shield"
     fi
 }
 
@@ -360,6 +497,7 @@ install_kiosk() {
     done
     mkdir -p "$KIOSK_HOME"
     chown -R "$KIOSK_USER":"$KIOSK_USER" "$KIOSK_HOME"
+    pkg_try libnss3-tools nss-tools mozilla-nss-tools || true
 
     if [[ -d /etc/X11 ]]; then
         printf 'allowed_users=anybody\nneeds_root_rights=yes\n' > /etc/X11/Xwrapper.config
@@ -386,7 +524,8 @@ StandardInput=tty
 StandardOutput=journal
 StandardError=journal
 Environment=HOME=${KIOSK_HOME}
-Environment=ARGUS_WALL_URL=http://127.0.0.1:${PORT}/wall
+Environment=ARGUS_WALL_URL=https://127.0.0.1:${PORT}/wall
+Environment=ARGUS_CA_FILE=${DATA_DIR}/secrets/pki/ca.crt
 Environment=ARGUS_BROWSER=${BROWSER_BIN}
 ExecStart=${HELPER_DIR}/kiosk-session.sh
 Restart=always
@@ -406,16 +545,38 @@ primary_address() {
 }
 
 summary() {
-    local address kiosk_state
+    local address kiosk_state port_suffix fingerprint public_state shield_state
     address="$(primary_address)"
     [[ -n "$address" ]] || address="127.0.0.1"
     if [[ -n "$BROWSER_BIN" ]]; then kiosk_state="attivo sul monitor collegato (tty1)"; else kiosk_state="non attivo"; fi
+
+    port_suffix=""
+    [[ "$PORT" != "443" ]] && port_suffix=":${PORT}"
+
+    fingerprint="$(cd "$INSTALL_DIR" && ARGUS_DATA_DIR="$DATA_DIR" "$NODE_BIN" bin/argus.js cert 2>/dev/null | awk '/Impronta/ { print $2 }')"
+    [[ -n "$fingerprint" ]] || fingerprint="esegui il comando: argus cert"
+
+    if [[ "$PUBLIC_ACCESS" == "true" ]]; then
+        public_state="consentito, sola visione delle telecamere"
+    else
+        public_state="disabilitato"
+    fi
+
+    if systemctl is-active --quiet argus-shield.service 2>/dev/null; then
+        shield_state="ARGUS-SHIELD attivo"
+    else
+        shield_state="ARGUS-SHIELD non attivo"
+    fi
 
     cat <<SUMEOF
 
   ARGUS-PR e' installato e in esecuzione.
 
-  Interfaccia web        http://${address}:${PORT}
+  Interfaccia web        https://${address}${port_suffix}
+  Impronta certificato   ${fingerprint}
+  Autorita interna       ${DATA_DIR}/secrets/pki/ca.crt
+  Accesso da internet    ${public_state}
+  Firewall perimetrale   ${shield_state}
   Muro video locale      ${kiosk_state}
   Versione installata    ${REF}
   Codice                 ${INSTALL_DIR}
@@ -425,9 +586,13 @@ summary() {
   Al primo accesso web viene chiesta la configurazione iniziale:
   creazione dell'account amministratore e aggiunta delle telecamere.
 
+  Il browser mostra un avviso sul certificato: confronta l impronta qui
+  sopra prima di accettare, oppure installa ca.crt sui dispositivi client.
+
   Comandi utili:
     systemctl status argus-pr
     journalctl -u argus-pr -f
+    argus-shield status
     systemctl restart argus-pr-kiosk
 
 SUMEOF
@@ -445,6 +610,7 @@ main() {
     setup_vision
     write_service
     open_firewall
+    if want_shield; then install_shield; else log "ARGUS-SHIELD non richiesto"; fi
     if want_kiosk; then install_kiosk; else log "Muro video locale non richiesto"; fi
     summary
 }
