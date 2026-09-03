@@ -1,4 +1,5 @@
 import { discoverFfmpeg, listHardwareAccelerators } from './ffmpeg.js';
+import { detectUsableEncoders } from './encoder_probe.js';
 import { installationSupported, installFfmpeg } from './dependencies/ffmpeg_installer.js';
 import { isFail } from '../kernel/result.js';
 import { internal } from '../kernel/errors.js';
@@ -19,24 +20,27 @@ export async function initMediaTools(config) {
 
     if (isFail(found)) {
         log.warn('media tools unavailable', { message: found.error.message });
-        tools = { available: false, reason: found.error.message, ffmpeg: null, ffprobe: null, accelerators: [] };
+        tools = { available: false, reason: found.error.message, ffmpeg: null, ffprobe: null, accelerators: [], encoders: [] };
         return tools;
     }
 
     const accelerators = await listHardwareAccelerators(found.value.ffmpeg.path);
+    const encoders = await detectUsableEncoders(found.value.ffmpeg.path, accelerators);
 
     tools = {
         available: true,
         reason: null,
         ffmpeg: found.value.ffmpeg,
         ffprobe: found.value.ffprobe,
-        accelerators
+        accelerators,
+        encoders
     };
 
     log.info('media tools ready', {
         ffmpeg: tools.ffmpeg.version,
         path: tools.ffmpeg.path,
-        accelerators
+        accelerators,
+        encoders
     });
 
     return tools;

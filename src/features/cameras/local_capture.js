@@ -73,9 +73,9 @@ function createBroker(cameraId) {
         return channelTarget(address);
     }
 
-    function outputArgs(accelerators) {
+    function outputArgs(tools) {
         const args = [];
-        const encoder = pickEncoder(accelerators, secrets?.hwaccel === 'none' ? 'libx264' : 'auto');
+        const encoder = pickEncoder(tools.accelerators, secrets?.hwaccel === 'none' ? 'libx264' : 'auto', tools.encoders);
 
         for (const consumer of consumers.values()) {
             if (consumer.role === 'record') {
@@ -129,7 +129,7 @@ function createBroker(cameraId) {
         const input = resolveInput(secrets, { preferSub: false });
         const args = buildCaptureArgs(input);
         args.splice(args.indexOf('-i'), 0, '-y');
-        args.push(...outputArgs(tools.accelerators));
+        args.push(...outputArgs(tools));
 
         const live = [...consumers.values()].find((consumer) => consumer.role === 'live');
         child = spawn(tools.ffmpeg.path, args, {

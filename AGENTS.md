@@ -402,6 +402,8 @@ Le rotte mutanti sono `Exposure.PRIVATE`: **da internet non si aprono varchi**, 
 
 Il processo viene ricostruito quando cambia l'insieme dei consumatori (150 ms di debounce) e riavviato con backoff se cade. Quando l'ultimo consumatore si stacca, la periferica viene rilasciata.
 
+**Gli encoder si verificano, non si deducono.** `listHardwareAccelerators` dice quali acceleratori ffmpeg *dichiara*, non quali funzionano: su una macchina con driver NVIDIA piu' vecchio della build di ffmpeg, `h264_nvenc` compare fra gli acceleratori ma fallisce all'apertura con `Driver does not support the required nvenc API version`, e ogni anteprima e ogni registrazione transcodificata muore. All'avvio `src/platform/encoder_probe.js` prova ciascun encoder candidato con una sorgente sintetica di 0,2 s e conserva solo quelli che si aprono davvero, in `tools.encoders`. `pickEncoder(accelerators, preferenza, usable)` sceglie dentro quell'elenco: se la GPU non e' utilizzabile si scende a `libx264` invece di fallire in ciclo.
+
 **Buffer di acquisizione.** Le periferiche grezze producono molto: 1280x720 in `yuyv422` a 30 fps sono circa 55 MB/s. Con il buffer predefinito ffmpeg segnala `real-time buffer too full` e scarta fotogrammi, percio' le sorgenti locali ricevono `-rtbufsize 256M` (Windows) e `-thread_queue_size 1024` ovunque.
 
 **Le sorgenti locali si registrano sempre codificate.** Una webcam consegna `rawvideo`/`yuyv422`: `-c copy` verso MP4 fallisce con `Could not find tag for codec rawvideo`. La scelta dell'encoder (GPU quando disponibile, `libx264` altrimenti) sta in `src/features/streaming/encoder.js`, condivisa fra anteprima, registrazione e broker.
@@ -637,6 +639,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 ---
 
 ## 9. Stato reale: cosa esiste e cosa no
+
+Aggiunte della versione 0.18.2: **verifica reale degli encoder all'avvio** (gli acceleratori dichiarati non bastano: su driver NVIDIA disallineati `h264_nvenc` si apre solo per fallire, e con lui l'anteprima e la registrazione delle sorgenti locali).
 
 Aggiunte della versione 0.18.0: **motore di automazione** (migrazione 011) che trasforma rilevamenti, targhe e movimento in azioni, con regole filtrate per telecamera, classe, confidenza, esito targa, persona nota o ignota e fascia oraria, con cooldown e limite giornaliero; **canali di consegna nativi** email SMTP, Telegram, webhook firmato HMAC, MQTT 3.1.1, comando HTTP per cancelli e rele', **rele' ONVIF della telecamera** per l'apertura dei varchi, e avviso in console; **segreti dei canali cifrati nel vault**; **registro delle esecuzioni** con esito per canale; **pagina Automazioni** nella macro-area Sicurezza.
 

@@ -88,7 +88,7 @@ export async function trialPreview(camera, options = {}) {
     args.push('-an', '-map', '0:v:0', '-t', String(seconds));
 
     if (copyable) args.push('-c:v', 'copy');
-    else args.push(...encoderArgs(pickEncoder(tools.accelerators, 'auto'), { gop: 50, bitrate: '2000k' }));
+    else args.push(...encoderArgs(pickEncoder(tools.accelerators, 'auto', tools.encoders), { gop: 50, bitrate: '2000k' }));
 
     args.push('-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset');
     args.push('-frag_duration', '500000', 'pipe:1');
@@ -113,7 +113,7 @@ export async function trialRecording(camera, destination, options = {}) {
     args.push('-map', '0:v:0', '-an', '-t', String(seconds));
 
     if (copyable) args.push('-c', 'copy');
-    else args.push(...encoderArgs(pickEncoder(tools.accelerators, 'auto'), { gop: 50, preset: 'veryfast' }));
+    else args.push(...encoderArgs(pickEncoder(tools.accelerators, 'auto', tools.encoders), { gop: 50, preset: 'veryfast' }));
 
     args.push('-f', 'mp4', '-movflags', '+faststart', '-y', destination);
 

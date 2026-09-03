@@ -101,12 +101,7 @@ export class StreamSession {
             .catch(() => null);
 
         const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
-        const { args, transcoded } = buildPreviewArgs(
-            input,
-            probe,
-            tools.accelerators,
-            perf
-        );
+        const { args, transcoded } = buildPreviewArgs(input, probe, tools, perf);
 
 
         log.info('stream starting', {

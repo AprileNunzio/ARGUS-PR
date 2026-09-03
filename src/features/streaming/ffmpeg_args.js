@@ -1,4 +1,5 @@
 import { buildCaptureArgs } from '../cameras/camera_input.js';
+import { pickEncoder, encoderArgs } from './encoder.js';
 
 const COPYABLE_VIDEO = new Set(['h264', 'avc1']);
 
@@ -6,7 +7,9 @@ export function buildInputArgs(input) {
     return buildCaptureArgs(input);
 }
 
-export function buildPreviewArgs(input, probe, accelerators = [], options = {}) {
+export function buildPreviewArgs(input, probe, tools = {}, options = {}) {
+    const accelerators = Array.isArray(tools) ? tools : (tools.accelerators ?? []);
+    const usableEncoders = Array.isArray(tools) ? null : (tools.encoders ?? null);
     const args = buildInputArgs(input);
     const canCopy = probe && COPYABLE_VIDEO.has(String(probe.codec ?? '').toLowerCase());
 
@@ -29,32 +32,14 @@ export function buildPreviewArgs(input, probe, accelerators = [], options = {}) 
     if (canCopy) {
         args.push('-c:v', 'copy');
     } else {
-        const preferredEncoder = options.videoEncoder && options.videoEncoder !== 'auto'
-            ? options.videoEncoder
-            : (accelerators.includes('cuda') ? 'h264_nvenc'
-                : accelerators.includes('qsv') ? 'h264_qsv'
-                : accelerators.includes('amf') ? 'h264_amf'
-                : accelerators.includes('vaapi') ? 'h264_vaapi'
-                : accelerators.includes('videotoolbox') ? 'h264_videotoolbox'
-                : 'libx264');
-
-        if (preferredEncoder === 'h264_nvenc') {
-            args.push('-c:v', 'h264_nvenc', '-preset', 'p4', '-tune', 'll', '-profile:v', 'main');
-        } else if (preferredEncoder === 'h264_qsv') {
-            args.push('-c:v', 'h264_qsv', '-preset', 'veryfast');
-        } else if (preferredEncoder === 'h264_amf') {
-            args.push('-c:v', 'h264_amf', '-usage', 'lowlatency');
-        } else if (preferredEncoder === 'h264_vaapi') {
-            args.push('-c:v', 'h264_vaapi');
-        } else if (preferredEncoder === 'h264_videotoolbox') {
-            args.push('-c:v', 'h264_videotoolbox', '-realtime', '1');
-        } else {
-            args.push('-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'main');
-        }
-
-        args.push('-pix_fmt', 'yuv420p', '-g', '50');
-        if (probe?.height && probe.height > 720) args.push('-vf', 'scale=-2:720');
-        args.push('-b:v', '2500k', '-maxrate', '3000k', '-bufsize', '4000k');
+        args.push(...encoderArgs(pickEncoder(accelerators, options.videoEncoder ?? 'auto', usableEncoders), {
+            gop: 50,
+            bitrate: '2500k',
+            maxrate: '3000k',
+            bufsize: '4000k',
+            maxHeight: 720,
+            sourceHeight: probe?.height ?? null
+        }));
     }
 
     args.push('-f', 'mp4');

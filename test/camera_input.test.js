@@ -123,3 +123,17 @@ test('una sorgente sconosciuta viene rifiutata', () => {
     assert.equal(isLocalKind('usb'), true);
     assert.equal(isLocalKind('rtsp'), false);
 });
+
+test('la scelta dell encoder scarta quelli che l hardware non sa aprire', async () => {
+    const { pickEncoder } = await import('../src/features/streaming/encoder.js');
+    const { candidateEncoders } = await import('../src/platform/encoder_probe.js');
+
+    assert.equal(pickEncoder(['cuda'], 'auto'), 'h264_nvenc');
+    assert.equal(pickEncoder(['cuda'], 'auto', ['libx264']), 'libx264');
+    assert.equal(pickEncoder(['cuda', 'qsv'], 'auto', ['h264_qsv', 'libx264']), 'h264_qsv');
+    assert.equal(pickEncoder(['cuda'], 'h264_nvenc', ['libx264']), 'libx264');
+    assert.equal(pickEncoder([], 'auto', ['libx264']), 'libx264');
+
+    assert.deepEqual(candidateEncoders(['cuda', 'qsv']), ['h264_nvenc', 'h264_qsv', 'libx264']);
+    assert.deepEqual(candidateEncoders([]), ['libx264']);
+});

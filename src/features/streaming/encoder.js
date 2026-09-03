@@ -14,11 +14,16 @@ export function pickAccelerator(accelerators = [], preference = 'auto') {
     return accelerators.find((entry) => DECODE_ACCELERATORS.includes(entry)) ?? null;
 }
 
-export function pickEncoder(accelerators = [], preference = 'auto') {
-    if (preference && preference !== 'auto') return preference;
+export function pickEncoder(accelerators = [], preference = 'auto', usable = null) {
+    const allowed = Array.isArray(usable) && usable.length > 0 ? usable : null;
+    const permitted = (encoder) => allowed === null || allowed.includes(encoder);
+
+    if (preference && preference !== 'auto' && permitted(preference)) return preference;
+
     for (const [accelerator, encoder] of Object.entries(GPU_ENCODERS)) {
-        if (accelerators.includes(accelerator)) return encoder;
+        if (accelerators.includes(accelerator) && permitted(encoder)) return encoder;
     }
+
     return 'libx264';
 }
 
