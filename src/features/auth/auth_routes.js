@@ -2,6 +2,7 @@ import { login, logout, changePassword } from './auth_service.js';
 import { requireString } from '../../security/guards.js';
 import { buildCookie } from '../../http/http_utils.js';
 import { Exposure, Zone } from '../../security/net_zones.js';
+import { sessionTtlHoursFor } from '../settings/settings_service.js';
 import { SESSION_COOKIE } from '../../http/server.js';
 
 const LOGIN_RATE_LIMIT = Object.freeze({ limit: 8, windowMs: 5 * 60 * 1000 });
@@ -16,13 +17,13 @@ export function registerAuthRoutes(router) {
             password,
             remoteAddr: ctx.address,
             userAgent: ctx.req.headers['user-agent'] ?? null,
-            ttlHours: ctx.config.sessionTtlHours,
+            ttlHours: sessionTtlHoursFor(ctx.config),
             zone: ctx.zone
         });
 
         const cookie = buildCookie(SESSION_COOKIE, result.session.token, {
             secure: ctx.req.socket.encrypted === true,
-            maxAge: ctx.config.sessionTtlHours * 3600
+            maxAge: sessionTtlHoursFor(ctx.config) * 3600
         });
 
         return {

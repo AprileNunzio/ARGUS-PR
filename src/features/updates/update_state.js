@@ -5,6 +5,7 @@ import { isReleaseTag } from './semver.js';
 
 export const Phase = Object.freeze({
     IDLE: 'idle',
+    AWAITING_APPROVAL: 'awaiting-approval',
     REQUESTED: 'requested',
     PENDING: 'pending',
     HEALTHY: 'healthy',

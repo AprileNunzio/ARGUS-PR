@@ -1,12 +1,27 @@
 import { getDatabase } from '../storage/database.js';
 import { AppError, ErrorCode } from '../kernel/errors.js';
 
-const SOFT_THRESHOLD = 3;
-const HARD_THRESHOLD = 10;
-const BASE_DELAY_SECONDS = 30;
-const MAX_DELAY_SECONDS = 1800;
-const HARD_LOCK_SECONDS = 3600;
+const DEFAULTS = Object.freeze({
+    softThreshold: 3,
+    hardThreshold: 10,
+    baseSeconds: 30,
+    maxSeconds: 1800,
+    hardLockSeconds: 3600
+});
+
 const WINDOW_SECONDS = 3600;
+
+function rulesFrom(overrides) {
+    const rules = { ...DEFAULTS, ...(overrides ?? {}) };
+
+    return {
+        softThreshold: Number.isInteger(rules.softThreshold) ? rules.softThreshold : DEFAULTS.softThreshold,
+        hardThreshold: Number.isInteger(rules.hardThreshold) ? rules.hardThreshold : DEFAULTS.hardThreshold,
+        baseSeconds: Number.isInteger(rules.baseSeconds) ? rules.baseSeconds : DEFAULTS.baseSeconds,
+        maxSeconds: Number.isInteger(rules.maxSeconds) ? rules.maxSeconds : DEFAULTS.maxSeconds,
+        hardLockSeconds: Number.isInteger(rules.hardLockSeconds) ? rules.hardLockSeconds : DEFAULTS.hardLockSeconds
+    };
+}
 
 function nowMs() {
     return Date.now();
@@ -18,11 +33,11 @@ function readRow(username) {
         .get(username) ?? null;
 }
 
-function backoffSeconds(failures) {
-    if (failures >= HARD_THRESHOLD) return HARD_LOCK_SECONDS;
-    if (failures < SOFT_THRESHOLD) return 0;
-    const steps = failures - SOFT_THRESHOLD;
-    return Math.min(BASE_DELAY_SECONDS * Math.pow(2, steps), MAX_DELAY_SECONDS);
+function backoffSeconds(failures, rules) {
+    if (failures >= rules.hardThreshold) return rules.hardLockSeconds;
+    if (failures < rules.softThreshold) return 0;
+    const steps = failures - rules.softThreshold;
+    return Math.min(rules.baseSeconds * Math.pow(2, steps), rules.maxSeconds);
 }
 
 export function lockState(username) {
@@ -52,14 +67,15 @@ export function assertNotLocked(username) {
     });
 }
 
-export function recordFailure(username) {
+export function recordFailure(username, overrides) {
+    const rules = rulesFrom(overrides);
     const row = readRow(username);
     const stale = row && row.last_failure_at
         ? nowMs() - Date.parse(row.last_failure_at) > WINDOW_SECONDS * 1000
         : true;
 
     const failures = (stale ? 0 : row.failures) + 1;
-    const delay = backoffSeconds(failures);
+    const delay = backoffSeconds(failures, rules);
     const lockedUntil = delay > 0 ? new Date(nowMs() + delay * 1000).toISOString() : null;
     const at = new Date().toISOString();
 

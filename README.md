@@ -346,7 +346,25 @@ npm run reset-admin
 ---
 ## Configurazione
 
-Variabili d'ambiente, oppure un file `argus.env` nella cartella dati.
+Quasi tutto si regola dal browser, in **Impostazioni**: aggiornamenti, accesso remoto, sicurezza degli account, console e ritenzione. Ogni modifica e validata, registrata nel giornale di controllo e applicata a caldo, senza riavviare.
+
+Restano nel file di ambiente soltanto porta HTTPS, certificato e percorsi dei dati: un valore sbagliato li renderebbe irraggiungibili proprio dalla pagina da cui li avresti cambiati, quindi si toccano dalla macchina.
+
+### Il riavvio lo decidi tu
+
+Trovato un aggiornamento, il sistema **non si riavvia da solo**. In Impostazioni scegli:
+
+| Politica | Comportamento |
+|---|---|
+| **Chiedi sempre conferma** (predefinita) | compare un avviso con il pulsante per riavviare quando vuoi tu |
+| **Solo nella finestra di manutenzione** | si aggiorna da solo negli orari e nei giorni che indichi, per esempio dalle 03:00 alle 05:00 |
+| **Subito** | applica appena disponibile |
+
+La finestra puo attraversare la mezzanotte. Se la nuova versione non si stabilizza, viene ripristinata da sola quella precedente e messa in quarantena.
+
+### Variabili d ambiente
+
+Restano disponibili per l installazione automatica e per chi preferisce configurare da file. Un file `argus.env` nella cartella dati ha lo stesso effetto.
 
 | Variabile | Default | Descrizione |
 |---|---|---|

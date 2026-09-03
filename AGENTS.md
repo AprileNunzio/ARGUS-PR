@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.11.0
+Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.12.0
 
 
 
@@ -86,6 +86,7 @@ src/
                           net_zones, lockout, security_events
   http/                   server, router, http_utils, static_files, rate_limit, websocket
   features/<nome>/        <nome>_service.js, <nome>_routes.js, <nome>_repository.js
+  features/settings/      settings_schema.js dichiara OGNI impostazione modificabile
   app.js                  composizione: avvio, registrazione rotte
 web/
   index.html
@@ -222,7 +223,17 @@ Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun e
 
 Il principio che regge tutto: **il servizio non puo' riscrivere il proprio codice.** `/opt/argus-pr` appartiene a root, il servizio gira come `argus`, e l'unita' systemd concede scrittura solo su `DATA_DIR` e `vendor/`. Non "sistemare" questo dando la proprieta' del codice al servizio: e' il motivo per cui l'autoaggiornamento qui non e' un vettore di persistenza.
 
-**L'aggiornamento e' automatico a ogni avvio.** `runAutomaticUpgrade()` in `src/features/updates/auto_update.js` gira in `bootstrap()` **prima** che partano ffmpeg, gli hub e il server: se c'e' una release piu' recente la richiede ed esce con 75, cosi' il riavvio non interrompe nulla di gia' avviato. Lo stesso codice viene richiamato dal controllo periodico ogni 6 ore, perche' un NVR acceso da mesi non si aggiornerebbe mai altrimenti: quel percorso costa un riavvio del servizio, quindi qualche secondo di buco nella registrazione. Con `ARGUS_AUTO_UPDATE=false` resta tutto manuale.
+**Il riavvio non e' mai una decisione del software.** La politica sta in `updates.restartPolicy` e vale tre cose:
+
+| Politica | Comportamento |
+|---|---|
+| `ask` (predefinita) | trovato un aggiornamento, la fase diventa `awaiting-approval` e non succede altro finche' un amministratore non chiama `POST /api/updates/approve` |
+| `window` | applica da solo, ma **solo** dentro la finestra di manutenzione; fuori resta in attesa e ricontrolla ogni 10 minuti |
+| `immediate` | applica appena disponibile |
+
+Il valore predefinito e' `ask` **per scelta di sicurezza**: un NVR che si riavvia da solo mentre registra e' un buco nella prova, non una comodita'. Non cambiare questo default. La finestra e' valutata sull'ora locale della macchina e sa attraversare la mezzanotte (`maintenance_window.js`); `nextOpening()` serve a dire all'operatore quando accadra'.
+
+**Il controllo dell'aggiornamento e' automatico a ogni avvio.** `runAutomaticUpgrade()` in `src/features/updates/auto_update.js` gira in `bootstrap()` **prima** che partano ffmpeg, gli hub e il server: se c'e' una release piu' recente la richiede ed esce con 75, cosi' il riavvio non interrompe nulla di gia' avviato. Lo stesso codice viene richiamato dal controllo periodico ogni 6 ore, perche' un NVR acceso da mesi non si aggiornerebbe mai altrimenti: quel percorso costa un riavvio del servizio, quindi qualche secondo di buco nella registrazione. Con `ARGUS_AUTO_UPDATE=false` resta tutto manuale.
 
 Le quattro protezioni contro il ciclo infinito, tutte necessarie:
 
@@ -488,6 +499,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 **Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **Setup .exe Inno Setup con launcher desktop nativo, icona propria e verifica della porta prima di dichiarare il successo**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
 
 
+Aggiunte della versione 0.12.0: **pannello Impostazioni completo nel browser** (aggiornamenti, accesso remoto, sicurezza account, console, ritenzione), **politica di riavvio con conferma esplicita o finestra di manutenzione**, **impostazioni applicate a caldo senza riavvio** (accesso remoto, reti fidate, durata sessione, soglie di blocco), **validazione tipizzata con audit di ogni modifica**.
+
 Aggiunte della versione 0.11.0: **aggiornamento automatico a ogni avvio e ogni 6 ore**, **quarantena delle versioni difettose**, **freno temporale contro i cicli di riavvio**, **verifica opzionale della firma GPG dei tag**.
 
 Aggiunte della versione 0.10.0: **TLS obbligatorio con PKI interna autogenerata e autorinnovante**, **redirect 308 dalla porta 80**, **classificazione delle zone di rete**, **separazione visione/gestione applicata dal codice**, **divieto di accesso amministrativo da internet**, **sessioni legate alla zona di emissione**, **riduzione dei dati telecamera verso internet**, **blocco progressivo per account**, **flusso eventi di sicurezza append-only**, **ARGUS-SHIELD con ruleset nftables, punteggio a decadimento e blocco automatico**, **CPU, RAM e GPU in diretta sulla barra della console**.
@@ -513,6 +526,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | F5 | Persone, targhe, biometria, ANPR, controllo accessi, installatori autonomi | completata |
 | FS | TLS obbligatorio, zone di rete, blocco account, ARGUS-SHIELD | completata |
 | FU2 | Aggiornamento automatico a ogni avvio, quarantena, verifica firma | completata |
+| FC | Impostazioni complete dal browser, politica di riavvio, finestra di manutenzione | completata |
 | FS2 | MFA TOTP, firma degli aggiornamenti, integrita' archivio e audit | da fare |
 | F6 | Planimetria, preset, notifiche Telegram/MQTT, relè, diagnostica, watchdog | da fare |
 

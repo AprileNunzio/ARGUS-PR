@@ -16,6 +16,8 @@ import { registerAuthRoutes } from './features/auth/auth_routes.js';
 import { registerCameraRoutes } from './features/cameras/camera_routes.js';
 import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.js';
 import { registerSystemRoutes } from './features/system/system_routes.js';
+import { registerSettingsRoutes } from './features/settings/settings_routes.js';
+import { seedFromConfig, readSetting } from './features/settings/settings_service.js';
 import { registerStreamRoutes } from './features/streaming/stream_routes.js';
 import { installStreamHub } from './features/streaming/stream_hub.js';
 import { registerRecordingRoutes } from './features/recording/recording_routes.js';
@@ -49,6 +51,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository }) {
     registerCameraRoutes(router);
     registerDiscoveryRoutes(router);
     registerSystemRoutes(router);
+    registerSettingsRoutes(router);
     registerStreamRoutes(router);
     registerRecordingRoutes(router);
     registerPlaybackRoutes(router);
@@ -60,6 +63,16 @@ function registerRoutes(router, { db, accessRepository, peopleRepository }) {
     registerDetectionRoutes(router);
     registerAccessRoutes({ router, accessRepository });
     registerPeopleRoutes({ router, peopleRepository, db });
+}
+
+function startMaintenanceWatch(config) {
+    const timer = setInterval(() => {
+        if (readSetting('updates.restartPolicy') !== 'window') return;
+        runAutomaticUpgrade(config, 'window').catch((error) => log.debug('maintenance check failed', { message: error.message }));
+    }, 10 * 60 * 1000);
+
+    timer.unref();
+    onShutdown('maintenance-watch', () => clearInterval(timer));
 }
 
 function startSessionJanitor() {
@@ -89,6 +102,8 @@ export async function bootstrap(overrides = {}) {
     initSecurityEvents(config);
     const db = openDatabase(config);
 
+    seedFromConfig(config);
+
     const upgrade = await runAutomaticUpgrade(config, 'startup');
 
     if (upgrade.outcome === Outcome.UPGRADING) {
@@ -105,6 +120,7 @@ export async function bootstrap(overrides = {}) {
     installMotionHub(config);
     installUpdateWatchdog(config);
     onPeriodicCheck((current) => runAutomaticUpgrade(current, 'periodic'));
+    startMaintenanceWatch(config);
 
     const accessRepository = createAccessRepository(db);
     const peopleRepository = createPeopleRepository(db);

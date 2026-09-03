@@ -5,6 +5,7 @@ import { issueSession, revokeSession, revokeAllForUser } from '../../security/se
 import { recordAudit, AuditAction } from '../../security/audit.js';
 import { Role, roleExists, can, Permission } from '../../security/rbac.js';
 import { assertNotLocked, recordFailure, recordSuccess } from '../../security/lockout.js';
+import { lockoutThresholds } from '../settings/settings_service.js';
 import { emitSecurityEvent, SecurityEvent } from '../../security/security_events.js';
 import { Zone } from '../../security/net_zones.js';
 import { validationError, unauthenticated, notFound } from '../../kernel/errors.js';
@@ -59,7 +60,7 @@ export async function login({ username, password, remoteAddr, userAgent, ttlHour
     const matches = await verifyPassword(password, stored);
 
     if (!user || !matches || user.is_active !== 1) {
-        const outcome = recordFailure(username);
+        const outcome = recordFailure(username, lockoutThresholds());
 
         recordAudit({
             action: AuditAction.LOGIN_FAILURE,
@@ -79,7 +80,7 @@ export async function login({ username, password, remoteAddr, userAgent, ttlHour
     }
 
     if (zone === Zone.WAN && can(user.role, Permission.SYSTEM_MANAGE)) {
-        recordFailure(username);
+        recordFailure(username, lockoutThresholds());
 
         recordAudit({
             action: AuditAction.LOGIN_FAILURE,

@@ -8,6 +8,7 @@ import { assessPassword } from '../../security/password.js';
 import { validationError } from '../../kernel/errors.js';
 import { readPackageVersion } from '../../platform/version.js';
 import { buildCookie } from '../../http/http_utils.js';
+import { sessionTtlHoursFor } from '../settings/settings_service.js';
 import { SESSION_COOKIE } from '../../http/server.js';
 
 const CLAIM_RATE_LIMIT = Object.freeze({ limit: 10, windowMs: 10 * 60 * 1000 });
@@ -71,12 +72,13 @@ export function registerSetupRoutes(router) {
             password,
             remoteAddr: ctx.address,
             userAgent: ctx.req.headers['user-agent'] ?? null,
-            ttlHours: ctx.config.sessionTtlHours
+            ttlHours: sessionTtlHoursFor(ctx.config),
+            zone: ctx.zone
         });
 
         const cookie = buildCookie(SESSION_COOKIE, result.session.token, {
             secure: ctx.req.socket.encrypted === true,
-            maxAge: ctx.config.sessionTtlHours * 3600
+            maxAge: sessionTtlHoursFor(ctx.config) * 3600
         });
 
         return {

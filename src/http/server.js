@@ -10,6 +10,7 @@ import { resolveSession } from '../security/sessions.js';
 import { can, Permission } from '../security/rbac.js';
 import { classify, allowsZone, Zone, Exposure, isTrustedZone } from '../security/net_zones.js';
 import { emitSecurityEvent, SecurityEvent } from '../security/security_events.js';
+import { remoteAccessEnabled, trustedNetworksFor } from '../features/settings/settings_service.js';
 import { createRouter } from './router.js';
 import { serveFile } from './static_files.js';
 import { consume } from './rate_limit.js';
@@ -107,14 +108,14 @@ function enforceSessionZone(actor, zone, address) {
 
 export function resolveZone(req, config) {
     const address = clientAddress(req, config.trustProxy);
-    return { address, zone: classify(address, config.trustedNetworks) };
+    return { address, zone: classify(address, trustedNetworksFor(config)) };
 }
 
 async function dispatch(router, req, res, config) {
     const url = new URL(req.url, `https://${req.headers.host ?? 'localhost'}`);
     const { address, zone } = resolveZone(req, config);
 
-    if (zone === Zone.WAN && !config.publicAccess) {
+    if (zone === Zone.WAN && !remoteAccessEnabled(config)) {
         emitSecurityEvent(SecurityEvent.ZONE_DENIED, {
             address,
             zone,

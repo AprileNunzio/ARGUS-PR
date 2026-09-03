@@ -203,3 +203,40 @@
 .zone-canvas-wrapper { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 52vh; background: #0b0f19; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--rule); }
 .zone-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
 
+
+.setting-list { display: flex; flex-direction: column; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-3); padding: var(--gap-3) 0; border-bottom: 1px solid var(--rule); }
+.setting:last-child { border-bottom: none; }
+.setting--sensitive { border-left: 3px solid var(--amber); padding-left: var(--gap-2); margin-left: calc(var(--gap-2) * -1); }
+.setting__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.setting__label { font-weight: 600; color: var(--ink); }
+.setting__help { font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+.setting__control { flex: 0 0 auto; display: flex; align-items: center; gap: var(--gap-2); min-width: 180px; justify-content: flex-end; }
+.setting__control input[type="number"] { width: 108px; }
+.setting__control input[type="text"] { width: 260px; max-width: 100%; }
+
+.control--unit { display: flex; align-items: center; gap: var(--gap-1); }
+.control__unit { font-size: 0.8rem; color: var(--muted); }
+
+.toggle { display: inline-flex; align-items: center; gap: var(--gap-2); cursor: pointer; user-select: none; }
+.toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle__track { width: 42px; height: 24px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--rule); position: relative; transition: background-color var(--speed), border-color var(--speed); flex-shrink: 0; }
+.toggle__thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform var(--speed), background-color var(--speed); }
+.toggle input:checked + .toggle__track { background: var(--accent); border-color: var(--accent); }
+.toggle input:checked + .toggle__track .toggle__thumb { transform: translateX(18px); background: #fff; }
+.toggle input:focus-visible + .toggle__track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toggle__text { font-size: 0.82rem; color: var(--muted); min-width: 62px; }
+
+.daypicker { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.daypicker__day { padding: 4px 8px; font-size: 0.74rem; font-weight: 600; border-radius: var(--radius-sm); border: 1px solid var(--rule); background: var(--surface-2); color: var(--muted); cursor: pointer; transition: background-color var(--speed), color var(--speed), border-color var(--speed); }
+.daypicker__day:hover { border-color: var(--accent); }
+.daypicker__day--on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.panel__text { color: var(--muted); font-size: 0.88rem; line-height: 1.5; margin: 0 0 var(--gap-3); }
+
+@media (max-width: 720px) {
+    .setting { flex-direction: column; align-items: stretch; }
+    .setting__control { justify-content: flex-start; min-width: 0; }
+    .setting__control input[type="text"] { width: 100%; }
+    .daypicker { justify-content: flex-start; }
+}

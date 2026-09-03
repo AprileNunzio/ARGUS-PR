@@ -7,6 +7,7 @@ import { renderCameras } from '/features/cameras/cameras.js';
 import { renderLive } from '/features/live/live.js';
 import { renderArchive } from '/features/archive/archive.js';
 import { renderSystem } from '/features/system/system.js';
+import { renderSettings } from '/features/settings/settings.js';
 import { renderDetectionsView } from '/features/detections/detections_view.js';
 import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
@@ -20,7 +21,8 @@ const ROUTES = {
     detections: { label: 'Visione AI', icon: 'eye', render: renderDetectionsView },
     access: { label: 'Targhe & Accessi', icon: 'shield', render: renderAccessView },
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },
-    system: { label: 'Sistema', icon: 'settings', render: renderSystem, permission: 'system.manage' }
+    settings: { label: 'Impostazioni', icon: 'settings', render: renderSettings, permission: 'system.manage' },
+    system: { label: 'Sistema', icon: 'server', render: renderSystem, permission: 'system.manage' }
 };
 
 

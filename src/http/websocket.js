@@ -8,6 +8,7 @@ import { parseCookies, clientAddress } from './http_utils.js';
 import { SESSION_COOKIE } from './server.js';
 import { classify, isTrustedZone, Zone } from '../security/net_zones.js';
 import { emitSecurityEvent, SecurityEvent } from '../security/security_events.js';
+import { remoteAccessEnabled, trustedNetworksFor } from '../features/settings/settings_service.js';
 import { isStreamPath, cameraIdFromPath, authoriseStream, attachStreamViewer } from '../features/streaming/stream_socket.js';
 
 const log = createLogger('websocket');
@@ -48,9 +49,9 @@ export function attachEventSocket(server, config) {
     server.on('upgrade', (req, socket, head) => {
         const url = new URL(req.url, `https://${req.headers.host ?? 'localhost'}`);
         const address = clientAddress(req, config.trustProxy);
-        const zone = classify(address, config.trustedNetworks);
+        const zone = classify(address, trustedNetworksFor(config));
 
-        if (zone === Zone.WAN && !config.publicAccess) {
+        if (zone === Zone.WAN && !remoteAccessEnabled(config)) {
             reject(socket, 403, 'Forbidden');
             return;
         }
