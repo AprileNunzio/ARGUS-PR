@@ -105,8 +105,8 @@ if ($PSScriptRoot) {
 
 if (-not $sourceDir) {
     Write-Host "[DOWNLOAD] Download pacchetto ARGUS-PR da GitHub..." -ForegroundColor Cyan
-    $zipUrl = "https://github.com/AprileNunzio/ARGUS-PR/archive/refs/tags/v0.9.0.zip"
-    $tempZip = Join-Path $env:TEMP "argus-pr-v0.9.0.zip"
+    $zipUrl = "https://github.com/AprileNunzio/ARGUS-PR/archive/refs/tags/v0.13.0.zip"
+    $tempZip = Join-Path $env:TEMP "argus-pr-v0.13.0.zip"
     $tempExtract = Join-Path $env:TEMP "argus-pr-extract-$([System.Guid]::NewGuid().ToString('N'))"
     Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
     Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
@@ -227,6 +227,7 @@ function Install-NssmService {
         "ARGUS_DATA_DIR=$DataPath",
         "ARGUS_MEDIA_DIR=$DataPath\media",
         "ARGUS_PORT=$Port",
+        "ARGUS_SERVICE=1",
         "NODE_ENV=production",
         "PATH=$extendedPath"
     ) | Out-Null

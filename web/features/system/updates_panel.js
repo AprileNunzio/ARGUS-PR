@@ -96,7 +96,7 @@ export function renderUpdatesPanel({ api }) {
                 ? notice(status.phase === 'rolled-back' || status.phase === 'failed' ? 'error' : 'success', status.message)
                 : null,
             !status.supported
-                ? notice('warn', 'Questa copia non e\' un clone git, quindi non puo\' aggiornarsi da sola. L\'installazione automatica Linux usa git e supporta l\'aggiornamento da questa pagina.')
+                ? notice('warn', 'Questa copia non supporta l\'aggiornamento automatico su questa piattaforma.')
                 : null,
             status.lastCheck && !available
                 ? notice('ok', 'Il sistema e\' allineato all\'ultima versione pubblicata.')

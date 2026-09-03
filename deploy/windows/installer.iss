@@ -1,7 +1,11 @@
+#ifndef MyAppVersion
+#define MyAppVersion "0.13.0"
+#endif
+
 [Setup]
 AppId={{D3F9B72C-82B5-4D19-9B2F-9B6C8C38B2D1}
 AppName=ARGUS-PR
-AppVersion=0.9.0
+AppVersion={#MyAppVersion}
 AppPublisher=NunzioTech
 AppPublisherURL=https://github.com/AprileNunzio/ARGUS-PR
 AppSupportURL=https://github.com/AprileNunzio/ARGUS-PR/issues
@@ -11,7 +15,7 @@ DefaultGroupName=ARGUS-PR
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE
 OutputDir=..\..\dist
-OutputBaseFilename=ARGUS-PR-v0.9.0-Setup
+OutputBaseFilename=ARGUS-PR-v{#MyAppVersion}-Setup
 SetupIconFile=..\..\web\assets\argus.ico
 UninstallDisplayIcon={app}\ARGUS-PR.exe
 UninstallDisplayName=ARGUS-PR

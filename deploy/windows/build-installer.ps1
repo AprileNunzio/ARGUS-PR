@@ -38,7 +38,8 @@ Write-Host "[BUILD] Compilazione launcher desktop ARGUS-PR.exe..." -ForegroundCo
 if ($LASTEXITCODE -ne 0) { throw "Compilazione del launcher fallita ($LASTEXITCODE)." }
 
 Write-Host "[BUILD] Generazione installer Inno Setup..." -ForegroundColor Cyan
-& $iscc "$issFile"
+$pkgVersion = (Get-Content (Join-Path $repoRoot 'package.json') -Raw | ConvertFrom-Json).version
+& $iscc "/DMyAppVersion=$pkgVersion" "$issFile"
 if ($LASTEXITCODE -ne 0) { throw "Compilazione dell'installer fallita ($LASTEXITCODE)." }
 
 $setup = Get-ChildItem (Join-Path $repoRoot 'dist') -Filter '*Setup.exe' | Sort-Object LastWriteTime -Descending | Select-Object -First 1

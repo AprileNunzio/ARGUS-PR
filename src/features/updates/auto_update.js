@@ -5,7 +5,7 @@ import { readSetting } from '../settings/settings_service.js';
 import { RestartPolicy } from '../settings/settings_schema.js';
 import { insideWindow, nextOpening } from './maintenance_window.js';
 import { isNewer } from './semver.js';
-import { checkForUpdate, isGitInstall, requestUpdate, scheduleRestart } from './update_service.js';
+import { checkForUpdate, isGitInstall, isUpdateSupported, requestUpdate, scheduleRestart } from './update_service.js';
 import { Phase, readState, writeState, quarantine, isQuarantined } from './update_state.js';
 
 const log = createLogger('auto-update');
@@ -104,7 +104,7 @@ async function applyNow(config, target, trigger) {
 export async function runAutomaticUpgrade(config, trigger = 'startup', deps = {}) {
     const check = deps.check ?? checkForUpdate;
     const apply = deps.apply ?? applyNow;
-    const supported = deps.isGitInstall ?? isGitInstall;
+    const supported = deps.isUpdateSupported ?? deps.isGitInstall ?? isUpdateSupported;
     const now = deps.now ?? (() => new Date());
 
     const state = settleFailedAttempt(config);
@@ -113,7 +113,7 @@ export async function runAutomaticUpgrade(config, trigger = 'startup', deps = {}
     if (!rules.autoCheck) return { outcome: Outcome.DISABLED };
 
     if (!supported()) {
-        log.debug('automatic upgrade unavailable: this copy is not a git clone');
+        log.debug('automatic upgrade unavailable: this platform is not supported');
         return { outcome: Outcome.UNSUPPORTED };
     }
 

@@ -4,7 +4,7 @@ Documento di consegna per l'assistente che prosegue il lavoro.
 
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
-Stato alla consegna: **v0.13.0**, 164 test verdi (154 NVR + 10 ARGUS-SHIELD).
+Stato alla consegna: **v0.13.0**, 169 test verdi (159 NVR + 10 ARGUS-SHIELD).
 
 ---
 
@@ -62,7 +62,7 @@ Non rifare queste cose, sono complete e coperte da test.
 
 **Gestione (v0.12.0)**: pannello Impostazioni completo, politica di riavvio (`ask` / `window` / `immediate`), finestra di manutenzione, impostazioni applicate a caldo.
 
-**Installazione**: autoinstaller Linux non presidiato, console kiosk su HDMI, installatore Windows con launcher desktop, autoaggiornamento con quarantena e ripristino.
+**Installazione**: autoinstaller Linux non presidiato, console kiosk su HDMI, installatore Windows con launcher desktop, autoaggiornamento e autoripristino sia su Linux sia su Windows (anche senza clone git).
 
 ---
 

@@ -25,6 +25,10 @@ export function isGitInstall() {
     return fs.existsSync(path.join(projectRoot, '.git'));
 }
 
+export function isUpdateSupported() {
+    return isGitInstall() || process.platform === 'win32';
+}
+
 async function git(args) {
     const result = await run('git', ['-C', projectRoot, ...args], {
         windowsHide: true,
@@ -78,15 +82,15 @@ export function updateStatus(config) {
         automatic: state.automatic,
         quarantine: state.quarantine,
         lastAutoAttemptAt: state.lastAutoAttemptAt,
-        supported: isGitInstall(),
+        supported: isUpdateSupported(),
         repository: repository.url,
         lastCheck: cachedCheck?.result ?? null
     };
 }
 
 export async function requestUpdate(config, ref) {
-    if (!isGitInstall()) {
-        throw new AppError(ErrorCode.CONFLICT, 'Aggiornamento automatico non disponibile: questa copia non e\' un clone git');
+    if (!isUpdateSupported()) {
+        throw new AppError(ErrorCode.CONFLICT, 'Aggiornamento automatico non disponibile su questa piattaforma');
     }
 
     if (!isReleaseTag(ref)) {
@@ -100,6 +104,11 @@ export async function requestUpdate(config, ref) {
     const state = readState(config);
     if (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING) {
         throw new AppError(ErrorCode.CONFLICT, 'Un aggiornamento e\' gia\' in corso');
+    }
+
+    if (process.platform === 'win32') {
+        const { applyWindowsUpdate } = await import('./windows_updater.js');
+        return applyWindowsUpdate(config, ref);
     }
 
     const head = await currentCommit();

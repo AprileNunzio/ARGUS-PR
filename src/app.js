@@ -104,6 +104,11 @@ export async function bootstrap(overrides = {}) {
 
     seedFromConfig(config);
 
+    if (process.platform === 'win32') {
+        const { handleWindowsStartup } = await import('./features/updates/windows_updater.js');
+        handleWindowsStartup(config);
+    }
+
     const upgrade = await runAutomaticUpgrade(config, 'startup');
 
     if (upgrade.outcome === Outcome.UPGRADING) {
