@@ -4,6 +4,10 @@ Guida operativa per chi implementa. Non descrive un'idea: descrive **cosa scrive
 
 Leggi prima [AGENTS.md](../AGENTS.md) per i vincoli e [HANDOVER.md](../HANDOVER.md) per il quadro generale.
 
+> **Stato al 2026-09-03 (v0.12.0).** I punti da 1 a 8 dell'ordine di lavoro qui sotto **sono stati costruiti**. Restano il 9 in parte e dal 10 in poi. La tabella è aggiornata con lo stato di ciascuno.
+>
+> I capitoli §4 (come si accerta che una funzione sia vera) e §5 (cosa non fare) **non invecchiano**: valgono per ogni funzione nuova, comprese quelle di sicurezza descritte in [SICUREZZA.md](SICUREZZA.md). Se leggi un solo capitolo di questo documento, leggi quei due.
+
 | Documento | Contenuto |
 |---|---|
 | Questo file | Il principio, l'architettura dell'inferenza, l'ordine di lavoro |
@@ -65,25 +69,27 @@ Questa separazione non è estetica: è ciò che permette di sostituire il motore
 
 ## 3. Ordine di lavoro consigliato
 
-Ogni riga è una release. Non passare alla successiva finché la precedente non è verificata su video reale.
+Ogni riga è una release. Non passare alla successiva finché la precedente non è verificata.
 
-| # | Cosa | Perché in quest'ordine | Documento |
+| # | Cosa | Stato | Documento |
 |---|---|---|---|
-| 1 | Pianificazione oraria | Non dipende da nulla, è puro, si testa in un pomeriggio | [MOVIMENTO.md](MOVIMENTO.md) §1 |
-| 2 | Rilevamento movimento con zone | Primo rilevamento **vero** senza modelli né GPU. Dà subito eventi reali con cui provare tutto il resto | [MOVIMENTO.md](MOVIMENTO.md) §2 |
-| 3 | Ingresso rilevamenti + tabella eventi | La porta d'ingresso comune a movimento e visione. Falla prima della visione, così la visione ha dove scrivere | [VISIONE.md](VISIONE.md) §5 |
-| 4 | Registrazione su evento | Usa il movimento del punto 2. Chiude una funzione che il vecchio programma prometteva | [MOVIMENTO.md](MOVIMENTO.md) §3 |
-| 5 | Processo di visione: oggetti | Persone, veicoli, animali. Il modello più semplice, nessuna post-elaborazione | [VISIONE.md](VISIONE.md) §1-3 |
-| 6 | Inseguimento (tracking) | Senza questo un passante genera 150 eventi. Serve prima di targhe e volti | [VISIONE.md](VISIONE.md) §4 |
-| 7 | Targhe | Richiede tracking e voto su più fotogrammi | [VISIONE.md](VISIONE.md) §6 |
-| 8 | Anagrafica persone e volti | Richiede tracking e una soglia tarata | [VISIONE.md](VISIONE.md) §7 |
-| 9 | Regole di accesso e varchi | Solo ora, quando i rilevamenti sono affidabili | [AUTOMAZIONI.md](AUTOMAZIONI.md) §1-2 |
-| 10 | Notifiche Telegram, webhook, MQTT | Indipendente, si può anticipare se serve | [AUTOMAZIONI.md](AUTOMAZIONI.md) §3 |
-| 11 | Ricerca forense | Ha senso quando ci sono dati veri da cercare | [AUTOMAZIONI.md](AUTOMAZIONI.md) §5 |
-| 12 | Planimetria e barriere virtuali | Costruita sopra il tracking | [AUTOMAZIONI.md](AUTOMAZIONI.md) §6 |
-| 13 | Preset telecamere, diagnostica, watchdog | Rifiniture | [HANDOVER.md](../HANDOVER.md) §4 |
+| 1 | Pianificazione oraria | **fatta** | [MOVIMENTO.md](MOVIMENTO.md) §1 |
+| 2 | Rilevamento movimento con zone | **fatta** | [MOVIMENTO.md](MOVIMENTO.md) §2 |
+| 3 | Ingresso rilevamenti + tabella eventi | **fatta** | [VISIONE.md](VISIONE.md) §5 |
+| 4 | Registrazione su evento | **parziale**: solo la ritenzione differenziata | [MOVIMENTO.md](MOVIMENTO.md) §3 |
+| 5 | Processo di visione: oggetti | **fatta** | [VISIONE.md](VISIONE.md) §1-3 |
+| 6 | Inseguimento (tracking) | **fatta** | [VISIONE.md](VISIONE.md) §4 |
+| 7 | Targhe | **fatta** | [VISIONE.md](VISIONE.md) §6 |
+| 8 | Anagrafica persone e volti | **fatta** | [VISIONE.md](VISIONE.md) §7 |
+| 9 | Regole di accesso e varchi | **parziale**: le regole sì, i varchi no | [AUTOMAZIONI.md](AUTOMAZIONI.md) §1-2 |
+| 10 | Notifiche Telegram, webhook, MQTT | da fare | [AUTOMAZIONI.md](AUTOMAZIONI.md) §3 |
+| 11 | Ricerca forense | da fare | [AUTOMAZIONI.md](AUTOMAZIONI.md) §5 |
+| 12 | Planimetria e barriere virtuali | da fare | [AUTOMAZIONI.md](AUTOMAZIONI.md) §6 |
+| 13 | Preset RTSP, PTZ, diagnostica, watchdog | da fare | [AUTOMAZIONI.md](AUTOMAZIONI.md) §7-9 |
 
-**Il punto 2 è quello che cambia tutto.** Il rilevamento movimento non richiede modelli, GPU, né dipendenze: è aritmetica su byte. Ed è vero al 100%. Farlo per primo significa avere un sistema che rileva davvero qualcosa entro poche ore di lavoro, e avere eventi reali con cui provare regole, notifiche e registrazione su evento senza aspettare la visione artificiale.
+**L'ordine è cambiato.** Questa scaletta è stata scritta quando mancava il riconoscimento. Oggi il rilevamento c'è e il sistema può stare su internet, quindi la priorità non è più la riga 10: è **[SICUREZZA.md](SICUREZZA.md) §1, l'autenticazione a due fattori**. Le funzioni di questa tabella vengono dopo, nell'ordine indicato da [HANDOVER.md](../HANDOVER.md) §3.
+
+**Perché il punto 2 era quello che cambiava tutto**, e perché la lezione vale ancora: il rilevamento movimento non richiede modelli, GPU né dipendenze, è aritmetica su byte, ed è vero al 100%. Averlo fatto per primo ha dato eventi reali con cui provare tutto il resto senza aspettare la visione artificiale. Quando pianifichi una funzione nuova, cerca il suo equivalente: il pezzo più semplice che produce dati veri.
 
 ---
 

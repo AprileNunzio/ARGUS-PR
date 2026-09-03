@@ -1,6 +1,16 @@
 # Pianificazione oraria e rilevamento movimento
 
-Due funzioni che non richiedono modelli, GPU né dipendenze nuove. Il rilevamento movimento è **aritmetica su byte**: è il primo rilevamento vero che il sistema avrà, e serve per provare tutto il resto.
+Due funzioni che non richiedono modelli, GPU né dipendenze nuove. Il rilevamento movimento è **aritmetica su byte**.
+
+> **Stato al 2026-09-03 (v0.12.0): §1 e §2 sono costruiti e in esercizio.** Questo documento resta come spiegazione del *perché* le cose sono fatte così — soglie, isteresi, guardia anti-abbagliamento, point-in-polygon — e va letto prima di modificarle. Non è più un piano di lavoro.
+>
+> | Sezione | Stato |
+> |---|---|
+> | §1 Pianificazione oraria | **fatta**: `src/features/scheduling/`, griglia 7×48 con eccezioni, test in `test/schedule.test.js` |
+> | §2 Rilevamento movimento con zone | **fatta**: `src/features/motion/`, modelli di sfondo su fotogrammi 160×90, zone poligonali, editor web |
+> | §3 Registrazione su evento | **parziale**: la ritenzione differenziata sui segmenti con evento esiste (`retention.js`, `test/retention_events.test.js`); l'avvio e l'arresto della registrazione guidati dall'evento **no**, la registrazione resta continua |
+>
+> Se ti serve la registrazione su evento vera, il §3 è ancora la specifica giusta. Valuta però con il proprietario se la vuole davvero: la registrazione continua con ritenzione differenziata non perde mai nulla, quella su evento sì, ogni volta che il rilevatore sbaglia.
 
 ---
 

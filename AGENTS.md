@@ -5,6 +5,19 @@ Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora**
 
 Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.12.0
 
+**Mappa della documentazione.** Ogni file ha un compito, e ognuno dichiara in testa cosa e' gia' costruito, cosi' nessuno ricostruisce quello che esiste.
+
+| File | Compito |
+|---|---|
+| `AGENTS.md` | vincoli, convenzioni, stato delle API e del progetto |
+| `HANDOVER.md` | cosa manca, in ordine di priorita' |
+| `docs/SICUREZZA.md` | come costruire MFA, firma delle release, integrita', cifratura a riposo |
+| `docs/AUTOMAZIONI.md` | come costruire varchi, notifiche, ricerca forense, planimetria, PTZ |
+| `docs/IMPLEMENTAZIONE.md` | metodo: come si accerta che una funzione sia vera, e cosa non fare |
+| `docs/MOVIMENTO.md` | perche' pianificazione e movimento sono fatti cosi (gia' costruiti) |
+| `docs/VISIONE.md` | perche' la visione e' fatta cosi (gia' costruita) |
+| `shield/README.md` | ARGUS-SHIELD: ruleset, punteggio, comandi |
+
 
 
 ---

@@ -2,6 +2,12 @@
 
 Come costruire il riconoscimento **vero**. Il processo di visione è un componente separato, trattato come ffmpeg: un eseguibile esterno che ARGUS-PR avvia e con cui parla su una pipe.
 
+> **Stato al 2026-09-03 (v0.12.0): costruito e in esercizio.** `src/features/vision/` e `vision/` contengono rilevamento oggetti, tracciamento IoU, ANPR con voto su fotogrammi multipli, e biometria YuNet + SFace con soglia 0.363. L'ingresso macchina `POST /api/detections` con chiavi ad hash SHA-256 è attivo.
+>
+> Questo documento resta la spiegazione del *perché*: scelta dei modelli e loro licenze, protocollo fra i due processi, soglie, conformità GDPR. Leggilo prima di toccare quel codice; non è più un piano di lavoro.
+>
+> **Quello che non è mai stato provato**: nessuna telecamera IP reale è stata collegata. Tutte le verifiche usano una sorgente sintetica generata con ffmpeg. Prima di dichiarare affidabile il riconoscimento su un impianto, va rifatta la prova sul campo descritta in [IMPLEMENTAZIONE.md](IMPLEMENTAZIONE.md) §4.
+
 ---
 
 ## 1. Il processo `argus-vision`
