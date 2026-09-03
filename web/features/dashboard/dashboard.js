@@ -48,7 +48,7 @@ export async function renderDashboard({ session, api }) {
     const root = el('div', { className: 'view launchpad-view' });
     const permissions = session?.permissions ?? [];
 
-    const info = await api.get('/api/system/info').catch(() => ({
+    let info = await api.get('/api/system/info').catch(() => ({
         hostname: 'ARGUS-PR',
         platform: 'NVR',
         version: '0.15.0',
@@ -66,60 +66,149 @@ export async function renderDashboard({ session, api }) {
         placeholder: 'Cerca applicazione o strumento…'
     });
 
+    const clearSearchBtn = el('button', {
+        type: 'button',
+        className: 'launchpad-search__clear',
+        title: 'Cancella ricerca',
+        onclick: () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.hidden = true;
+            renderGrid();
+            searchInput.focus();
+        }
+    }, [icon('close')]);
+    clearSearchBtn.hidden = true;
+
+    const kbdBadge = el('kbd', {
+        className: 'launchpad-search__kbd',
+        textContent: 'Ctrl K'
+    });
+
     const searchBox = el('div', { className: 'launchpad-search' }, [
         icon('search'),
-        searchInput
+        searchInput,
+        clearSearchBtn,
+        kbdBadge
     ]);
 
     const modeCategoryBtn = el('button', {
         type: 'button',
         className: 'seg__btn seg__btn--on',
-        textContent: 'Categorie',
         onclick: () => {
             viewAllMode = false;
             currentAreaId = null;
             updateModeBtns();
             renderGrid();
         }
-    });
+    }, [
+        icon('grid'),
+        el('span', { textContent: 'Categorie' })
+    ]);
 
     const modeAllBtn = el('button', {
         type: 'button',
         className: 'seg__btn',
-        textContent: 'Tutte le App',
         onclick: () => {
             viewAllMode = true;
             currentAreaId = null;
             updateModeBtns();
             renderGrid();
         }
-    });
+    }, [
+        icon('apps'),
+        el('span', { textContent: 'Tutte le App' })
+    ]);
 
     const updateModeBtns = () => {
         modeCategoryBtn.classList.toggle('seg__btn--on', !viewAllMode && !currentAreaId);
         modeAllBtn.classList.toggle('seg__btn--on', viewAllMode);
     };
 
+    const wallBtn = el('button', {
+        type: 'button',
+        className: 'launchpad-tool-btn',
+        title: 'Apri il Muro Video a schermo intero',
+        onclick: () => window.open('/wall', '_blank')
+    }, [
+        icon('monitor'),
+        el('span', { className: 'launchpad-tool-btn__text', textContent: 'Muro Video' })
+    ]);
+
+    const refreshBtn = el('button', {
+        type: 'button',
+        className: 'launchpad-tool-btn launchpad-tool-btn--icon',
+        title: 'Aggiorna stato e telemetria',
+        onclick: async () => {
+            refreshBtn.classList.add('spinning');
+            info = await api.get('/api/system/info').catch(() => info);
+            updateMetaChips();
+            setTimeout(() => refreshBtn.classList.remove('spinning'), 400);
+        }
+    }, [icon('refresh')]);
+
+    const settingsBtn = permissions.includes('system.manage') ? el('button', {
+        type: 'button',
+        className: 'launchpad-tool-btn launchpad-tool-btn--icon',
+        title: 'Impostazioni di sistema',
+        onclick: () => { location.hash = '#/settings'; }
+    }, [icon('settings')]) : null;
+
+    const camerasChip = el('a', {
+        href: '#/cameras',
+        className: 'launchpad-hero__meta-chip clickable',
+        title: 'Gestione Telecamere'
+    }, [
+        icon('camera'),
+        el('span', { className: 'cameras-text', textContent: `${info.cameraCount ?? 0} Canali` })
+    ]);
+
+    const uptimeChip = el('span', {
+        className: 'launchpad-hero__meta-chip',
+        title: `Nodo: ${info.hostname}`
+    }, [
+        icon('clock'),
+        el('span', { className: 'uptime-text', textContent: formatDuration(info.uptimeSeconds) })
+    ]);
+
+    const versionChip = el('span', {
+        className: 'launchpad-hero__meta-chip'
+    }, [
+        `v${info.version}`
+    ]);
+
+    const updateMetaChips = () => {
+        const cText = camerasChip.querySelector('.cameras-text');
+        if (cText) cText.textContent = `${info.cameraCount ?? 0} Canali`;
+        const uText = uptimeChip.querySelector('.uptime-text');
+        if (uText) uText.textContent = formatDuration(info.uptimeSeconds);
+    };
+
     const header = el('div', { className: 'launchpad-hero' }, [
-        el('div', { className: 'launchpad-hero__info' }, [
-            el('div', { className: 'launchpad-hero__headline' }, [
+        el('div', { className: 'launchpad-hero__left' }, [
+            el('div', { className: 'launchpad-hero__brand' }, [
+                el('div', { className: 'launchpad-hero__logo' }, [icon('shield')]),
                 el('h1', { className: 'launchpad-hero__title', textContent: 'Centro di Controllo' }),
-                el('span', { className: 'launchpad-hero__status-pill' }, [
+                el('span', { className: 'launchpad-hero__status-pill', title: 'Tutti i demoni e worker operativi' }, [
                     el('span', { className: 'status-dot status-dot--live' }),
-                    'Sistema Operativo'
+                    'Operativo'
                 ])
             ]),
-            el('div', { className: 'launchpad-hero__meta-row' }, [
-                el('span', { className: 'launchpad-hero__meta-chip', textContent: `Host: ${info.hostname}` }),
-                el('span', { className: 'launchpad-hero__meta-chip', textContent: `${info.cameraCount ?? 0} Canali` }),
-                el('span', { className: 'launchpad-hero__meta-chip', textContent: `v${info.version}` }),
-                el('span', { className: 'launchpad-hero__meta-chip', textContent: `Uptime ${formatDuration(info.uptimeSeconds)}` })
+            el('div', { className: 'launchpad-hero__meta-group' }, [
+                camerasChip,
+                uptimeChip,
+                versionChip
             ])
         ]),
-        el('div', { className: 'launchpad-hero__actions' }, [
-            el('div', { className: 'seg-group' }, [modeCategoryBtn, modeAllBtn]),
+        el('div', { className: 'launchpad-hero__center' }, [
             searchBox
-        ])
+        ]),
+        el('div', { className: 'launchpad-hero__right' }, [
+            el('div', { className: 'seg-group' }, [modeCategoryBtn, modeAllBtn]),
+            wallBtn,
+            refreshBtn,
+            settingsBtn
+        ].filter(Boolean))
     ]);
 
     const navBarHost = el('div', { className: 'launchpad-navbar' });
@@ -259,8 +348,18 @@ export async function renderDashboard({ session, api }) {
 
     searchInput.addEventListener('input', () => {
         searchQuery = searchInput.value;
+        clearSearchBtn.hidden = searchQuery.length === 0;
         renderGrid();
     });
+
+    const onKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    };
+    window.addEventListener('keydown', onKeyDown);
 
     renderGrid();
     root.replaceChildren(header, navBarHost, gridHost);
