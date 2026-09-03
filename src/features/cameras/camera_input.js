@@ -9,6 +9,8 @@ export const INPUT_FORMATS = Object.freeze(['auto', 'mjpeg', 'h264', 'yuyv422', 
 const BASE_ARGS = Object.freeze(['-hide_banner', '-loglevel', 'error']);
 const LOW_LATENCY_ARGS = Object.freeze(['-fflags', 'nobuffer', '-flags', 'low_delay']);
 const DEVICE_PATTERN = /^[A-Za-z0-9/][A-Za-z0-9 ._:@#()\/-]{0,199}$/;
+const CAPTURE_BUFFER = '256M';
+const THREAD_QUEUE = '1024';
 const RAW_FORMATS = Object.freeze(['yuyv422', 'uyvy422', 'nv12', 'yuv420p', 'rgb24', 'bgr24', 'gray']);
 
 export function isLocalKind(kind) {
@@ -45,7 +47,7 @@ function pixelFormat(camera) {
 }
 
 function windowsArgs(device, size, rate, format) {
-    const args = ['-f', 'dshow'];
+    const args = ['-f', 'dshow', '-rtbufsize', CAPTURE_BUFFER, '-thread_queue_size', THREAD_QUEUE];
     if (format && RAW_FORMATS.includes(format)) args.push('-pixel_format', format);
     if (format && !RAW_FORMATS.includes(format)) args.push('-vcodec', format);
     if (size) args.push('-video_size', size);
@@ -54,7 +56,7 @@ function windowsArgs(device, size, rate, format) {
 }
 
 function linuxArgs(device, size, rate, format) {
-    const args = ['-f', 'v4l2'];
+    const args = ['-f', 'v4l2', '-thread_queue_size', THREAD_QUEUE];
     if (format) args.push('-input_format', format);
     if (size) args.push('-video_size', size);
     if (rate) args.push('-framerate', rate);
@@ -62,7 +64,7 @@ function linuxArgs(device, size, rate, format) {
 }
 
 function darwinArgs(device, size, rate) {
-    const args = ['-f', 'avfoundation'];
+    const args = ['-f', 'avfoundation', '-thread_queue_size', THREAD_QUEUE];
     if (rate) args.push('-framerate', rate);
     if (size) args.push('-video_size', size);
     return { args, target: device };

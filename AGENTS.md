@@ -402,6 +402,8 @@ Le rotte mutanti sono `Exposure.PRIVATE`: **da internet non si aprono varchi**, 
 
 Il processo viene ricostruito quando cambia l'insieme dei consumatori (150 ms di debounce) e riavviato con backoff se cade. Quando l'ultimo consumatore si stacca, la periferica viene rilasciata.
 
+**Buffer di acquisizione.** Le periferiche grezze producono molto: 1280x720 in `yuyv422` a 30 fps sono circa 55 MB/s. Con il buffer predefinito ffmpeg segnala `real-time buffer too full` e scarta fotogrammi, percio' le sorgenti locali ricevono `-rtbufsize 256M` (Windows) e `-thread_queue_size 1024` ovunque.
+
 **Le sorgenti locali si registrano sempre codificate.** Una webcam consegna `rawvideo`/`yuyv422`: `-c copy` verso MP4 fallisce con `Could not find tag for codec rawvideo`. La scelta dell'encoder (GPU quando disponibile, `libx264` altrimenti) sta in `src/features/streaming/encoder.js`, condivisa fra anteprima, registrazione e broker.
 
 ---

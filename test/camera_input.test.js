@@ -65,7 +65,8 @@ test('la telecamera USB su Windows usa dshow con formato, risoluzione e cadenza'
     assert.equal(input.target, 'video=Integrated Camera');
     assert.deepEqual(args, [
         '-hide_banner', '-loglevel', 'error', '-nostdin',
-        '-f', 'dshow', '-vcodec', 'mjpeg', '-video_size', '1280x720', '-framerate', '30',
+        '-f', 'dshow', '-rtbufsize', '256M', '-thread_queue_size', '1024',
+        '-vcodec', 'mjpeg', '-video_size', '1280x720', '-framerate', '30',
         '-i', 'video=Integrated Camera'
     ]);
 });

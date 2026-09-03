@@ -60,7 +60,7 @@ export const MACRO_AREAS = [
         icon: 'server',
         png: 'area_sistema',
         color: 'cyan',
-        getMetric: (info) => `v${info.version ?? '0.18.0'}`,
+        getMetric: (info) => `v${info.version ?? '0.18.1'}`,
         subapps: [
             { id: 'cameras', title: 'Telecamere', desc: 'Canali di rete e USB, parametri, orari e zone', icon: 'camera', png: 'app_cameras', route: 'cameras', badge: { text: 'Canali', tone: 'blue' }, permission: 'camera.manage' },
             { id: 'settings', title: 'Impostazioni', desc: 'Pannello schema-driven autogenerante', icon: 'settings', png: 'app_settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
