@@ -2,6 +2,10 @@
 
 Il contesto completo di questo progetto è in **[AGENTS.md](AGENTS.md)**. Leggilo prima di scrivere codice.
 
+**Cosa devi fare** è in **[HANDOVER.md](HANDOVER.md)**: stato reale, lavoro pendente in ordine di priorità, trappole già pagate e cosa non è mai stato provato su hardware vero.
+
+La regola che sovrasta tutte le altre: questo è un sistema di videosorveglianza esposto a internet, quindi **la sicurezza viene prima di eleganza, prestazioni e comodità** (AGENTS.md §0).
+
 Promemoria dei vincoli che vengono violati più spesso:
 
 - Nessun commento nel codice sorgente.

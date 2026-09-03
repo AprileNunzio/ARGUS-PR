@@ -1,233 +1,163 @@
 # HANDOVER — cosa resta da fare su ARGUS-PR
 
 Documento di consegna per l'assistente che prosegue il lavoro.
-Leggi **prima** [AGENTS.md](AGENTS.md): contiene i vincoli non negoziabili e le convenzioni.
-Questo file dice **cosa manca**. Per **come costruirlo davvero**, punto per punto, vai in [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md).
 
-Stato alla consegna: **v0.6.0**, 33 test verdi, tutto pubblicato su GitHub.
+Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
----
-
-## 1. Il contesto in due minuti
-
-Il proprietario aveva un'app di videosorveglianza dentro il marketplace **Adestio**
-(`D:\Google Drive (...)\Adestio-Marketplace\App-ArgusPR`). Quella piattaforma ha limiti
-insuperabili per un NVR: SQLite in RAM riserializzato per intero a ogni flush, niente moduli
-nativi, niente supporto Range, nessun push dal backend al frontend, backend nello stesso
-processo dell'app.
-
-Per questo è nato **ARGUS-PR standalone**, questo repository: nessun rapporto con Adestio,
-nessun FTP, demone Node.js autonomo. L'obiettivo dichiarato dal proprietario è
-**riportare tutte le funzionalità del vecchio programma**, fatte per davvero.
-
-### Cosa NON devi copiare dal vecchio programma
-
-Il "riconoscimento AI" del vecchio programma **non esisteva**. Verificato leggendo il codice:
-
-- `backend/biometrics/biometric_ensemble.js` → `generateSimulatedEmbedding()` produce un
-  vettore da un hash SHA-256 del nome. Non è un embedding facciale.
-- `engine/worker_manager.js` → `getLiveFrameDetections()` restituisce un riquadro **fisso**
-  (`bbox_x: 0.38, bbox_y: 0.24`) con confidenza **0.96 inventata**.
-- `backend/detections/detection_handler.js` → ha una lista `BANNED_FAKES` di targhe finte
-  (`AB123CD`, `EF456GH`, …) da filtrare: erano dati di esempio seminati nel database.
-
-**Non riprodurre la simulazione.** Il proprietario è stato informato di questo. La strada
-corretta è nella sezione 4: un ingresso reale per i rilevamenti, che accetta dati da un
-motore di inferenza esterno o dall'analitica di bordo delle telecamere.
+Stato alla consegna: **v0.12.0**, 150 test verdi (140 NVR + 10 ARGUS-SHIELD), due commit pronti in locale **non ancora pubblicati** (vedi §1).
 
 ---
 
-## 2. Cosa è già fatto e funzionante
+## 0. Le regole del proprietario, prima di toccare qualsiasi cosa
 
-| Fase | Contenuto | Versione |
-|---|---|---|
-| F0 | Kernel, sicurezza, HTTP, UI, telecamere, ONVIF | 0.1.0 |
-| F1 | Diretta video fMP4 su WebSocket + MSE | 0.2.0 |
-| F2 | Registrazione, segmentazione, indice JSONL, ritenzione | 0.3.0 |
-| F3 | Riproduzione e linea temporale | 0.3.0 |
-| FA | Autoinstaller Linux, console locale `/wall` | 0.4.0 |
-| FU | Autoaggiornamento da GitHub con ripristino automatico | 0.5.0 |
-| F3b | Esportazione con catena di custodia | 0.6.0 |
+Non sono preferenze. Sono vincoli.
 
-Ognuna ha commit, tag e release su GitHub, con note che dichiarano cosa è stato verificato
-e cosa no. **Mantieni questa abitudine**: il proprietario chiede esplicitamente
-"per ogni fase completata aggiorna github e release e readme".
-
----
-
-## 3. Inventario del vecchio programma da portare
-
-Il vecchio programma aveva **19 moduli** e **14 tabelle**. Ecco la mappatura completa.
-
-### Già portato
-
-| Vecchio | Nuovo |
-|---|---|
-| `camera_management`, `camera_form`, `onvif_scanner` | `src/features/cameras/`, `src/features/discovery/` |
-| `live_view` (griglia) | `src/features/streaming/`, `web/features/live/`, `web/features/wall/` |
-| `dashboard` | `web/features/dashboard/` |
-| `diagnostics` (parziale) | `web/features/system/` |
-
-### Da portare
-
-| Vecchio modulo | Tabelle | Cosa fa | Priorità |
-|---|---|---|---|
-| `presets`, `preset_form` | `camera_presets` | Modelli di URL RTSP per marca/modello, così l'utente non scrive l'URL a mano | **alta**, è piccolo e utile subito |
-| `people`, `person_form`, `person_detail` | `people`, `face_logs` | Anagrafica persone: nome, ruolo (dipendente/visitatore/fornitore/VIP/lista nera), reparto, contatti, foto, conteggio visite | alta |
-| `access_logs`, `log_detail` | `plate_logs`, `access_rules` | Registro transiti targhe con esito accesso, dettaglio del singolo transito | alta |
-| `analytics`, `rule_form` | `access_rules` | Regole targhe: whitelist/blacklist/monitorata, con validità temporale | alta |
-| `automation` | `automation_config`, `physical_gates`, `gate_action_rules` | Notifiche Telegram, relè via webhook HTTP, MQTT; apertura varchi su riconoscimento | media |
-| `forensic_search` | `detections`, `plate_logs`, `face_logs` | Ricerca incrociata per classe, telecamera, intervallo, targa, persona | media |
-| `floor_plan` | `floor_plans`, `map_camera_positions`, `virtual_barriers` | Planimetria con posizione/rotazione/campo visivo delle telecamere e barriere virtuali (attraversamento linea, zona perimetrale) | media |
-| `settings` | — | Impostazioni generali | bassa |
-| `diagnostics` (completo) | `system_metrics` | FPS in ingresso, FPS inferenza, latenza per telecamera, storico | bassa |
+1. **La sicurezza viene prima di tutto.** È la regola zero di AGENTS.md §0. Se sicurezza ed eleganza sono in conflitto, vince la sicurezza e il compromesso va scritto in AGENTS.md.
+2. **Nessun commento nel codice.** Le spiegazioni vanno nei file `.md`.
+3. **Nessun file oltre 500 righe.** Superato il limite, si modularizza.
+4. **Clean Architecture**, colocation per funzionalità. `features → security/storage/platform → kernel`, mai al contrario.
+5. **Due dipendenze soltanto**: `better-sqlite3` e `ws`. Ogni pacchetto in più è superficie d'attacco. ARGUS-SHIELD ne ha **zero**.
+6. **Niente abuso di try/catch**: solo ai confini di I/O, e sempre traducendo in `AppError`.
+7. **`spawn` sempre con `shell: false`**, argomenti come array.
+8. **UI totalmente responsive**, nativa su mobile e desktop.
+9. **A ogni lavoro finito**: commit, tag, release GitHub, README e **AGENTS.md aggiornato nello stesso commit**.
+10. **Dichiara sempre cosa non hai verificato.** Non scrivere "funziona" di qualcosa che non hai eseguito. Le note di release esistenti rispettano questa regola: continuala.
 
 ---
 
-## 4. Le fasi da fare, in ordine
+## 1. La prima cosa da fare: pubblicare
 
-> Le istruzioni operative dettagliate — algoritmi, modelli, comandi ffmpeg, schemi SQL, test di verifica — stanno in **[docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md)** e nei tre documenti che indicizza:
-> [docs/MOVIMENTO.md](docs/MOVIMENTO.md), [docs/VISIONE.md](docs/VISIONE.md), [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
-> Quella e' la guida da seguire. Questa sezione resta come quadro d'insieme.
+Due commit sono già in locale su `main`, con i tag creati, ma **il push non è stato eseguito**: l'assistente precedente era bloccato dai permessi della propria sessione.
 
-### F4 — Pianificazione e rilevamento movimento (v0.7.0)
+- `0452d1a` — v0.11.0: TLS obbligatorio, zone di rete, ARGUS-SHIELD, autoaggiornamento
+- `79ead56` — v0.12.0: politica di riavvio e impostazioni complete dal browser
 
-Due cose distinte, entrambe reali e verificabili.
+```bash
+git push origin main
+git push origin v0.11.0 v0.12.0
+gh release create v0.11.0 --title "ARGUS-PR v0.11.0" --notes-file <note>
+gh release create v0.12.0 --title "ARGUS-PR v0.12.0" --notes-file <note>
+```
 
-**Pianificazione oraria.** Registrare non 24 ore su 24 ma per fasce. Modello: per telecamera,
-una settimana tipo (7 giorni × 24 ore, bitmap) più eccezioni per data. Il `recording_hub`
-già decide chi registra: aggiungi un valutatore puro `schedule.js` che, data la settimana
-tipo e un istante, dice se registrare. **Scrivilo come funzione pura e testalo**: è la stessa
-logica di `retention.js`, che è pura apposta.
+**Perché è la priorità:** l'autoaggiornamento del prodotto scarica l'ultimo tag di release da GitHub. Finché non pubblichi, nessun impianto installato riceve niente. Le note vanno scritte con la stessa onestà delle precedenti: cosa cambia, come si aggiorna dalla versione prima, cosa manca ancora.
 
-**Rilevamento movimento vero.** Non simularlo. Due strade praticabili:
-
-1. **ffmpeg `select` con `scene`**: `-vf "select='gt(scene,0.02)',metadata=print"` e leggi i
-   valori da stderr. Semplice, nessuna dipendenza, ma niente zone.
-2. **Differenza di frame in Node**: estrai fotogrammi ridotti (`-vf scale=64:36,format=gray`)
-   a bassa frequenza su `pipe:1`, confronta i buffer in JavaScript. Ti dà **le zone**, perché
-   sai a quale porzione della griglia appartiene ogni pixel. 64×36 = 2304 byte per fotogramma:
-   costa niente.
-
-Consiglio la seconda: le zone erano una richiesta esplicita. Le zone si disegnano sul
-riquadro live con un canvas, si salvano come poligoni normalizzati (0–1) e si valutano con
-un point-in-polygon puro e testabile.
-
-Eventi da pubblicare su `Topic.MOTION` (già dichiarato in `event_bus.js`, mai usato).
-
-### F5 — Eventi, persone, targhe, automazioni (v0.8.0)
-
-Questa è la fase grossa, quella che riporta il cuore del vecchio programma.
-
-**4.1 Ingresso rilevamenti** — `POST /api/detections`, autenticato con una chiave per sorgente
-(non con la sessione utente: chi scrive è una macchina). Payload: telecamera, istante, classe
-(`person`, `vehicle`, `animal`, `face`, `plate`), confidenza, riquadro normalizzato, testo
-targa opzionale, ritaglio in base64 opzionale. Questo è ciò che sostituisce la simulazione:
-- un motore di inferenza esterno (ONNX Runtime, Frigate, CodeProject.AI) ci scrive dentro;
-- molte telecamere IP fanno ANPR e rilevamento persone a bordo e possono inviare eventi.
-
-Valida tutto in `guards.js`. La classe deve stare in un elenco chiuso. Il ritaglio va salvato
-su disco, **mai** in SQLite (vale la stessa regola dell'indice segmenti).
-
-**4.2 Anagrafica persone** — tabella `people` come il vecchio schema. Il campo `face_embedding`
-tienilo, ma **popolalo solo con embedding veri** che arrivano dall'ingresso rilevamenti. Il
-confronto con `cosineSimilarity` (in `backend/biometrics/biometric_ensemble.js` del vecchio
-programma) è matematica corretta: quella puoi copiarla, è l'unica parte vera.
-
-**4.3 Regole targhe** — `access_rules` con `list_type` whitelist/blacklist/monitored e validità
-`valid_from`/`valid_to`. Il confronto va fatto su targa normalizzata (solo A-Z0-9). Attenzione:
-è la logica che decide se un cancello si apre. **Falla pura e testala** con casi limite: targa
-scaduta, regola disattivata, pattern con caratteri jolly.
-
-**4.4 Automazioni** — Telegram, webhook HTTP per relè, MQTT.
-- Telegram e webhook: `fetch` nativo, nessuna dipendenza.
-- MQTT: servirebbe un pacchetto. **Il vincolo è due dipendenze soltanto.** Prima di aggiungerne
-  una, chiedi al proprietario. In alternativa un webhook verso un bridge MQTT esterno.
-- I token vanno nel vault (`encryptSecret`), **mai in chiaro nel database**.
-- Ogni azione verso l'esterno deve avere timeout e non deve poter bloccare la registrazione.
-
-**4.5 Varchi** — `physical_gates` e `gate_action_rules`. Un varco che si apre da solo è
-l'operazione più delicata del sistema: registra ogni apertura in `audit_log`, metti un limite
-di frequenza, e non aprire mai su una corrispondenza sotto soglia di confidenza.
-
-### F6 — Planimetria, preset, diagnostica, watchdog (v0.9.0)
-
-**Planimetria**: immagine di sfondo, telecamere posizionate con rotazione e cono di campo
-visivo, barriere virtuali. Nel vecchio programma l'immagine stava in `image_data` come base64
-dentro il database: **non farlo**, salvala come file e tieni il percorso.
-
-**Preset telecamere**: tabella `camera_presets` più un elenco di sistema (Hikvision, Dahua,
-Reolink, Axis, TP-Link, Foscam…). Nel form telecamera, scelta marca/modello → URL precompilato.
-
-**Diagnostica**: `system_metrics` per FPS e latenza per telecamera, con grafico storico.
-
-**Watchdog**: sorveglia i processi ffmpeg, riavvia quelli fermi, allarme se una telecamera è
-irraggiungibile oltre N minuti. Parte dell'infrastruttura c'è già (`STALL_TIMEOUT_MS` in
-`stream_session.js`, `recorder.js` con `reconnecting`).
-
-**GDPR**: cancellazione su richiesta di una persona e dei suoi `face_logs`, esportazione dei
-dati di una persona, ritenzione separata e più corta per i dati biometrici.
+Verifica prima di pubblicare: `node --test test/*.test.js` e `node --test shield/test/*.test.js` devono essere entrambi verdi.
 
 ---
 
-## 5. Regole di lavoro che il proprietario ha imposto
+## 2. Cosa esiste davvero oggi
 
-Queste non sono preferenze, sono vincoli. Le trovi anche in AGENTS.md §2.
+Non rifare queste cose, sono complete e coperte da test.
 
-1. **Nessun commento nel codice.** Le spiegazioni vanno in `.md`.
-2. **Nessun file oltre 500 righe.** Superato il limite, si modularizza.
-3. **Clean Architecture**, colocation per funzionalità.
-4. **UI responsive** nativa su mobile e desktop, **tema chiaro unico**.
-5. **Zero-Trust**, sanitizzazione totale, dati sensibili cifrati.
-6. **Niente abuso di try/catch**: solo ai confini di I/O.
-7. **Due dipendenze soltanto**: `better-sqlite3` e `ws`. Ogni pacchetto è superficie d'attacco.
-8. **A ogni fase completata**: commit, tag, release GitHub, README e AGENTS.md aggiornati.
-9. **Aggiorna AGENTS.md nello stesso commit** di ogni cambiamento strutturale.
+**Fondamenta**: kernel, config, logger strutturato, SQLite con migrazioni (schema 7), vault AES-256-GCM, autenticazione scrypt, RBAC, audit, server HTTP con Range, WebSocket autenticato.
 
-E una regola che viene dal modo in cui il proprietario ha lavorato finora: **dichiara sempre
-cosa non hai verificato.** Le note di release esistenti lo fanno. Non scrivere "funziona" di
-qualcosa che non hai eseguito.
+**Video**: diretta reale via fMP4 su WebSocket e Media Source Extensions, registrazione continua segmentata, indice append-only, ritenzione automatica, archivio con timeline e riproduzione, esportazione con catena di custodia.
+
+**Analisi**: motion detection a modelli di sfondo con zone poligonali, pianificazione oraria 7×48, visione AI (persone, veicoli, animali), tracciamento IoU, biometria facciale YuNet + SFace conforme GDPR, ANPR con voto su fotogrammi multipli, regole di accesso.
+
+**Sicurezza (v0.11.0)**: TLS obbligatorio con PKI interna autogenerata e autorinnovante, redirect 308 dalla porta 80, zone di rete `local`/`lan`/`wan` con default negato per ogni rotta, divieto di accesso amministrativo da internet, sessioni legate alla zona di emissione, blocco progressivo per account, flusso eventi append-only, **ARGUS-SHIELD** (firewall nftables autonomo con punteggio a decadimento).
+
+**Gestione (v0.12.0)**: pannello Impostazioni completo, politica di riavvio (`ask` / `window` / `immediate`), finestra di manutenzione, impostazioni applicate a caldo.
+
+**Installazione**: autoinstaller Linux non presidiato, console kiosk su HDMI, installatore Windows con launcher desktop, autoaggiornamento con quarantena e ripristino.
 
 ---
 
-## 6. Trappole già pagate, non ripagarle
+## 3. Il lavoro che manca, in ordine di priorità
+
+### 3.1 MFA TOTP — la cosa più importante
+
+**Perché per prima:** il sistema può essere esposto a internet (`ARGUS_PUBLIC_ACCESS`). Con la sola password, una credenziale rubata è un impianto perso. È l'unica difesa di livello base ancora assente.
+
+Cosa serve:
+
+- `src/security/totp.js` — RFC 6238 puro con `node:crypto`, nessuna dipendenza. Finestra ±1 intervallo da 30 s, cifre 6, algoritmo SHA-1 (è quello che le app supportano davvero).
+- Seed cifrato nel vault esistente (`encryptSecret`), **mai** in chiaro nel database né nei log.
+- Codici di recupero: 10, generati una volta, salvati come hash scrypt, consumati singolarmente.
+- Migrazione 008: colonne `totp_secret`, `totp_enabled`, tabella `recovery_codes`.
+- **Obbligatorio per il ruolo `admin`**, opzionale per `operator` e `viewer`. Un admin senza TOTP attivo deve essere costretto ad attivarlo al primo accesso, come già accade per il cambio password.
+- Il QR code va generato **lato client** in SVG dal solo `otpauth://` URI: non aggiungere una libreria per questo.
+- Flusso di arruolamento nella UI (`web/features/account/`), accanto al cambio password.
+- Il blocco per account (`lockout.js`) deve valere anche sui codici TOTP sbagliati.
+
+Test obbligatori: vettori RFC 6238, riuso dello stesso codice rifiutato, codice di recupero consumato una sola volta, admin da WAN comunque rifiutato (regola esistente, non indebolirla).
+
+### 3.2 Firma degli aggiornamenti
+
+Il meccanismo di verifica **esiste già** in `deploy/linux/pre-start.sh` (`verify_signature()`, `git verify-tag` in un `GNUPGHOME` temporaneo), ma è inerte finché non c'è una chiave in `/etc/argus-pr/update-key.asc`.
+
+Cosa manca:
+
+- Firmare i tag di release con GPG (`git tag -s`).
+- Distribuire la chiave pubblica e farla installare dall'autoinstaller.
+- Documentare la rotazione della chiave.
+
+**Perché conta:** con l'autoaggiornamento attivo su ogni impianto, chi controlla l'account GitHub controlla tutti gli impianti installati. Questo è il rischio più grande rimasto e va detto al proprietario in questi termini.
+
+### 3.3 Integrità dell'archivio e dell'audit
+
+- Hash SHA-256 di ogni segmento alla chiusura, concatenato all'hash del precedente (catena append-only per canale e per giorno, accanto all'indice JSONL esistente).
+- Stessa catena sull'`audit_log`, più inoltro syslog verso una macchina esterna: oggi un admin compromesso può cancellare le proprie tracce.
+
+**Perché conta:** per la videosorveglianza dimostrare che un filmato non è stato alterato è il requisito legale vero, più della riservatezza.
+
+### 3.4 Cifratura del disco dati
+
+Non è codice: è documentazione operativa. `master.key` e le chiavi della PKI stanno a `0600` sul disco. Chi si porta via il mini PC ha credenziali RTSP e registrazioni. Serve una guida a LUKS con sblocco automatico via TPM 2.0, in `docs/`.
+
+### 3.5 F6 — funzionalità non ancora costruite
+
+Planimetria con barriere virtuali, preset PTZ, notifiche Telegram e MQTT, relè hardware di apertura varchi, ricerca forense unificata per targa e volto sullo storico registrato, diagnostica e watchdog.
+
+Se il proprietario ne chiede una, **non fingere che esista**: dichiara che va costruita.
+
+---
+
+## 4. Trappole già pagate, non ripagarle
 
 - **`node --test test/` fallisce su Windows.** Usa `node --test test/*.test.js`.
-- **`strftime_mkdir` non esiste** sul muxer `segment` di ffmpeg (è del muxer `hls`): le
-  directory le crea `ensureSegmentDays()`.
-- **Il CSV di ffmpeg contiene solo il nome file**, non il percorso; e viene troncato a ogni
-  riavvio di ffmpeg. `segmentPathFromName()` e il contatore del watcher gestiscono entrambe.
-- **`-re` serve sulle sorgenti non RTSP**, altrimenti un file viene letto a velocità piena e
-  produce un unico segmento.
-- **CSP senza `unsafe-inline`**: nessun attributo `style` nel DOM generato da JS. Per i valori
-  dinamici usa `element.style.setProperty('--token', valore)`.
-- **`[hidden]` non basta**: serve `[hidden] { display: none !important; }`, altrimenti
-  `display:flex` di un componente vince sull'attributo.
+- **La suite di ARGUS-SHIELD si lancia a parte**: `node --test shield/test/*.test.js`.
+- **`strftime_mkdir` non esiste** sul muxer `segment` di ffmpeg: le directory le crea `ensureSegmentDays()`.
+- **Il CSV di ffmpeg contiene solo il nome file**, non il percorso, e viene troncato a ogni riavvio.
+- **`-re` serve sulle sorgenti non RTSP**, altrimenti un file viene letto a velocità piena.
+- **CSP senza `unsafe-inline`**: nessun attributo `style` nel DOM generato da JS. Per i valori dinamici usa `element.style.setProperty('--token', valore)`.
+- **`[hidden]` non basta**: serve `[hidden] { display: none !important; }`.
 - **Le varianti di `notice()` sono `error`, `warn`, `ok`, `info`.** Non esiste `success`.
-- **Il tool Bash tronca i comandi molto lunghi**: per file grandi usa lo strumento di scrittura,
-  non un heredoc.
-- **I server in background trattengono il file del database**: fermali con lo strumento
-  apposito, non con `kill`.
-- **`.gitattributes` forza LF sugli script shell**: un CRLF li renderebbe non eseguibili su
-  Linux e romperebbe l'installatore in modo silenzioso.
+- **Gli heredoc con apostrofi e backtick vengono mangiati dalla shell**: per i file grandi usa lo strumento di scrittura, per le modifiche chirurgiche uno script Python separato.
+- **`openDatabase()` è un singleton**: nei test `:memory:` lo stato persiste fra un test e l'altro. Usa nomi utente diversi invece di provare a riaprire il database.
+- **I server in background trattengono il file del database**: fermali prima di cancellare la cartella dati.
+- **`.gitattributes` forza LF sugli script shell**: un CRLF li renderebbe non eseguibili su Linux e romperebbe l'installatore in silenzio.
+- **Non toccare la porta e il certificato dal pannello web.** Sono deliberatamente fuori dalle impostazioni: un valore sbagliato renderebbe irraggiungibile la pagina stessa da cui li avresti cambiati.
+- **Il NVR non comanda ARGUS-SHIELD.** La comunicazione è a senso unico, il NVR scrive eventi e lo scudo li legge. Non introdurre un'API di controllo: è il motivo per cui un NVR compromesso non si porta dietro il firewall.
 
 ---
 
-## 7. Cosa non è mai stato provato su hardware vero
+## 5. Cosa non è mai stato provato su hardware vero
 
-Va detto a chi prosegue e al proprietario:
+Va detto a chi prosegue e al proprietario. Non spacciarlo per verificato.
 
-- **L'autoinstaller Linux non è mai stato eseguito su Linux.** La macchina di sviluppo è
-  Windows, senza Docker né WSL. Sintassi, flusso, gestione argomenti e artefatti generati sono
-  stati verificati; l'esecuzione reale no.
-- **`ExecStartPre` non è mai girato sotto systemd reale.** La macchina a stati del ripristino
-  è stata provata a mano su un repository git di prova, e funziona; l'integrazione con systemd
-  no.
-- **La console locale non è mai stata provata su un monitor collegato a un server Linux.** È
-  stata provata nel browser, dove funziona.
-- **Nessuna telecamera IP reale è mai stata collegata.** Tutte le prove usano una sorgente
-  sintetica generata con ffmpeg. RTSP con credenziali, UDP, sotto-flussi e ONVIF di marche
-  reali sono da verificare sul campo.
+- **L'autoinstaller Linux non è mai stato eseguito su Linux.** La macchina di sviluppo è Windows, senza Docker né WSL. Sintassi e flusso sono verificati; l'esecuzione reale no.
+- **Il ruleset nftables non è mai stato applicato su un kernel reale.** È generato e validato come testo; `nft -c` non è mai girato. Le suite girano tutte sul backend `report-only`.
+- **`ExecStartPre` non è mai girato sotto systemd reale.**
+- **La console locale non è mai stata provata su un monitor collegato a un server Linux.** Nel browser funziona.
+- **Nessuna telecamera IP reale è mai stata collegata.** Tutte le prove usano una sorgente sintetica ffmpeg. RTSP con credenziali, UDP, sotto-flussi e ONVIF di marche reali sono da verificare sul campo.
+- **Il certificato interno è verificato con handshake TLS veri** (questo sì), ma mai da un browser reale con la CA installata nello store di sistema.
 
-Quando il proprietario installerà su una macchina vera, il primo comando utile è
-`journalctl -u argus-pr -n 50`.
+Quando il proprietario installerà su una macchina vera, i primi comandi utili sono `journalctl -u argus-pr -n 50` e `argus-shield status`.
+
+---
+
+## 6. Come si lavora qui
+
+```bash
+npm install
+npm start                          # avvia il server
+npm run doctor                     # verifica ambiente, vault, DB, ffmpeg
+npm run cert                       # impronta del certificato e percorso della CA
+node --test test/*.test.js         # suite NVR
+node --test shield/test/*.test.js  # suite ARGUS-SHIELD
+```
+
+In sviluppo su Windows conviene `ARGUS_PORT=8443 ARGUS_HTTP_PORT=0 ARGUS_AUTO_UPDATE=false`, altrimenti il servizio prova a occupare la 443 e a cercare aggiornamenti a ogni avvio.
+
+Prima di dichiarare finito un lavoro: entrambe le suite verdi, nessun file oltre 500 righe, nessun commento nel codice, AGENTS.md aggiornato, commit, tag, release.
