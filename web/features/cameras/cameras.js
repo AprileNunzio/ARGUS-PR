@@ -270,10 +270,7 @@ export async function renderCameras({ api, session }) {
 
         outlet.replaceChildren(
             el('div', { className: 'view__head' }, [
-                el('div', {}, [
-                    el('h1', { className: 'view__title', textContent: 'Telecamere' }),
-                    el('p', { className: 'view__sub', textContent: `${cameras.length} canali configurati` })
-                ]),
+                el('h1', { className: 'view__title', textContent: 'Telecamere' }),
                 el('div', { className: 'row row--tight' }, [discoverButton, addButton])
             ]),
             formHost,

@@ -125,7 +125,7 @@ export async function renderArchive({ api, session }) {
                 el('div', { className: 'panel archive__stage' }, [video]),
                 el('section', { className: 'panel' }, [
                     el('div', { className: 'panel__head' }, [
-                        el('span', { className: 'panel__title' }, [icon('timeline'), 'Linea temporale']),
+                        el('span', { className: 'panel__title' }, [icon('timeline'), 'Timeline']),
                         stats
                     ]),
                     el('div', { className: 'panel__body' }, [timeline.element, feedback])

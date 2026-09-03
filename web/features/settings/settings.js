@@ -39,10 +39,9 @@ function settingRow(entry, values, onChange) {
     const row = el('div', { className: 'settings-row' }, [
         el('div', { className: 'settings-row__info' }, [
             el('div', { className: 'settings-row__title-line' }, [
-                el('span', { className: 'settings-row__label', textContent: entry.label }),
+                el('span', { className: 'settings-row__label', textContent: entry.label, title: entry.help ?? entry.label }),
                 ...badges
-            ]),
-            entry.help ? el('p', { className: 'settings-row__help', textContent: entry.help }) : null
+            ])
         ]),
         el('div', { className: 'settings-row__control' }, [
             controlFor(entry, (value) => onChange(entry.key, value))
@@ -95,12 +94,9 @@ function groupCard(group, entries, values, onChange) {
                 el('div', { className: `settings-card__icon-badge settings-card__icon-badge--${color}` }, [
                     icon(group.icon ?? 'settings')
                 ]),
-                el('div', {}, [
-                    el('h2', { className: 'settings-card__title', textContent: group.label }),
-                    group.subtitle ? el('p', { className: 'settings-card__sub', textContent: group.subtitle }) : null
-                ])
+                el('h2', { className: 'settings-card__title', textContent: group.label })
             ]),
-            el('span', { className: 'settings-card__count', textContent: `${entries.length} opzioni` })
+            el('span', { className: 'settings-card__count', textContent: `${entries.length} parametri` })
         ]),
         el('div', { className: 'settings-card__body' }, sectionNodes)
     ]);
@@ -309,10 +305,7 @@ export async function renderSettings({ api }) {
 
         root.replaceChildren(
             el('div', { className: 'settings-header' }, [
-                el('div', {}, [
-                    el('h1', { className: 'view__title', textContent: 'Impostazioni' }),
-                    el('p', { className: 'settings-header__sub', textContent: 'Configurazione centralizzata e autonoma dei servizi e dell architettura' })
-                ]),
+                el('h1', { className: 'view__title', textContent: 'Impostazioni' }),
                 searchBox
             ]),
             tabsContainer,

@@ -32,10 +32,7 @@ export async function renderSystem({ api }) {
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('div', {}, [
-                el('h1', { className: 'view__title', textContent: 'Sistema' }),
-                el('p', { className: 'view__sub', textContent: `${info.hostname} · ${info.platform}` })
-            ]),
+            el('h1', { className: 'view__title', textContent: 'Sistema' }),
             chip(`v${info.version}`, 'info')
         ]),
 

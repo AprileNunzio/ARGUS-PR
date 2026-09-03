@@ -1,64 +1,59 @@
 export const MACRO_AREAS = [
     {
         id: 'surveillance',
-        title: 'Videosorveglianza & Flussi',
-        subtitle: 'Monitoraggio in tempo reale, streaming multi-camera e gestione dispositivi',
+        title: 'Flussi Live',
         icon: 'camera',
         color: 'blue',
-        getMetric: (info) => `${info.cameraCount ?? 0} canali attivi · Streaming fMP4`,
+        getMetric: (info) => `${info.cameraCount ?? 0} canali`,
         subapps: [
-            { id: 'live', title: 'Diretta Live', desc: 'Visualizzatore ad altissima fluidità fMP4 su WebSocket', icon: 'play', route: 'live', badge: { text: 'Realtime', tone: 'green' } },
-            { id: 'wall', title: 'Muro Video (Wall)', desc: 'Console perimetrale multi-telecamera a pieno schermo per monitor dedicati', icon: 'monitor', route: 'wall', isPage: true, badge: { text: 'Display', tone: 'blue' } },
-            { id: 'cameras', title: 'Gestione Telecamere', desc: 'Rilevamento ONVIF, credenziali RTSP, profili e verifica canali', icon: 'camera', route: 'cameras', badge: { text: 'ONVIF', tone: 'blue' } }
+            { id: 'live', title: 'Diretta', icon: 'play', route: 'live', badge: { text: 'fMP4', tone: 'green' } },
+            { id: 'wall', title: 'Muro Video', icon: 'monitor', route: 'wall', isPage: true, badge: { text: 'Wall', tone: 'blue' } },
+            { id: 'cameras', title: 'Telecamere', icon: 'camera', route: 'cameras', badge: { text: 'ONVIF', tone: 'blue' } }
         ]
     },
     {
         id: 'archive',
-        title: 'Archivio & Registrazioni',
-        subtitle: 'Registrazione continua 24/7, timeline ad alta velocità e catena di custodia',
+        title: 'Registrazioni',
         icon: 'archive',
         color: 'emerald',
-        getMetric: () => 'Ritenzione automatica · Muxer H.264 MP4',
+        getMetric: () => 'H.264 · 24/7',
         subapps: [
-            { id: 'archive_player', title: 'Riproduzione Filmati', desc: 'Navigatore cronologico con riproduzione Range e scrubbing', icon: 'play', route: 'archive', badge: { text: '24/7', tone: 'green' } },
-            { id: 'timeline', title: 'Timeline Continua', desc: 'Controllo visuale dei segmenti orari e intervalli di registrazione', icon: 'timeline', route: 'archive', badge: { text: 'Eventi', tone: 'purple' } }
+            { id: 'archive_player', title: 'Filmati', icon: 'play', route: 'archive', badge: { text: 'Archivio', tone: 'green' } },
+            { id: 'timeline', title: 'Timeline', icon: 'timeline', route: 'archive', badge: { text: 'Eventi', tone: 'purple' } }
         ]
     },
     {
         id: 'vision',
-        title: 'Visione AI & Analitiche',
-        subtitle: 'Rilevamento oggetti, tracciamento biometrico delle persone e varchi ANPR',
+        title: 'Visione AI',
         icon: 'sparkles',
         color: 'purple',
-        getMetric: () => 'Modelli ONNX Accelerati · Visione Attiva',
+        getMetric: () => 'ONNX Attivo',
         subapps: [
-            { id: 'detections', title: 'Rilevamento Oggetti & Movimento', desc: 'Analisi persone, veicoli, animali e tracciamento traiettorie', icon: 'eye', route: 'detections', badge: { text: 'AI', tone: 'purple' } },
-            { id: 'people', title: 'Riconoscimento Persone & Volti', desc: 'Galleria biometrica dei soggetti noti, dipendenti e visitatori', icon: 'users', route: 'people', badge: { text: 'Biometria', tone: 'blue' } },
-            { id: 'access', title: 'Targhe & Controllo Varchi', desc: 'Lettura targhe (ANPR), whitelist veicoli e varchi automatici', icon: 'shield', route: 'access', badge: { text: 'ANPR', tone: 'green' } }
+            { id: 'detections', title: 'Rilevamenti', icon: 'eye', route: 'detections', badge: { text: 'AI', tone: 'purple' } },
+            { id: 'people', title: 'Volti', icon: 'users', route: 'people', badge: { text: 'Biometria', tone: 'blue' } },
+            { id: 'access', title: 'Targhe', icon: 'shield', route: 'access', badge: { text: 'ANPR', tone: 'green' } }
         ]
     },
     {
         id: 'security',
-        title: 'Sicurezza Perimetrale & Firewall',
-        subtitle: 'Difesa attiva ARGUS-SHIELD, autenticazione a due fattori e audit trail',
+        title: 'Sicurezza',
         icon: 'shield',
         color: 'amber',
-        getMetric: () => 'Firewall Zero-Trust · Separazione LAN/WAN',
+        getMetric: () => 'Zero-Trust',
         subapps: [
-            { id: 'shield', title: 'Firewall ARGUS-SHIELD', desc: 'Sorveglianza indirizzi IP, regole nftables perimetrali e banlist', icon: 'shield', route: 'settings', badge: { text: 'Firewall', tone: 'amber' } },
-            { id: 'mfa', title: 'Autenticazione a Due Fattori (MFA)', desc: 'Protezione TOTP con codice a 6 cifre e codici di emergenza', icon: 'lock', route: 'settings', badge: { text: 'Critico', tone: 'red' } }
+            { id: 'shield', title: 'Firewall', icon: 'shield', route: 'settings', badge: { text: 'Shield', tone: 'amber' } },
+            { id: 'mfa', title: 'MFA', icon: 'lock', route: 'settings', badge: { text: 'TOTP', tone: 'red' } }
         ]
     },
     {
         id: 'system',
-        title: 'Sistema, Hardware & Configurazione',
-        subtitle: 'Telemetria delle risorse, aggiornamenti automatici e impostazioni dinamiche',
+        title: 'Sistema',
         icon: 'server',
         color: 'cyan',
-        getMetric: (info) => `Node ${info.node ?? '24'} · ${info.platform ?? 'OS'}`,
+        getMetric: (info) => `v${info.version ?? '0.15.0'}`,
         subapps: [
-            { id: 'settings', title: 'Impostazioni Autogeneranti', desc: 'Configurazione centralizzata schema-driven a manifest', icon: 'settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
-            { id: 'system', title: 'Telemetria & Manutenzione', desc: 'Grafici CPU/RAM/GPU, storage video e verifica del sistema', icon: 'activity', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' }
+            { id: 'settings', title: 'Impostazioni', icon: 'settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
+            { id: 'system', title: 'Telemetria', icon: 'activity', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' }
         ]
     }
 ];

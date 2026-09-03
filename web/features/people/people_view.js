@@ -194,7 +194,7 @@ export async function renderPeopleView({ api, session }) {
     const tabPeopleBtn = el('button', {
         className: 'seg__btn seg__btn--on',
         type: 'button',
-        textContent: 'Anagrafica Persone',
+        textContent: 'Anagrafica',
         onclick: () => {
             currentTab = 'people';
             tabPeopleBtn.classList.add('seg__btn--on');
@@ -207,7 +207,7 @@ export async function renderPeopleView({ api, session }) {
     const tabLogsBtn = el('button', {
         className: 'seg__btn',
         type: 'button',
-        textContent: 'Registro Rilevamenti Volti',
+        textContent: 'Transiti',
         onclick: () => {
             currentTab = 'logs';
             tabLogsBtn.classList.add('seg__btn--on');
@@ -225,16 +225,13 @@ export async function renderPeopleView({ api, session }) {
             formHost.removeAttribute('hidden');
             formHost.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [icon('plus'), el('span', { textContent: 'Nuova Persona' })]) : null;
+    }, [icon('plus'), el('span', { textContent: 'Iscrivi' })]) : null;
 
     const panelBody = el('div', { className: 'panel__body' }, [listHost]);
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('div', {}, [
-                el('h1', { className: 'view__title', textContent: 'Riconoscimento Facciale & Anagrafica' }),
-                el('p', { className: 'view__sub', textContent: 'Identificazione biometrica con YuNet e SFace (Conformità GDPR)' })
-            ]),
+            el('h1', { className: 'view__title', textContent: 'Volti' }),
             el('div', { className: 'row row--tight' }, [addBtn])
         ]),
         el('div', { className: 'row schedule-presets' }, [tabPeopleBtn, tabLogsBtn]),

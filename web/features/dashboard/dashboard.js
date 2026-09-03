@@ -16,7 +16,7 @@ function subAppTile(subapp, permissions) {
     const tile = el('button', {
         type: 'button',
         className: 'hub-tile',
-        title: subapp.desc,
+        title: subapp.title,
         onclick: () => {
             if (subapp.isPage) {
                 window.open(`/${subapp.route}`, '_blank');
@@ -26,17 +26,11 @@ function subAppTile(subapp, permissions) {
         }
     }, [
         el('div', { className: 'hub-tile__icon-wrap' }, [icon(subapp.icon ?? 'apps')]),
-        el('div', { className: 'hub-tile__content' }, [
-            el('div', { className: 'hub-tile__title-row' }, [
-                el('span', { className: 'hub-tile__title', textContent: subapp.title }),
-                renderBadge(subapp.badge)
-            ]),
-            el('p', { className: 'hub-tile__desc', textContent: subapp.desc })
-        ]),
-        el('div', { className: 'hub-tile__arrow' }, [icon('chevronRight')])
+        el('span', { className: 'hub-tile__title', textContent: subapp.title }),
+        renderBadge(subapp.badge)
     ]);
 
-    tile.dataset.search = `${subapp.title} ${subapp.desc}`.toLowerCase();
+    tile.dataset.search = subapp.title.toLowerCase();
     return tile;
 }
 
@@ -59,10 +53,7 @@ function macroAreaCard(area, info, permissions) {
                 el('div', { className: `hub-card__icon-badge hub-card__icon-badge--${color}` }, [
                     icon(area.icon ?? 'apps')
                 ]),
-                el('div', {}, [
-                    el('h2', { className: 'hub-card__title', textContent: area.title }),
-                    el('p', { className: 'hub-card__sub', textContent: area.subtitle })
-                ])
+                el('h2', { className: 'hub-card__title', textContent: area.title })
             ]),
             metricText ? el('span', { className: 'hub-card__metric', textContent: metricText }) : null
         ]),
@@ -79,7 +70,7 @@ export async function renderDashboard({ session, api }) {
     const info = await api.get('/api/system/info').catch(() => ({
         hostname: 'ARGUS-PR',
         platform: 'NVR',
-        version: '0.14.0',
+        version: '0.15.0',
         uptimeSeconds: 0,
         cameraCount: 0
     }));
@@ -87,7 +78,7 @@ export async function renderDashboard({ session, api }) {
     const searchInput = el('input', {
         type: 'search',
         className: 'hub-search__input',
-        placeholder: 'Trova qualsiasi funzione, telecamera o strumento…'
+        placeholder: 'Cerca funzione o modulo…'
     });
 
     const searchBox = el('div', { className: 'hub-search' }, [
@@ -97,9 +88,8 @@ export async function renderDashboard({ session, api }) {
 
     const header = el('div', { className: 'hub-hero' }, [
         el('div', { className: 'hub-hero__info' }, [
-            el('span', { className: 'hub-hero__badge', textContent: 'Centro di Controllo Integrato' }),
             el('h1', { className: 'hub-hero__title', textContent: info.hostname }),
-            el('p', { className: 'hub-hero__meta', textContent: `${info.platform} · ARGUS-PR v${info.version} · Uptime ${formatDuration(info.uptimeSeconds)}` })
+            el('span', { className: 'hub-hero__meta', textContent: `${info.platform} · v${info.version} · Uptime ${formatDuration(info.uptimeSeconds)}` })
         ]),
         searchBox
     ]);

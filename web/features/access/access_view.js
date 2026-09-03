@@ -132,23 +132,20 @@ export async function renderAccessView({ api, session }) {
             formHost.removeAttribute('hidden');
             formHost.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [icon('plus'), el('span', { textContent: 'Aggiungi Regola Targa' })]) : null;
+    }, [icon('plus'), el('span', { textContent: 'Nuova Regola' })]) : null;
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('div', {}, [
-                el('h1', { className: 'view__title', textContent: 'Controllo Accessi & Targhe (ANPR)' }),
-                el('p', { className: 'view__sub', textContent: 'Regole liste bianche/nere, transiti e varchi automatici' })
-            ]),
+            el('h1', { className: 'view__title', textContent: 'Targhe' }),
             el('div', { className: 'row row--tight' }, [addRuleBtn])
         ]),
         formHost,
         el('section', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Regole Attive' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Regole' })]),
             el('div', { className: 'panel__body' }, [rulesHost])
         ]),
         el('section', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Registro Ultimi Transiti' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Transiti' })]),
             el('div', { className: 'panel__body' }, [eventsHost])
         ])
     );

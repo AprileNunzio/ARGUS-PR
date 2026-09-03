@@ -21,14 +21,13 @@ const BUILTIN_MANIFESTS = [
     {
         group: {
             id: 'updates',
-            label: 'Aggiornamenti & Manutenzione',
-            subtitle: 'Canale di release, frequenza di ricerca e politica di riavvio automatico',
+            label: 'Aggiornamenti',
             icon: 'download',
             color: 'blue',
             sections: [
-                { id: 'search', label: 'Rilevamento e Ricerca', icon: 'search' },
-                { id: 'restart', label: 'Politica di Riavvio e Finestra', icon: 'clock' },
-                { id: 'safety', label: 'Freni di Sicurezza', icon: 'shield' }
+                { id: 'search', label: 'Ricerca', icon: 'search' },
+                { id: 'restart', label: 'Riavvio', icon: 'clock' },
+                { id: 'safety', label: 'Sicurezza', icon: 'shield' }
             ]
         },
         settings: [
@@ -47,13 +46,13 @@ const BUILTIN_MANIFESTS = [
                 key: 'updates.restartPolicy',
                 group: 'updates',
                 section: 'restart',
-                label: 'Quando riavviare per applicare un aggiornamento',
+                label: 'Politica di riavvio',
                 help: 'Chiedi conferma: il sistema segnala l aggiornamento e attende un comando esplicito. Finestra: applica da solo soltanto negli orari indicati. Subito: applica appena disponibile, interrompendo la registrazione per qualche secondo.',
                 type: SettingType.ENUM,
                 component: 'segmented',
                 options: [
-                    { value: RestartPolicy.ASK, label: 'Chiedi conferma', icon: 'info' },
-                    { value: RestartPolicy.WINDOW, label: 'In finestra', icon: 'clock' },
+                    { value: RestartPolicy.ASK, label: 'Conferma', icon: 'info' },
+                    { value: RestartPolicy.WINDOW, label: 'Finestra', icon: 'clock' },
                     { value: RestartPolicy.IMMEDIATE, label: 'Subito', icon: 'zap' }
                 ],
                 default: RestartPolicy.ASK
@@ -62,7 +61,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'updates.windowDays',
                 group: 'updates',
                 section: 'restart',
-                label: 'Giorni della finestra di manutenzione',
+                label: 'Giorni finestra manutenzione',
                 help: 'Giorni settimanali in cui il riavvio automatico e consentito.',
                 type: SettingType.DAYS,
                 component: 'days',
@@ -74,7 +73,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'updates.windowStart',
                 group: 'updates',
                 section: 'restart',
-                label: 'Inizio finestra manutenzione',
+                label: 'Inizio finestra',
                 help: 'Ora locale della macchina per l inizio della finestra.',
                 type: SettingType.TIME,
                 component: 'time',
@@ -85,7 +84,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'updates.windowEnd',
                 group: 'updates',
                 section: 'restart',
-                label: 'Fine finestra manutenzione',
+                label: 'Fine finestra',
                 help: 'Se precede l orario di inizio, la finestra attraversa la mezzanotte.',
                 type: SettingType.TIME,
                 component: 'time',
@@ -103,7 +102,7 @@ const BUILTIN_MANIFESTS = [
                 minimum: 5,
                 maximum: 1440,
                 step: 5,
-                unit: 'minuti',
+                unit: 'min',
                 badge: { text: 'Anti-loop', tone: 'amber' },
                 default: 60
             }
@@ -112,13 +111,12 @@ const BUILTIN_MANIFESTS = [
     {
         group: {
             id: 'access',
-            label: 'Accesso Remoto & Reti',
-            subtitle: 'Controllo perimetrale di rete, esposizione internet e subnet fidate',
+            label: 'Rete',
             icon: 'globe',
             color: 'cyan',
             sections: [
-                { id: 'wan', label: 'Esposizione Esterna (WAN)', icon: 'globe' },
-                { id: 'lan', label: 'Reti Locali e Subnet Fidate', icon: 'network' }
+                { id: 'wan', label: 'Internet (WAN)', icon: 'globe' },
+                { id: 'lan', label: 'Reti Fidate (LAN)', icon: 'network' }
             ]
         },
         settings: [
@@ -126,7 +124,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'access.publicAccess',
                 group: 'access',
                 section: 'wan',
-                label: 'Consenti la visione da internet',
+                label: 'Visione da internet',
                 help: 'Da fuori la rete locale restano raggiungibili solo accesso, elenco telecamere e diretta. Nessuna funzione di configurazione, nessun account amministrativo.',
                 type: SettingType.BOOLEAN,
                 component: 'switch',
@@ -151,14 +149,13 @@ const BUILTIN_MANIFESTS = [
     {
         group: {
             id: 'security',
-            label: 'Sicurezza Account & Protezione',
-            subtitle: 'Durata delle sessioni, criteri di blocco e protezione brute-force',
+            label: 'Sicurezza',
             icon: 'shield',
             color: 'amber',
             sections: [
-                { id: 'mfa', label: 'Autenticazione a Due Fattori (MFA)', icon: 'lock' },
-                { id: 'sessions', label: 'Sessioni e Token', icon: 'users' },
-                { id: 'lockout', label: 'Protezione Attacchi e Blocco', icon: 'alarm' }
+                { id: 'mfa', label: 'MFA TOTP', icon: 'lock' },
+                { id: 'sessions', label: 'Sessioni', icon: 'users' },
+                { id: 'lockout', label: 'Protezione', icon: 'alarm' }
             ]
         },
         settings: [
@@ -166,7 +163,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'security.mfaRequiredForAdmin',
                 group: 'security',
                 section: 'mfa',
-                label: 'MFA obbligatoria per amministratori',
+                label: 'MFA per amministratori',
                 help: 'Impone l attivazione del secondo fattore TOTP per gli account con privilegi amministrativi.',
                 type: SettingType.BOOLEAN,
                 component: 'switch',
@@ -177,7 +174,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'security.sessionTtlHours',
                 group: 'security',
                 section: 'sessions',
-                label: 'Durata massima della sessione',
+                label: 'Durata sessione',
                 help: 'Scaduto questo intervallo, l operatore deve autenticarsi nuovamente.',
                 type: SettingType.INTEGER,
                 component: 'slider',
@@ -191,7 +188,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'security.lockoutSoftThreshold',
                 group: 'security',
                 section: 'lockout',
-                label: 'Tentativi prima dell attesa progressiva',
+                label: 'Soglia attesa progressiva',
                 help: 'Numero di fallimenti consecutivi prima di rallentare i tentativi.',
                 type: SettingType.INTEGER,
                 component: 'stepper',
@@ -205,7 +202,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'security.lockoutHardThreshold',
                 group: 'security',
                 section: 'lockout',
-                label: 'Tentativi prima del blocco prolungato',
+                label: 'Soglia blocco prolungato',
                 help: 'Numero di fallimenti consecutivi prima del blocco completo dell account.',
                 type: SettingType.INTEGER,
                 component: 'stepper',
@@ -219,28 +216,28 @@ const BUILTIN_MANIFESTS = [
                 key: 'security.lockoutBaseSeconds',
                 group: 'security',
                 section: 'lockout',
-                label: 'Attesa iniziale di blocco',
+                label: 'Attesa iniziale',
                 help: 'Secondi di ritardo applicati al primo scatto dell attesa progressiva.',
                 type: SettingType.INTEGER,
                 component: 'slider',
                 minimum: 5,
                 maximum: 600,
                 step: 5,
-                unit: 'secondi',
+                unit: 'sec',
                 default: 30
             },
             {
                 key: 'security.lockoutMaxSeconds',
                 group: 'security',
                 section: 'lockout',
-                label: 'Attesa massima di blocco',
+                label: 'Attesa massima',
                 help: 'Tetto massimo di secondi per la progressione esponenziale del blocco.',
                 type: SettingType.INTEGER,
                 component: 'slider',
                 minimum: 60,
                 maximum: 86400,
                 step: 60,
-                unit: 'secondi',
+                unit: 'sec',
                 default: 1800
             }
         ]
@@ -248,13 +245,12 @@ const BUILTIN_MANIFESTS = [
     {
         group: {
             id: 'console',
-            label: 'Console & Muro Video',
-            subtitle: 'Opzioni del display locale a schermo intero e kiosk HDMI',
+            label: 'Console Wall',
             icon: 'monitor',
             color: 'rose',
             sections: [
-                { id: 'metrics', label: 'Monitoraggio Risorse Hardware', icon: 'cpu' },
-                { id: 'layout', label: 'Griglia Visualizzazione', icon: 'grid' }
+                { id: 'metrics', label: 'Telemetria', icon: 'cpu' },
+                { id: 'layout', label: 'Griglia', icon: 'grid' }
             ]
         },
         settings: [
@@ -262,14 +258,14 @@ const BUILTIN_MANIFESTS = [
                 key: 'console.metricsIntervalSeconds',
                 group: 'console',
                 section: 'metrics',
-                label: 'Frequenza telemetria CPU, RAM e GPU',
+                label: 'Frequenza telemetria',
                 help: 'Intervallo di aggiornamento dei grafici delle risorse di sistema.',
                 type: SettingType.INTEGER,
                 component: 'slider',
                 minimum: 1,
                 maximum: 60,
                 step: 1,
-                unit: 'secondi',
+                unit: 'sec',
                 badge: { text: 'Hardware', tone: 'purple' },
                 default: 3
             },
@@ -277,7 +273,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'console.gridColumns',
                 group: 'console',
                 section: 'layout',
-                label: 'Colonne della griglia telecamere',
+                label: 'Colonne griglia telecamere',
                 help: 'Zero adatta automaticamente le colonne al numero di flussi attivi.',
                 type: SettingType.INTEGER,
                 component: 'segmented',
@@ -297,13 +293,12 @@ const BUILTIN_MANIFESTS = [
     {
         group: {
             id: 'retention',
-            label: 'Registrazione & Archiviazione',
-            subtitle: 'Politiche di ritenzione dei filmati, quote disco e pulizia',
+            label: 'Archiviazione',
             icon: 'clock',
             color: 'emerald',
             sections: [
-                { id: 'general', label: 'Ritenzione Ordinaria', icon: 'clock' },
-                { id: 'events', label: 'Segmenti con Rilevamento', icon: 'sparkles' }
+                { id: 'general', label: 'Ritenzione', icon: 'clock' },
+                { id: 'events', label: 'Eventi AI', icon: 'sparkles' }
             ]
         },
         settings: [
@@ -311,7 +306,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'retention.days',
                 group: 'retention',
                 section: 'general',
-                label: 'Giorni di conservazione continuativa',
+                label: 'Conservazione continuativa',
                 help: 'Giorni dopo i quali i filmati ordinari vengono eliminati automaticamente.',
                 type: SettingType.INTEGER,
                 component: 'slider',
@@ -325,7 +320,7 @@ const BUILTIN_MANIFESTS = [
                 key: 'retention.eventDays',
                 group: 'retention',
                 section: 'events',
-                label: 'Conservazione filmati con eventi AI',
+                label: 'Conservazione eventi AI',
                 help: 'I segmenti associati a persone, veicoli o varchi possono essere conservati piu a lungo.',
                 type: SettingType.INTEGER,
                 component: 'slider',
@@ -348,24 +343,41 @@ for (const manifest of BUILTIN_MANIFESTS) {
 }
 
 export function registerFeatureManifest(manifest) {
-    if (!manifest || !manifest.group || !Array.isArray(manifest.settings)) return;
-    const existingIdx = customGroups.findIndex((g) => g.id === manifest.group.id);
-    if (existingIdx >= 0) customGroups[existingIdx] = manifest.group;
-    else customGroups.push(manifest.group);
-
+    if (!manifest || !manifest.group || !Array.isArray(manifest.settings)) {
+        throw new Error('Invalid feature settings manifest');
+    }
+    const existingGroup = customGroups.find((g) => g.id === manifest.group.id);
+    if (!existingGroup) {
+        customGroups.push(manifest.group);
+    }
     for (const setting of manifest.settings) {
         registry.set(setting.key, setting);
     }
 }
 
+export function getFeatureManifests() {
+    return customGroups.map((group) => ({
+        group,
+        settings: Array.from(registry.values()).filter((s) => s.group === group.id)
+    }));
+}
+
 export function getAllGroups() {
-    return customGroups.map((g) => ({ ...g }));
+    return [...customGroups];
 }
 
 export function getAllSettings() {
-    return Array.from(registry.values()).map((s) => ({ ...s }));
+    return Array.from(registry.values());
 }
 
 export function getSettingDefinition(key) {
+    return registry.get(key) ?? null;
+}
+
+export function getAllSettingSchemas() {
+    return Array.from(registry.values());
+}
+
+export function getSettingSchema(key) {
     return registry.get(key) ?? null;
 }

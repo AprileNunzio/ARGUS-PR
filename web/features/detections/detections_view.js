@@ -88,12 +88,12 @@ export async function renderDetectionsView({ api, session }) {
     }
 
     const filters = [
-        { id: 'all', label: 'Tutti i Rilevamenti' },
-        { id: 'person', label: '👤 Persone' },
-        { id: 'vehicles', label: '🚗 Veicoli & Mezzi' },
-        { id: 'plate', label: '🏷️ Targhe (ANPR)' },
-        { id: 'face', label: '😃 Volti Biometrici' },
-        { id: 'animals', label: '🐾 Animali (Cani, Gatti, Bestiame)' }
+        { id: 'all', label: 'Tutti' },
+        { id: 'person', label: 'Persone' },
+        { id: 'vehicles', label: 'Veicoli' },
+        { id: 'plate', label: 'Targhe' },
+        { id: 'face', label: 'Volti' },
+        { id: 'animals', label: 'Animali' }
     ];
 
     const filterButtons = filters.map((f) => {
@@ -119,10 +119,7 @@ export async function renderDetectionsView({ api, session }) {
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('div', {}, [
-                el('h1', { className: 'view__title', textContent: 'Rilevamenti & Visione AI' }),
-                el('p', { className: 'view__sub', textContent: 'Monitoraggio intelligente di persone, veicoli, targhe, volti e animali' })
-            ]),
+            el('h1', { className: 'view__title', textContent: 'Rilevamenti' }),
             el('div', { className: 'row row--tight' }, [refreshBtn])
         ]),
         el('div', { className: 'row schedule-presets' }, filterButtons),
