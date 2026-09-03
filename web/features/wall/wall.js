@@ -175,12 +175,17 @@ async function boot() {
         }
 
         if (!authenticated) {
-            await request('/api/console/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: '{}'
-            });
-            authenticated = true;
+            const current = await request('/api/auth/session').catch(() => null);
+            if (current?.username) {
+                authenticated = true;
+            } else {
+                await request('/api/console/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+                authenticated = true;
+            }
         }
 
         const { cameras } = await request('/api/cameras');

@@ -84,6 +84,12 @@ export function renderShell({ session, routes, onNavigate, onLogout }) {
         breadcrumbNode,
         el('span', { className: 'spacer' }),
         el('span', { className: 'link-status' }, [linkDot, linkLabel]),
+        session.username === '__kiosk__' ? el('button', {
+            className: 'btn btn--sm btn--primary',
+            type: 'button',
+            textContent: 'Accedi come Admin',
+            onclick: onLogout
+        }) : null,
         el('button', {
             className: 'btn btn--sm user-chip',
             type: 'button',

@@ -10,6 +10,13 @@ import { liveMetrics } from '../../platform/metrics.js';
 
 export function registerKioskRoutes(router) {
     router.post('/api/console/session', async (ctx) => {
+        if (ctx.actor && ctx.actor.username && ctx.actor.username !== '__kiosk__') {
+            return {
+                status: 200,
+                body: { expiresAt: null, existingUser: ctx.actor.username }
+            };
+        }
+
         const session = await issueConsoleSession(ctx.address, ctx.config.sessionTtlHours);
 
         const cookie = buildCookie(SESSION_COOKIE, session.token, {
