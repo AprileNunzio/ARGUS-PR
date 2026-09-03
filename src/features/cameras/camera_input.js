@@ -11,6 +11,13 @@ const LOW_LATENCY_ARGS = Object.freeze(['-fflags', 'nobuffer', '-flags', 'low_de
 const DEVICE_PATTERN = /^[A-Za-z0-9/][A-Za-z0-9 ._:@#()\/-]{0,199}$/;
 const CAPTURE_BUFFER = '256M';
 const THREAD_QUEUE = '1024';
+const RTSP_TIMEOUT_US = '8000000';
+
+let rtspTimeoutOption = 'timeout';
+
+export function setRtspTimeoutOption(name) {
+    rtspTimeoutOption = name === 'stimeout' || name === 'timeout' ? name : null;
+}
 const RAW_FORMATS = Object.freeze(['yuyv422', 'uyvy422', 'nv12', 'yuv420p', 'rgb24', 'bgr24', 'gray']);
 
 export function isLocalKind(kind) {
@@ -47,7 +54,7 @@ function pixelFormat(camera) {
 }
 
 function windowsArgs(device, size, rate, format) {
-    const args = ['-f', 'dshow', '-rtbufsize', CAPTURE_BUFFER, '-thread_queue_size', THREAD_QUEUE];
+    const args = ['-f', 'dshow', '-rtbufsize', CAPTURE_BUFFER];
     if (format && RAW_FORMATS.includes(format)) args.push('-pixel_format', format);
     if (format && !RAW_FORMATS.includes(format)) args.push('-vcodec', format);
     if (size) args.push('-video_size', size);
@@ -56,7 +63,7 @@ function windowsArgs(device, size, rate, format) {
 }
 
 function linuxArgs(device, size, rate, format) {
-    const args = ['-f', 'v4l2', '-thread_queue_size', THREAD_QUEUE];
+    const args = ['-f', 'v4l2'];
     if (format) args.push('-input_format', format);
     if (size) args.push('-video_size', size);
     if (rate) args.push('-framerate', rate);
@@ -64,7 +71,7 @@ function linuxArgs(device, size, rate, format) {
 }
 
 function darwinArgs(device, size, rate) {
-    const args = ['-f', 'avfoundation', '-thread_queue_size', THREAD_QUEUE];
+    const args = ['-f', 'avfoundation'];
     if (rate) args.push('-framerate', rate);
     if (size) args.push('-video_size', size);
     return { args, target: device };
@@ -91,7 +98,7 @@ function networkInput(camera, options) {
 
     if (target.startsWith('rtsp')) {
         args.push('-rtsp_transport', camera.transport === 'udp' ? 'udp' : 'tcp');
-        args.push('-stimeout', '8000000');
+        if (rtspTimeoutOption) args.push(`-${rtspTimeoutOption}`, RTSP_TIMEOUT_US);
     } else {
         args.push('-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5');
     }
@@ -115,12 +122,13 @@ export function resolveInput(camera, options = {}) {
         local: isLocalKind(kind),
         target: resolved.target,
         demuxArgs: resolved.args,
+        captureArgs: isLocalKind(kind) ? ['-thread_queue_size', THREAD_QUEUE] : [],
         label: isLocalKind(kind) ? resolved.target : redactCredentials(resolved.target)
     };
 }
 
 export function buildCaptureArgs(input, options = {}) {
-    const args = [...BASE_ARGS, '-nostdin', ...input.demuxArgs];
+    const args = [...BASE_ARGS, '-nostdin', ...input.demuxArgs, ...(input.captureArgs ?? [])];
     if (options.lowLatency !== false && !input.local) args.push(...LOW_LATENCY_ARGS);
     args.push('-i', input.target);
     return args;

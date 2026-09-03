@@ -402,6 +402,11 @@ Le rotte mutanti sono `Exposure.PRIVATE`: **da internet non si aprono varchi**, 
 
 Il processo viene ricostruito quando cambia l'insieme dei consumatori (150 ms di debounce) e riavviato con backoff se cade. Quando l'ultimo consumatore si stacca, la periferica viene rilasciata.
 
+**Le opzioni di ffmpeg non sono quelle di ffprobe, e cambiano fra le versioni.** Due regole imparate sul campo:
+
+- `-thread_queue_size` esiste **solo in ffmpeg**: passarlo a ffprobe interrompe l'analisi con `Option not found`. Per questo `resolveInput` separa `demuxArgs` (condivisi, sicuri per entrambi) da `captureArgs` (solo ffmpeg). `buildProbeArgs` usa i primi, `buildCaptureArgs` entrambi.
+- `-stimeout` per RTSP **e' stato rimosso**: nelle build attuali (n8.1.x e 9.x) esiste solo `-timeout`, e passare quello sbagliato fa fallire ffmpeg prima ancora di aprire la sorgente, con `Unrecognized option`. Il nome corretto si rileva all'avvio con `detectRtspTimeoutOption` (legge `-h demuxer=rtsp`) e si comunica a `camera_input` con `setRtspTimeoutOption` da `app.js`, che e' la composizione: `platform` non importa mai `features`.
+
 **Gli encoder si verificano, non si deducono.** `listHardwareAccelerators` dice quali acceleratori ffmpeg *dichiara*, non quali funzionano: su una macchina con driver NVIDIA piu' vecchio della build di ffmpeg, `h264_nvenc` compare fra gli acceleratori ma fallisce all'apertura con `Driver does not support the required nvenc API version`, e ogni anteprima e ogni registrazione transcodificata muore. All'avvio `src/platform/encoder_probe.js` prova ciascun encoder candidato con una sorgente sintetica di 0,2 s e conserva solo quelli che si aprono davvero, in `tools.encoders`. `pickEncoder(accelerators, preferenza, usable)` sceglie dentro quell'elenco: se la GPU non e' utilizzabile si scende a `libx264` invece di fallire in ciclo.
 
 **Buffer di acquisizione.** Le periferiche grezze producono molto: 1280x720 in `yuyv422` a 30 fps sono circa 55 MB/s. Con il buffer predefinito ffmpeg segnala `real-time buffer too full` e scarta fotogrammi, percio' le sorgenti locali ricevono `-rtbufsize 256M` (Windows) e `-thread_queue_size 1024` ovunque.
@@ -639,6 +644,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 ---
 
 ## 9. Stato reale: cosa esiste e cosa no
+
+Aggiunte della versione 0.18.3: **corretti due argomenti ffmpeg che rompevano tutto in silenzio** — `-thread_queue_size` passato anche a ffprobe (ogni verifica di sorgente falliva con "Stream unreachable or credentials rejected") e `-stimeout`, rimosso dalle build recenti, che impediva l'apertura di **qualunque** telecamera RTSP.
 
 Aggiunte della versione 0.18.2: **verifica reale degli encoder all'avvio** (gli acceleratori dichiarati non bastano: su driver NVIDIA disallineati `h264_nvenc` si apre solo per fallire, e con lui l'anteprima e la registrazione delle sorgenti locali).
 

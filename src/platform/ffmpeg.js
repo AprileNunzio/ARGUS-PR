@@ -67,6 +67,16 @@ export async function discoverFfmpeg(overrides = {}) {
     return ok({ ffmpeg, ffprobe });
 }
 
+export async function detectRtspTimeoutOption(ffmpegPath) {
+    const help = await run(ffmpegPath, ['-hide_banner', '-h', 'demuxer=rtsp'], { timeout: 8000, windowsHide: true })
+        .then((out) => `${out.stdout}${out.stderr ?? ''}`)
+        .catch(() => '');
+
+    if (/^\s+-stimeout\s/m.test(help)) return 'stimeout';
+    if (/^\s+-timeout\s/m.test(help)) return 'timeout';
+    return null;
+}
+
 export async function listHardwareAccelerators(ffmpegPath) {
     const result = await run(ffmpegPath, ['-hide_banner', '-hwaccels'], { timeout: 8000, windowsHide: true })
         .then((out) => out.stdout)

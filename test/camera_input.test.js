@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveInput, buildCaptureArgs, buildProbeArgs, requireDeviceId, isLocalKind } from '../src/features/cameras/camera_input.js';
+import { resolveInput, buildCaptureArgs, buildProbeArgs, requireDeviceId, isLocalKind, setRtspTimeoutOption } from '../src/features/cameras/camera_input.js';
 
 const ipCamera = {
     sourceKind: 'rtsp',
@@ -30,7 +30,21 @@ test('la sorgente RTSP inietta credenziali, trasporto e timeout', () => {
     assert.deepEqual(args.slice(-2), ['-i', input.target]);
     assert.equal(args.includes('-rtsp_transport'), true);
     assert.equal(args[args.indexOf('-rtsp_transport') + 1], 'tcp');
-    assert.equal(args.includes('-stimeout'), true);
+    assert.equal(args.includes('-timeout'), true);
+    assert.equal(args.includes('-stimeout'), false);
+});
+
+test('l opzione di timeout RTSP segue quella supportata dal binario', () => {
+    setRtspTimeoutOption('stimeout');
+    assert.equal(buildCaptureArgs(resolveInput(ipCamera)).includes('-stimeout'), true);
+
+    setRtspTimeoutOption(null);
+    const bare = buildCaptureArgs(resolveInput(ipCamera));
+    assert.equal(bare.includes('-stimeout'), false);
+    assert.equal(bare.includes('-timeout'), false);
+
+    setRtspTimeoutOption('timeout');
+    assert.equal(buildCaptureArgs(resolveInput(ipCamera)).includes('-timeout'), true);
 });
 
 test('preferSub sceglie il flusso secondario quando esiste', () => {
@@ -65,8 +79,9 @@ test('la telecamera USB su Windows usa dshow con formato, risoluzione e cadenza'
     assert.equal(input.target, 'video=Integrated Camera');
     assert.deepEqual(args, [
         '-hide_banner', '-loglevel', 'error', '-nostdin',
-        '-f', 'dshow', '-rtbufsize', '256M', '-thread_queue_size', '1024',
+        '-f', 'dshow', '-rtbufsize', '256M',
         '-vcodec', 'mjpeg', '-video_size', '1280x720', '-framerate', '30',
+        '-thread_queue_size', '1024',
         '-i', 'video=Integrated Camera'
     ]);
 });
@@ -102,7 +117,14 @@ test('gli argomenti di analisi non contengono flag esclusivi di ffmpeg', () => {
     const args = buildProbeArgs(resolveInput(ipCamera), ['-show_streams']);
     assert.equal(args.includes('-nostdin'), false);
     assert.equal(args.includes('-fflags'), false);
+    assert.equal(args.includes('-thread_queue_size'), false);
     assert.equal(args.at(-1), 'rtsp://admin:segreta@192.168.1.64:554/Streaming/Channels/101');
+
+    const local = buildProbeArgs(resolveInput(usbCamera, { platform: 'win32' }), ['-show_streams']);
+    assert.equal(local.includes('-thread_queue_size'), false);
+    assert.equal(local.includes('-nostdin'), false);
+    assert.equal(local.includes('-rtbufsize'), true);
+    assert.equal(local.at(-1), 'video=Integrated Camera');
 });
 
 test('un identificativo di periferica ostile viene rifiutato', () => {
