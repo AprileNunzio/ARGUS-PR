@@ -1,11 +1,23 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { createLogger } from '../../kernel/logger.js';
 
 const log = createLogger('vision-process');
 
-export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', modelsDir, performanceSettings = {}, onDetections, onError }) {
+export function resolvePythonBin(dataDir) {
+    if (dataDir) {
+        const winBin = join(dataDir, 'vision', 'venv', 'Scripts', 'python.exe');
+        if (existsSync(winBin)) return winBin;
+        const nixBin = join(dataDir, 'vision', 'venv', 'bin', 'python');
+        if (existsSync(nixBin)) return nixBin;
+    }
+    return process.platform === 'win32' ? 'python' : 'python3';
+}
+
+export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, modelsDir, performanceSettings = {}, onDetections, onError }) {
+    const resolvedPython = pythonBin ?? resolvePythonBin(dataDir);
     let ffmpegChild = null;
     let workerChild = null;
     let isTerminated = false;
@@ -48,7 +60,7 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin = 'python', 
 
         try {
             ffmpegChild = spawn(ffmpegPath, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-            workerChild = spawn(pythonBin, workerArgs, {
+            workerChild = spawn(resolvedPython, workerArgs, {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
         } catch (err) {

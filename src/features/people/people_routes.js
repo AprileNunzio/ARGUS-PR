@@ -1,10 +1,17 @@
+import { join } from 'node:path';
+import { writeFile, unlink } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { requireId, requireString, optionalString, requireEmbedding } from '../../security/guards.js';
-import { notFound } from '../../kernel/errors.js';
+import { notFound, validationError } from '../../kernel/errors.js';
 import { Permission } from '../../security/rbac.js';
 import { recordAudit } from '../../security/audit.js';
 import { findBestMatch } from '../vision/face_matcher.js';
+import { resolvePythonBin } from '../vision/vision_process.js';
 
-export function registerPeopleRoutes({ router, peopleRepository, db }) {
+const execFileAsync = promisify(execFile);
+
+export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
     router.get('/api/people', async () => {
         const people = peopleRepository.listPeople();
         return { body: { people } };
@@ -92,4 +99,29 @@ export function registerPeopleRoutes({ router, peopleRepository, db }) {
         const faceLogs = peopleRepository.listFaceLogs({ limit, offset, personId });
         return { body: { faceLogs } };
     }, { permission: Permission.LIVE_VIEW });
+
+    router.post('/api/people/extract-face', async (ctx) => {
+        const imageBase64 = requireString(ctx.body?.imageBase64, 'imageBase64', { min: 10, max: 15000000 });
+        const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9.+]+;base64,/, '');
+        const dataDir = config?.dataDir ?? process.env.ARGUS_DATA_DIR ?? join(process.cwd(), 'data');
+        const tempPath = join(dataDir, `face_enroll_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+        await writeFile(tempPath, Buffer.from(cleanBase64, 'base64'));
+
+        const pythonBin = resolvePythonBin(dataDir);
+        const workerScript = join(process.cwd(), 'vision', 'worker.py');
+        const modelsDir = join(dataDir, 'models');
+
+        try {
+            const { stdout } = await execFileAsync(pythonBin, [
+                workerScript,
+                '--models-dir', modelsDir,
+                '--enroll', tempPath
+            ]);
+            const res = JSON.parse(stdout);
+            if (!res.ok) throw validationError(res.error ?? 'Rilevamento volto non riuscito');
+            return { body: res };
+        } finally {
+            try { await unlink(tempPath); } catch {}
+        }
+    }, { permission: Permission.CAMERA_MANAGE });
 }

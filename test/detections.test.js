@@ -75,3 +75,43 @@ test('inserimento e interrogazione eventi di rilevamento', () => {
     const notFound = hasRecentEvent('cam-2', new Date(now - 60000).toISOString(), new Date(now - 30000).toISOString());
     assert.equal(notFound, false);
 });
+
+test('rilevamento veicoli con targa associata e animali domestici e selvatici', () => {
+    openDatabase({ databaseFile: ':memory:' });
+    const now = Date.now();
+
+    const car = insertDetectionEvent({
+        cameraId: 'cam-gate',
+        className: 'car',
+        confidence: 0.95,
+        plateText: 'MI987XY',
+        box: [0.2, 0.3, 0.4, 0.5],
+        startedAt: new Date(now - 8000).toISOString()
+    });
+
+    const dog = insertDetectionEvent({
+        cameraId: 'cam-garden',
+        className: 'dog',
+        confidence: 0.91,
+        box: [0.5, 0.6, 0.1, 0.15],
+        startedAt: new Date(now - 4000).toISOString()
+    });
+
+    const horse = insertDetectionEvent({
+        cameraId: 'cam-ranch',
+        className: 'horse',
+        confidence: 0.89,
+        box: [0.1, 0.2, 0.3, 0.4],
+        startedAt: new Date(now - 2000).toISOString()
+    });
+
+    assert.equal(car.className, 'car');
+    assert.equal(car.plateText, 'MI987XY');
+
+    assert.equal(dog.className, 'dog');
+    assert.equal(horse.className, 'horse');
+
+    const animals = listDetectionEvents({}).filter((e) => ['dog', 'cat', 'horse', 'cow', 'sheep', 'bear', 'bird'].includes(e.className));
+    assert.equal(animals.length, 2);
+});
+

@@ -42,6 +42,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
                 const proc = createVisionProcess({
                     camera,
                     ffmpegPath: config.ffmpegPath,
+                    dataDir: config.dataDir,
                     modelsDir,
                     performanceSettings,
                     onDetections: handleDetections
@@ -60,6 +61,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         const { activeTracks, newlyConfirmed, closedTracks } = tracker.update(detections, timestamp);
 
         for (const track of newlyConfirmed) {
+            const plate = track.plateReadings?.[0]?.text ?? null;
             detectionsRepository.recordEvent({
                 cameraId,
                 source: 'vision',
@@ -67,6 +69,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
                 trackId: track.id,
                 confidence: track.maxConfidence,
                 box: track.bestBox,
+                plateText: plate,
                 startedAt: new Date(track.startedAt).toISOString(),
                 endedAt: new Date(track.endedAt).toISOString()
             });
@@ -76,6 +79,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
                 className: track.className,
                 confidence: track.maxConfidence,
                 box: track.bestBox,
+                plateText: plate,
                 timestamp: track.startedAt
             });
         }

@@ -366,3 +366,10 @@
 .floating-save__info .icon { color: #d97706; }
 .floating-save__count { font-weight: 700; color: #b45309; }
 .floating-save__msg { font-size: 0.8rem; color: var(--muted); margin-left: var(--gap-2); }
+
+.avatar-preview { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; border: 2px dashed var(--rule); display: none; }
+.avatar-preview--active { display: block; border-style: solid; border-color: #10b981; }
+.avatar-preview--warn { display: block; border-style: solid; border-color: #f59e0b; }
+.avatar-thumb { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; border: 1px solid var(--rule); flex-shrink: 0; }
+.avatar-thumb--empty { width: 48px; height: 48px; border-radius: 10px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--muted); }
+.plate-badge { font-family: var(--mono); background: #f8fafc; color: #0f172a; border: 2px solid #0f172a; border-radius: 6px; padding: 2px 8px; font-weight: 700; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; }

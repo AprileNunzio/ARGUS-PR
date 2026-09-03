@@ -4,7 +4,7 @@ Documento di consegna per l'assistente che prosegue il lavoro.
 
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
-Stato alla consegna: **v0.14.0**, 170 test verdi (160 NVR + 10 ARGUS-SHIELD).
+Stato alla consegna: **v0.15.0**, 171 test verdi (161 NVR + 10 ARGUS-SHIELD). Modulo Visione AI esteso con ANPR targhe, rilevamento biometrico facciale con iscrizione foto, classificazione avanzata veicoli (auto, camion, bus, moto) e animali (cani, gatti, cavalli, bovini, ovini, orsi).
 
 ---
 
