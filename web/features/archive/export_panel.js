@@ -1,4 +1,4 @@
-import { el, chip, field, notice, formatBytes } from '/assets/dom.js';
+import { el, chip, field, notice, formatBytes, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
 const STATE = {
@@ -62,10 +62,19 @@ function exportRow({ record, api, onChanged, feedback }) {
                     el('button', {
                         className: 'btn btn--sm btn--danger',
                         type: 'button',
-                        onclick: async () => {
-                            if (!confirm('Eliminare questa esportazione e i suoi file?')) return;
-                            await api.remove(`/api/exports/${encodeURIComponent(record.id)}`).catch(() => undefined);
-                            await onChanged();
+                        onclick: () => {
+                            feedback.replaceChildren(confirmPanel({
+                                title: 'Eliminare questa esportazione?',
+                                message: 'Il video esportato e il suo manifesto di custodia vengono rimossi dal disco.',
+                                confirmLabel: 'Elimina',
+                                onCancel: () => feedback.replaceChildren(),
+                                onConfirm: async () => {
+                                    await api.remove(`/api/exports/${encodeURIComponent(record.id)}`).catch(() => undefined);
+                                    feedback.replaceChildren();
+                                    await onChanged();
+                                }
+                            }));
+                            feedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                         }
                     }, [icon('trash')])
                 ]

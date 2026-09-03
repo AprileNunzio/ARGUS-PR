@@ -1,4 +1,4 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
 const PHASE = {
@@ -35,6 +35,7 @@ function releaseNotes(text) {
 }
 
 export function renderUpdatesPanel({ api }) {
+    const confirmHost = el('div', {});
     const host = el('section', { className: 'panel panel--accent rise rise-4' });
     host.style.setProperty('--panel-accent', 'var(--grad-violet)');
     host.style.setProperty('--panel-icon', 'var(--violet)');
@@ -66,27 +67,37 @@ export function renderUpdatesPanel({ api }) {
             ? el('button', {
                 className: 'btn btn--sm btn--primary',
                 type: 'button',
-                onclick: async () => {
-                    if (!confirm(`Installare ${latest.tag}?\n\nIl servizio si riavvia da solo. Se la nuova versione non parte, il sistema ripristina automaticamente la ${status.currentVersion}.`)) return;
-
+                onclick: () => {
                     applyButton.disabled = true;
-                    const failure = await api.post('/api/updates/apply', { ref: latest.tag }).then(() => null).catch((error) => error);
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: `Installare ${latest.tag}?`,
+                        message: `Il servizio si riavvia da solo. Se la nuova versione non parte, il sistema ripristina automaticamente la ${status.currentVersion}.`,
+                        confirmLabel: 'Installa e riavvia',
+                        onCancel: () => {
+                            applyButton.disabled = false;
+                            confirmHost.replaceChildren();
+                        },
+                        onConfirm: async () => {
+                            const failure = await api.post('/api/updates/apply', { ref: latest.tag }).then(() => null).catch((error) => error);
 
-                    if (failure) {
-                        applyButton.disabled = false;
-                        host.append(el('div', { className: 'panel__body' }, [notice('error', failure.message)]));
-                        return;
-                    }
+                            if (failure) {
+                                applyButton.disabled = false;
+                                confirmHost.replaceChildren(notice('error', failure.message));
+                                return;
+                            }
 
-                    host.replaceChildren(
-                        el('div', { className: 'panel__head' }, [
-                            el('span', { className: 'panel__title' }, [icon('download'), 'Aggiornamento in corso']),
-                            chip('riavvio', 'warn')
-                        ]),
-                        el('div', { className: 'panel__body' }, [
-                            notice('info', 'Il servizio si sta riavviando sulla nuova versione. Ricarica la pagina tra un minuto: se qualcosa non funziona il ripristino e\' automatico.')
-                        ])
-                    );
+                            host.replaceChildren(
+                                el('div', { className: 'panel__head' }, [
+                                    el('span', { className: 'panel__title' }, [icon('download'), 'Aggiornamento in corso']),
+                                    chip('riavvio', 'warn')
+                                ]),
+                                el('div', { className: 'panel__body' }, [
+                                    notice('info', 'Il servizio si sta riavviando sulla nuova versione. Ricarica la pagina tra un minuto: se qualcosa non funziona il ripristino e\' automatico.')
+                                ])
+                            );
+                        }
+                    }));
+                    confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }, [icon('download'), el('span', { textContent: `Installa ${latest.tag}` })])
             : null;
@@ -115,6 +126,7 @@ export function renderUpdatesPanel({ api }) {
                 spec('Modalita\'', status.supported ? 'automatica con ripristino' : 'manuale')
             ]),
             el('div', { className: 'panel__body stack' }, [
+                confirmHost,
                 ...messages,
                 available && latest
                     ? el('div', { className: 'stack--tight' }, [

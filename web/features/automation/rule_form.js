@@ -1,4 +1,6 @@
-import { el, field, notice } from '/assets/dom.js';
+import { el, field, notice, pageHead } from '/assets/dom.js';
+import { go } from '/assets/router.js';
+import { backLink } from '/features/cameras/camera_wizard.js';
 
 const TRIGGER_LABELS = Object.freeze({
     detection: 'Rilevamento AI (persone, veicoli, animali, volti)',
@@ -32,7 +34,7 @@ function selectFrom(pairs, value) {
     return select;
 }
 
-export function ruleEditor({ api, catalog, cameras, channels, rule, onSaved, onCancel }) {
+function ruleEditor({ api, catalog, cameras, channels, rule }) {
     const name = el('input', { className: 'input', type: 'text', value: rule?.name ?? '', placeholder: 'Persona di notte sul retro' });
     const trigger = selectFrom(catalog.triggers.map((kind) => [kind, TRIGGER_LABELS[kind] ?? kind]), rule?.triggerKind);
     const camera = selectFrom([['', 'Tutte le telecamere'], ...cameras.map((entry) => [entry.id, entry.name])], rule?.cameraId ?? '');
@@ -108,14 +110,16 @@ export function ruleEditor({ api, catalog, cameras, channels, rule, onSaved, onC
             return;
         }
 
-        await onSaved();
+        go('automation');
     });
 
-    return el('section', { className: 'panel rise' }, [
-        el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: rule ? `Regola · ${rule.name}` : 'Nuova regola' }),
-            el('button', { className: 'btn btn--sm btn--ghost', type: 'button', textContent: 'Chiudi', onclick: onCancel })
-        ]),
+    return el('div', { className: 'view' }, [
+        pageHead({
+            title: rule ? `Regola · ${rule.name}` : 'Nuova regola',
+            hint: 'Quando succede qualcosa, che cosa deve fare il sistema',
+            back: backLink('Torna alle automazioni', 'automation')
+        }),
+        el('section', { className: 'panel' }, [
         el('div', { className: 'panel__body stack' }, [
             el('div', { className: 'form-grid' }, [
                 field('Nome', name),
@@ -136,9 +140,32 @@ export function ruleEditor({ api, catalog, cameras, channels, rule, onSaved, onC
                     : actionHost
             ]),
             feedback,
-            el('div', { className: 'row row--end' }, [saveButton])
+            el('div', { className: 'row row--end' }, [
+                el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: () => go('automation') }),
+                saveButton
+            ])
+        ])
         ])
     ]);
+}
+
+export async function renderRulePage({ api, ruleId }) {
+    const [catalog, rulesData, channelsData, camerasData] = await Promise.all([
+        api.get('/api/automation/catalog'),
+        api.get('/api/automation/rules'),
+        api.get('/api/automation/channels'),
+        api.get('/api/cameras').catch(() => ({ cameras: [] }))
+    ]);
+
+    const rule = ruleId ? (rulesData.rules ?? []).find((entry) => entry.id === ruleId) ?? null : null;
+
+    return ruleEditor({
+        api,
+        catalog,
+        cameras: camerasData.cameras ?? [],
+        channels: channelsData.channels ?? [],
+        rule
+    });
 }
 
 export { NIGHT_MASK, TRIGGER_LABELS };

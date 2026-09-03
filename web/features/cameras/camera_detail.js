@@ -1,8 +1,8 @@
-import { el, notice, chip, empty } from '/assets/dom.js';
+import { el, notice, chip, empty, pageHead, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { go } from '/assets/router.js';
 import { createCameraForm } from './camera_form.js';
-import { probeSummary } from './camera_wizard.js';
-import { renderAutoconfigure } from './camera_autoconfig.js';
+import { probeSummary, backLink } from './camera_wizard.js';
 import { renderCameraAnalytics } from './camera_analytics.js';
 import { renderScheduleEditor } from '/features/scheduling/schedule_editor.js';
 import { renderZoneEditor } from '/features/motion/zone_editor.js';
@@ -27,9 +27,11 @@ function specRow(key, value) {
     ]);
 }
 
-function generalTab({ api, camera, onChanged, onBack }) {
+function generalTab({ api, camera }) {
     const form = createCameraForm({ api, camera });
     const feedback = el('div', { hidden: 'hidden' });
+    const confirmHost = el('div', {});
+
     const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva modifiche' });
 
     saveButton.addEventListener('click', async () => {
@@ -37,40 +39,51 @@ function generalTab({ api, camera, onChanged, onBack }) {
         feedback.setAttribute('hidden', 'hidden');
 
         const outcome = await api.put(`/api/cameras/${camera.id}`, form.values())
-            .then((result) => ({ result }))
-            .catch((error) => ({ error }));
+            .then(() => null)
+            .catch((error) => error);
 
         saveButton.disabled = false;
 
-        if (outcome.error) {
-            feedback.replaceChildren(notice('error', outcome.error.message));
+        if (outcome) {
+            feedback.replaceChildren(notice('error', outcome.message));
             feedback.removeAttribute('hidden');
             return;
         }
 
         feedback.replaceChildren(notice('ok', 'Configurazione applicata. Le pipeline attive sono state riavviate.'));
         feedback.removeAttribute('hidden');
-        await onChanged();
     });
 
     const deleteButton = el('button', { className: 'btn btn--danger', type: 'button', textContent: 'Elimina canale' });
-    deleteButton.addEventListener('click', async () => {
-        if (!confirm(`Eliminare definitivamente il canale "${camera.name}"?`)) return;
-        await api.remove(`/api/cameras/${camera.id}`).catch(() => undefined);
-        await onChanged();
-        onBack();
+
+    deleteButton.addEventListener('click', () => {
+        deleteButton.disabled = true;
+        confirmHost.replaceChildren(confirmPanel({
+            title: `Eliminare il canale "${camera.name}"?`,
+            message: 'Il canale sparisce dalla configurazione. Le registrazioni gia scritte su disco restano dove sono.',
+            confirmLabel: 'Elimina definitivamente',
+            onCancel: () => {
+                deleteButton.disabled = false;
+                confirmHost.replaceChildren();
+            },
+            onConfirm: async () => {
+                await api.remove(`/api/cameras/${camera.id}`).catch(() => undefined);
+                go('cameras');
+            }
+        }));
+        confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     return el('div', { className: 'stack' }, [
         form.node,
         feedback,
-        el('div', { className: 'row row--between' }, [deleteButton, saveButton])
+        el('div', { className: 'row row--between' }, [deleteButton, saveButton]),
+        confirmHost
     ]);
 }
 
 function recordingTab({ api, camera, recorder }) {
     const active = recorder ? recorder.enabled : false;
-    const stateChip = active ? chip('registrazione attiva', 'ok') : chip('registrazione ferma', 'warn');
 
     const toggle = el('button', {
         className: 'btn btn--sm',
@@ -81,47 +94,31 @@ function recordingTab({ api, camera, recorder }) {
     toggle.addEventListener('click', async () => {
         toggle.disabled = true;
         await api.post(`/api/recording/${camera.id}`, { enabled: !active }).catch(() => undefined);
-        toggle.disabled = false;
-        window.dispatchEvent(new CustomEvent('argus:refresh-cameras'));
+        go('cameras', camera.id, 'recording');
     });
 
     return el('div', { className: 'stack' }, [
         el('div', { className: 'row row--between' }, [
-            el('div', { className: 'row row--tight' }, [icon('record'), stateChip]),
+            el('div', { className: 'row row--tight' }, [
+                icon('record'),
+                active ? chip('registrazione attiva', 'ok') : chip('registrazione ferma', 'warn')
+            ]),
             toggle
         ]),
         renderScheduleEditor({
             camera,
             api,
-            onSaved: () => window.dispatchEvent(new CustomEvent('argus:refresh-cameras')),
+            onSaved: () => go('cameras', camera.id, 'recording'),
             onCancel: () => undefined
         })
     ]);
 }
 
-function diagnosticsTab({ api, camera, onChanged }) {
+function diagnosticsTab({ api, camera }) {
     const result = el('div', {});
-    const autoHost = el('div', {});
-
-    const autoButton = el('button', { className: 'btn', type: 'button' }, [
-        icon('sparkles'),
-        el('span', { textContent: 'Autoconfigurazione guidata' })
-    ]);
-
-    autoButton.addEventListener('click', () => {
-        autoHost.replaceChildren(renderAutoconfigure({
-            api,
-            camera,
-            onApplied: async () => {
-                autoHost.replaceChildren();
-                await onChanged();
-            },
-            onClose: () => autoHost.replaceChildren()
-        }));
-        autoHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
 
     const probeButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Verifica sorgente' });
+
     probeButton.addEventListener('click', async () => {
         probeButton.disabled = true;
         probeButton.textContent = 'Verifica in corso…';
@@ -133,9 +130,7 @@ function diagnosticsTab({ api, camera, onChanged }) {
         probeButton.disabled = false;
         probeButton.textContent = 'Verifica sorgente';
 
-        result.replaceChildren(outcome.error
-            ? notice('error', outcome.error.message)
-            : probeSummary(outcome.value));
+        result.replaceChildren(outcome.error ? notice('error', outcome.error.message) : probeSummary(outcome.value));
     });
 
     return el('div', { className: 'stack' }, [
@@ -153,85 +148,48 @@ function diagnosticsTab({ api, camera, onChanged }) {
         ]),
         el('div', { className: 'row row--tight' }, [
             probeButton,
-            autoButton,
             el('button', {
                 className: 'btn',
                 type: 'button',
-                textContent: 'Apri in Diretta',
-                onclick: () => { location.hash = '#/live'; }
-            })
+                onclick: () => go('cameras', camera.id, 'autoconfig')
+            }, [icon('sparkles'), el('span', { textContent: 'Autoconfigurazione guidata' })]),
+            el('button', { className: 'btn', type: 'button', textContent: 'Apri in Diretta', onclick: () => go('live') })
         ]),
-        autoHost,
         result
     ]);
 }
 
-export function renderCameraDetail({ api, session, camera, recorder, onBack, onChanged }) {
-    const outlet = el('div', { className: 'stack' });
-    const content = el('div', { className: 'panel__body' });
-    let activeTab = 'general';
-
-    const tabButtons = new Map();
-
-    function paint() {
-        for (const [id, button] of tabButtons.entries()) {
-            button.className = id === activeTab ? 'tab tab--active' : 'tab';
-        }
-
-        if (activeTab === 'general') {
-            content.replaceChildren(generalTab({ api, camera, onChanged, onBack }));
-            return;
-        }
-        if (activeTab === 'recording') {
-            content.replaceChildren(recordingTab({ api, camera, recorder }));
-            return;
-        }
-        if (activeTab === 'zones') {
-            content.replaceChildren(camera.sourceKind === 'usb' && !camera.deviceId
-                ? empty('Configura prima la periferica di acquisizione.')
-                : renderZoneEditor({ camera, api, onSaved: () => undefined, onCancel: () => undefined }));
-            return;
-        }
-        if (activeTab === 'analytics') {
-            content.replaceChildren(renderCameraAnalytics({ api, camera, session }));
-            return;
-        }
-        content.replaceChildren(diagnosticsTab({ api, camera, onChanged }));
+function tabContent({ api, session, camera, recorder, tab }) {
+    if (tab === 'recording') return recordingTab({ api, camera, recorder });
+    if (tab === 'zones') {
+        return camera.sourceKind === 'usb' && !camera.deviceId
+            ? empty('Configura prima la periferica di acquisizione.')
+            : renderZoneEditor({ camera, api, onSaved: () => undefined, onCancel: () => undefined });
     }
+    if (tab === 'analytics') return renderCameraAnalytics({ api, camera, session });
+    if (tab === 'diagnostics') return diagnosticsTab({ api, camera });
+    return generalTab({ api, camera });
+}
 
-    const tabs = el('div', { className: 'tabs' }, TABS.map((tab) => {
-        const button = el('button', { className: 'tab', type: 'button' }, [
-            icon(tab.glyph),
-            el('span', { textContent: tab.label })
-        ]);
-        button.addEventListener('click', () => {
-            activeTab = tab.id;
-            paint();
-        });
-        tabButtons.set(tab.id, button);
-        return button;
-    }));
+export function renderCameraDetail({ api, session, camera, recorder, tab = 'general' }) {
+    const active = TABS.some((entry) => entry.id === tab) ? tab : 'general';
 
-    outlet.append(
-        el('div', { className: 'view__head' }, [
-            el('div', { className: 'stack stack--tight' }, [
-                el('div', { className: 'row row--tight' }, [
-                    el('h1', { className: 'view__title', textContent: camera.name }),
-                    camera.enabled ? chip('attivo', 'ok') : chip('disattivo', 'warn')
-                ]),
-                el('span', { className: 'section__hint mono truncate', textContent: sourceLabel(camera) })
-            ]),
-            el('button', { className: 'btn', type: 'button', onclick: onBack }, [
-                icon('close'),
-                el('span', { textContent: 'Torna all elenco' })
-            ])
-        ]),
+    const tabs = el('nav', { className: 'tabs' }, TABS.map((entry) => el('button', {
+        className: entry.id === active ? 'tab tab--active' : 'tab',
+        type: 'button',
+        onclick: () => go('cameras', camera.id, entry.id)
+    }, [icon(entry.glyph), el('span', { textContent: entry.label })])));
+
+    return el('div', { className: 'view' }, [
+        pageHead({
+            title: camera.name,
+            hint: sourceLabel(camera),
+            back: backLink('Torna all elenco', 'cameras'),
+            actions: [camera.enabled ? chip('attivo', 'ok') : chip('disattivo', 'warn')]
+        }),
         el('section', { className: 'panel' }, [
             el('div', { className: 'panel__head' }, [tabs]),
-            content
+            el('div', { className: 'panel__body' }, [tabContent({ api, session, camera, recorder, tab: active })])
         ])
-    );
-
-    paint();
-    return outlet;
+    ]);
 }

@@ -1,4 +1,4 @@
-import { el, chip, empty, field, notice } from '/assets/dom.js';
+import { el, chip, empty, field, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
 export async function renderAccessView({ api, session }) {
@@ -6,6 +6,7 @@ export async function renderAccessView({ api, session }) {
     const canManage = session.permissions.includes('camera.manage');
     const formHost = el('div', { hidden: 'hidden' });
     const rulesHost = el('div', { className: 'stack' });
+    const confirmHost = el('div', {});
     const eventsHost = el('div', { className: 'stack' });
 
     function renderRuleForm() {
@@ -81,10 +82,19 @@ export async function renderAccessView({ api, session }) {
                     className: 'btn btn--sm btn--danger',
                     type: 'button',
                     textContent: 'Elimina',
-                    onclick: async () => {
-                        if (!confirm(`Eliminare la regola per ${r.platePattern}?`)) return;
-                        await api.remove(`/api/access/rules/${r.id}`);
-                        await loadData();
+                    onclick: () => {
+                        confirmHost.replaceChildren(confirmPanel({
+                            title: `Eliminare la regola per ${r.platePattern}?`,
+                            message: 'La targa smette di essere autorizzata o negata da questa regola.',
+                            confirmLabel: 'Elimina',
+                            onCancel: () => confirmHost.replaceChildren(),
+                            onConfirm: async () => {
+                                await api.remove(`/api/access/rules/${r.id}`).catch(() => undefined);
+                                confirmHost.replaceChildren();
+                                await loadData();
+                            }
+                        }));
+                        confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                 }) : null;
 
@@ -142,7 +152,7 @@ export async function renderAccessView({ api, session }) {
         formHost,
         el('section', { className: 'panel stack' }, [
             el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Regole' })]),
-            el('div', { className: 'panel__body' }, [rulesHost])
+            el('div', { className: 'panel__body' }, [confirmHost, rulesHost])
         ]),
         el('section', { className: 'panel stack' }, [
             el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Transiti' })]),

@@ -37,6 +37,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 |---|---|
 | **Sorgenti di ogni tipo** | Telecamere IP RTSP, flussi MJPEG e HTTP, e **periferiche USB collegate al server** (dshow su Windows, v4l2 su Linux, avfoundation su macOS), con enumerazione delle periferiche e dei loro formati |
 | **Console Telecamere** | Elenco a schede con filtro, wizard di aggiunta con verifica della sorgente prima del salvataggio, scheda per canale con Generale, Registrazione, Zone e Diagnostica |
+| **Interfaccia senza finestre di dialogo** | Nessun popup del browser: ogni schermata ha il proprio indirizzo e le conferme distruttive compaiono dentro la pagina, con le conseguenze scritte |
 | **Automazioni** | Regole che legano un riconoscimento a un'azione: email, Telegram, webhook firmato, MQTT, comando HTTP e **apertura varchi dal relè ONVIF della telecamera**, con cooldown, limite giornaliero e fascia oraria |
 | **Analisi scegliibile per telecamera** | Persone, veicoli, animali, volti, riconoscimento facciale e targhe si accendono uno per uno su ogni canale, e per ognuno si sceglie l'algoritmo fra quelli disponibili, con soglia regolabile |
 | **Autoconfigurazione guidata** | Una sequenza di prove reali sulla sorgente — presenza, apertura, formato, anteprima, registrazione, analisi — che propone e applica la configurazione funzionante |

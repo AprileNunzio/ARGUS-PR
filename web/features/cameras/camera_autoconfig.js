@@ -1,9 +1,19 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { go } from '/assets/router.js';
+import { backLink } from './camera_wizard.js';
 
-const STATUS_TONE = Object.freeze({ ok: 'ok', warn: 'warn', fail: 'bad', skip: 'info', running: 'info' });
-const STATUS_GLYPH = Object.freeze({ ok: 'check', warn: 'warning', fail: 'close', skip: 'info', running: 'refresh' });
-const STATUS_TEXT = Object.freeze({ ok: 'riuscito', warn: 'attenzione', fail: 'fallito', skip: 'saltato', running: 'in corso' });
+const STATUS_TONE = Object.freeze({ ok: 'ok', warn: 'warn', fail: 'bad', skip: 'info' });
+const STATUS_GLYPH = Object.freeze({ ok: 'check', warn: 'warning', fail: 'close', skip: 'info' });
+const STATUS_TEXT = Object.freeze({ ok: 'riuscito', warn: 'attenzione', fail: 'fallito', skip: 'saltato' });
+
+const PATCH_LABELS = Object.freeze({
+    inputFormat: 'formato',
+    captureWidth: 'larghezza',
+    captureHeight: 'altezza',
+    captureFps: 'fotogrammi',
+    transport: 'trasporto'
+});
 
 function stepRow(label) {
     const badge = chip('in attesa', 'info');
@@ -12,10 +22,7 @@ function stepRow(label) {
 
     const node = el('div', { className: 'auto-step' }, [
         glyph,
-        el('div', { className: 'stack stack--tight' }, [
-            el('strong', { textContent: label }),
-            detail
-        ]),
+        el('div', { className: 'stack stack--tight' }, [el('strong', { textContent: label }), detail]),
         badge
     ]);
 
@@ -32,37 +39,32 @@ function stepRow(label) {
 }
 
 function describePatch(patch) {
-    const labels = {
-        inputFormat: 'formato',
-        captureWidth: 'larghezza',
-        captureHeight: 'altezza',
-        captureFps: 'fotogrammi',
-        transport: 'trasporto'
-    };
-
     return Object.entries(patch)
         .filter(([, value]) => value !== null && value !== undefined)
-        .map(([key, value]) => `${labels[key] ?? key}: ${value}`)
+        .map(([key, value]) => `${PATCH_LABELS[key] ?? key}: ${value}`)
         .join(' · ');
 }
 
-export function renderAutoconfigure({ api, camera = null, payload = null, onApplied, onClose }) {
-    const host = el('section', { className: 'panel rise' });
-    const body = el('div', { className: 'panel__body stack' });
-    const feedback = el('div', { hidden: 'hidden' });
+export async function renderAutoconfigurePage({ api, cameraId }) {
+    const camera = await api.get(`/api/cameras/${cameraId}`)
+        .then((result) => result.camera)
+        .catch(() => null);
+
+    if (!camera) {
+        return el('div', { className: 'view' }, [
+            pageHead({ title: 'Autoconfigurazione', back: backLink('Torna all elenco', 'cameras') }),
+            notice('warn', 'Il canale richiesto non esiste piu.')
+        ]);
+    }
+
     const rows = new Map();
     const stepHost = el('div', { className: 'stack stack--tight' });
+    const feedback = el('div', { hidden: 'hidden' });
 
     const startButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Avvia autoconfigurazione' });
     const applyButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Applica e salva', hidden: 'hidden' });
 
     let finalPatch = {};
-
-    const endpoint = camera ? `/api/cameras/${camera.id}/autoconfigure` : '/api/cameras/autoconfigure';
-
-    const requestStep = (step, state) => api.post(endpoint, camera
-        ? { step, state }
-        : { camera: payload, step, state });
 
     async function run() {
         startButton.disabled = true;
@@ -73,11 +75,11 @@ export function renderAutoconfigure({ api, camera = null, payload = null, onAppl
         finalPatch = {};
 
         let state = {};
-        let step = null;
+        let step;
         let first = true;
 
         while (first || step) {
-            const outcome = await requestStep(step ?? undefined, state)
+            const outcome = await api.post(`/api/cameras/${cameraId}/autoconfigure`, { step, state })
                 .then((value) => ({ value }))
                 .catch((error) => ({ error }));
 
@@ -99,8 +101,7 @@ export function renderAutoconfigure({ api, camera = null, payload = null, onAppl
                 first = false;
             }
 
-            const row = rows.get(result.step);
-            if (row) row.update(result.status, result.detail);
+            rows.get(result.step)?.update(result.status, result.detail);
 
             state = result.state;
             finalPatch = result.state?.patch ?? {};
@@ -114,12 +115,12 @@ export function renderAutoconfigure({ api, camera = null, payload = null, onAppl
 
         if (Object.keys(finalPatch).length > 0) {
             feedback.replaceChildren(notice('info', `Configurazione suggerita — ${describePatch(finalPatch)}`));
-            feedback.removeAttribute('hidden');
             applyButton.removeAttribute('hidden');
         } else {
             feedback.replaceChildren(notice('ok', 'Nessuna modifica necessaria: la configurazione attuale funziona.'));
-            feedback.removeAttribute('hidden');
         }
+
+        feedback.removeAttribute('hidden');
     }
 
     startButton.addEventListener('click', run);
@@ -127,37 +128,32 @@ export function renderAutoconfigure({ api, camera = null, payload = null, onAppl
     applyButton.addEventListener('click', async () => {
         applyButton.disabled = true;
 
-        if (camera) {
-            const outcome = await api.put(`/api/cameras/${camera.id}`, finalPatch)
-                .then(() => null)
-                .catch((error) => error);
-
-            applyButton.disabled = false;
-
-            if (outcome) {
-                feedback.replaceChildren(notice('error', outcome.message));
-                return;
-            }
-        }
+        const outcome = await api.put(`/api/cameras/${cameraId}`, finalPatch)
+            .then(() => null)
+            .catch((error) => error);
 
         applyButton.disabled = false;
-        await onApplied?.(finalPatch);
+
+        if (outcome) {
+            feedback.replaceChildren(notice('error', outcome.message));
+            return;
+        }
+
+        go('cameras', cameraId, 'diagnostics');
     });
 
-    body.append(
-        el('p', { className: 'section__hint', textContent: 'Ogni passo esegue una prova reale sulla sorgente: presenza, apertura, formato, anteprima, registrazione e alimentazione dell analisi.' }),
-        stepHost,
-        feedback,
-        el('div', { className: 'row row--end' }, [startButton, applyButton])
-    );
-
-    host.append(
-        el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: 'Autoconfigurazione guidata' }),
-            onClose ? el('button', { className: 'btn btn--sm btn--ghost', type: 'button', textContent: 'Chiudi', onclick: onClose }) : null
-        ]),
-        body
-    );
-
-    return host;
+    return el('div', { className: 'view' }, [
+        pageHead({
+            title: `Autoconfigurazione · ${camera.name}`,
+            hint: 'Ogni passo esegue una prova reale sulla sorgente: presenza, apertura, formato, anteprima, registrazione e alimentazione dell analisi',
+            back: backLink('Torna alla diagnostica', 'cameras', cameraId, 'diagnostics')
+        }),
+        el('section', { className: 'panel' }, [
+            el('div', { className: 'panel__body stack' }, [
+                stepHost,
+                feedback,
+                el('div', { className: 'row row--end' }, [startButton, applyButton])
+            ])
+        ])
+    ]);
 }

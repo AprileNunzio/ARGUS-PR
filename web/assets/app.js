@@ -14,6 +14,7 @@ import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
 import { renderAutomation } from '/features/automation/automation.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
+import { parseLocation, go } from './router.js';
 
 const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
@@ -45,13 +46,13 @@ function visibleRoutes() {
     );
 }
 
-function currentRoute() {
-    const hash = location.hash.replace('#/', '').trim();
-    return visibleRoutes()[hash] ? hash : 'dashboard';
+function currentLocation() {
+    const parsed = parseLocation();
+    return visibleRoutes()[parsed.name] ? parsed : { name: 'dashboard', params: [] };
 }
 
 async function mountRoute() {
-    const name = currentRoute();
+    const { name, params } = currentLocation();
     state.route = name;
     setActiveRoute(name, visibleRoutes());
 
@@ -60,7 +61,7 @@ async function mountRoute() {
 
     outlet.firstElementChild?.dispatchEvent(new CustomEvent("argus:teardown"));
     outlet.replaceChildren();
-    const view = await ROUTES[name].render({ session: state.session, api });
+    const view = await ROUTES[name].render({ session: state.session, api, params });
     outlet.append(view);
 }
 
@@ -76,7 +77,7 @@ async function showApp() {
     root.replaceChildren(renderShell({
         session: state.session,
         routes: visibleRoutes(),
-        onNavigate: (name) => { location.hash = `#/${name}`; },
+        onNavigate: (name) => go(name),
         onLogout: async () => {
             await api.post('/api/auth/logout');
             state.disconnect?.();

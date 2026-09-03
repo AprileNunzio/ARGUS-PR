@@ -1,4 +1,4 @@
-import { el, chip, empty, field, notice } from '/assets/dom.js';
+import { el, chip, empty, field, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
 export async function renderPeopleView({ api, session }) {
@@ -8,6 +8,7 @@ export async function renderPeopleView({ api, session }) {
 
     const formHost = el('div', { hidden: 'hidden' });
     const listHost = el('div', { className: 'stack' });
+    const confirmHost = el('div', {});
     const logsHost = el('div', { className: 'stack' });
 
     function renderAddForm() {
@@ -132,10 +133,19 @@ export async function renderPeopleView({ api, session }) {
                 className: 'btn btn--sm btn--danger',
                 type: 'button',
                 textContent: 'Elimina (GDPR)',
-                onclick: async () => {
-                    if (!confirm(`Cancellare definitivamente ${p.name}? Questa operazione purga tutti i dati biometrici e i log associati ai sensi del GDPR.`)) return;
-                    await api.remove(`/api/people/${p.id}`);
-                    await loadPeople();
+                onclick: () => {
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: `Cancellare definitivamente ${p.name}?`,
+                        message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati, ai sensi del GDPR. L operazione non e reversibile.',
+                        confirmLabel: 'Cancella tutto',
+                        onCancel: () => confirmHost.replaceChildren(),
+                        onConfirm: async () => {
+                            await api.remove(`/api/people/${p.id}`).catch(() => undefined);
+                            confirmHost.replaceChildren();
+                            await loadPeople();
+                        }
+                    }));
+                    confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }) : null;
 
@@ -199,7 +209,7 @@ export async function renderPeopleView({ api, session }) {
             currentTab = 'people';
             tabPeopleBtn.classList.add('seg__btn--on');
             tabLogsBtn.classList.remove('seg__btn--on');
-            panelBody.replaceChildren(listHost);
+            panelBody.replaceChildren(confirmHost, listHost);
             loadPeople();
         }
     });
@@ -227,7 +237,7 @@ export async function renderPeopleView({ api, session }) {
         }
     }, [icon('plus'), el('span', { textContent: 'Iscrivi' })]) : null;
 
-    const panelBody = el('div', { className: 'panel__body' }, [listHost]);
+    const panelBody = el('div', { className: 'panel__body' }, [confirmHost, listHost]);
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [

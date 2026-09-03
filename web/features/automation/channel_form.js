@@ -1,5 +1,7 @@
-import { el, field, chip, notice } from '/assets/dom.js';
+import { el, field, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { go } from '/assets/router.js';
+import { backLink } from '/features/cameras/camera_wizard.js';
 
 const FIELDS = Object.freeze({
     console: [],
@@ -75,7 +77,7 @@ function control(definition, value) {
     };
 }
 
-export function channelEditor({ api, catalog, channel, onSaved, onCancel }) {
+function channelEditor({ api, catalog, channel }) {
     const kinds = catalog.channels;
     const kindSelect = el('select', { className: 'select' }, kinds.map((entry) => el('option', { value: entry.kind, textContent: entry.label })));
     if (channel) kindSelect.value = channel.kind;
@@ -140,27 +142,42 @@ export function channelEditor({ api, catalog, channel, onSaved, onCancel }) {
             return;
         }
 
-        await onSaved();
+        go('automation');
     });
 
-    return el('section', { className: 'panel rise' }, [
-        el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: channel ? `Canale · ${channel.name}` : 'Nuovo canale di consegna' }),
-            el('button', { className: 'btn btn--sm btn--ghost', type: 'button', textContent: 'Chiudi', onclick: onCancel })
-        ]),
-        el('div', { className: 'panel__body stack' }, [
-            el('div', { className: 'form-grid' }, [
-                field('Nome', name),
-                field('Tipo', kindSelect)
-            ]),
-            fieldHost,
-            feedback,
-            el('div', { className: 'row row--end' }, [saveButton])
+    return el('div', { className: 'view' }, [
+        pageHead({
+            title: channel ? `Canale · ${channel.name}` : 'Nuovo canale di consegna',
+            hint: 'Dove far arrivare gli avvisi, e quali comandi impartire',
+            back: backLink('Torna alle automazioni', 'automation')
+        }),
+        el('section', { className: 'panel' }, [
+            el('div', { className: 'panel__body stack' }, [
+                el('div', { className: 'form-grid' }, [
+                    field('Nome', name),
+                    field('Tipo', kindSelect)
+                ]),
+                fieldHost,
+                feedback,
+                el('div', { className: 'row row--end' }, [
+                    el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: () => go('automation') }),
+                    saveButton
+                ])
+            ])
         ])
     ]);
 }
 
-export function channelRow({ api, channel, onChanged, onEdit }) {
+export async function renderChannelPage({ api, channelId }) {
+    const catalog = await api.get('/api/automation/catalog');
+    const channel = channelId
+        ? await api.get('/api/automation/channels').then((data) => (data.channels ?? []).find((entry) => entry.id === channelId) ?? null)
+        : null;
+
+    return channelEditor({ api, catalog, channel });
+}
+
+export function channelRow({ api, channel, onDelete }) {
     const testButton = el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Prova' });
     const state = el('span', { className: 'section__hint', textContent: channel.hasSecret ? 'segreto memorizzato e cifrato' : 'nessun segreto' });
 
@@ -185,17 +202,8 @@ export function channelRow({ api, channel, onChanged, onEdit }) {
         ]),
         el('div', { className: 'row row--tight' }, [
             testButton,
-            el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Modifica', onclick: () => onEdit(channel) }),
-            el('button', {
-                className: 'btn btn--sm btn--danger',
-                type: 'button',
-                textContent: 'Elimina',
-                onclick: async () => {
-                    if (!confirm(`Eliminare il canale "${channel.name}"?`)) return;
-                    await api.remove(`/api/automation/channels/${channel.id}`).catch(() => undefined);
-                    await onChanged();
-                }
-            })
+            el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Modifica', onclick: () => go('automation', 'channels', channel.id) }),
+            el('button', { className: 'btn btn--sm btn--danger', type: 'button', textContent: 'Elimina', onclick: () => onDelete(channel) })
         ])
     ]);
 }

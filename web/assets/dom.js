@@ -59,3 +59,34 @@ export function formatDuration(seconds) {
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
 }
+
+export function pageHead({ title, hint, actions = [], back = null }) {
+    return el('div', { className: 'view__head' }, [
+        el('div', { className: 'stack stack--tight' }, [
+            back,
+            el('h1', { className: 'view__title', textContent: title }),
+            hint ? el('span', { className: 'section__hint', textContent: hint }) : null
+        ]),
+        actions.length > 0 ? el('div', { className: 'row row--tight' }, actions) : null
+    ]);
+}
+
+export function confirmPanel({ title, message, confirmLabel = 'Conferma', cancelLabel = 'Annulla', onConfirm, onCancel }) {
+    const confirmButton = el('button', { className: 'btn btn--danger', type: 'button', textContent: confirmLabel });
+
+    confirmButton.addEventListener('click', async () => {
+        confirmButton.disabled = true;
+        await onConfirm();
+    });
+
+    return el('section', { className: 'panel confirm-panel rise' }, [
+        el('div', { className: 'panel__body stack stack--tight' }, [
+            el('strong', { textContent: title }),
+            el('span', { className: 'section__hint', textContent: message }),
+            el('div', { className: 'row row--end' }, [
+                el('button', { className: 'btn', type: 'button', textContent: cancelLabel, onclick: onCancel }),
+                confirmButton
+            ])
+        ])
+    ]);
+}

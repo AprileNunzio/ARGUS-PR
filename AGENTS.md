@@ -172,6 +172,13 @@ Icone: `web/assets/icons.js` genera SVG inline da tracciati locali. Nessuna CDN,
 
 **Tema unico chiaro**, per scelta del proprietario: nessun interruttore, nessun blocco `data-theme`. Ogni colore passa comunque dai token in `tokens.css`: mai valori letterali nei componenti.
 
+**Niente finestre di dialogo del browser, e ogni cosa ha una pagina propria.** Richiesta esplicita del proprietario. In pratica:
+
+- `confirm()`, `alert()` e `prompt()` **non si usano**. Una conferma distruttiva si chiede con `confirmPanel()` di `dom.js`, che compare dentro la pagina, spiega le conseguenze e si annulla senza perdere il contesto.
+- Le schermate non si aprono come pannelli sovrapposti a una lista: hanno un indirizzo. Il router (`web/assets/router.js`) legge l'hash come percorso a segmenti (`#/cameras/<id>/analytics`), e `app.js` passa i segmenti alla vista come `params`. Aggiungere una pagina significa gestire un segmento, non aprire un contenitore.
+- Le viste si spostano con `go('cameras', id, 'diagnostics')`, mai assegnando `location.hash` a mano.
+- `test/web_modules.test.js` fa rispettare entrambe le regole, oltre a verificare che ogni `import` punti a un simbolo realmente esportato e che nessun file dell'interfaccia superi le 500 righe.
+
 Nessun framework, nessun build step. ESM nativo servito staticamente.
 `el()` in `web/assets/dom.js` costruisce il DOM: usa `textContent`, mai `innerHTML`, per i dati.
 Ricorda `[hidden] { display: none !important; }`: senza, `display:flex` di un componente vince sull'attributo.
@@ -644,6 +651,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 ---
 
 ## 9. Stato reale: cosa esiste e cosa no
+
+Aggiunte della versione 0.19.0: **nessuna finestra di dialogo del browser in tutta l'interfaccia** (le conferme distruttive sono pannelli dentro la pagina) e **ogni schermata ha il proprio indirizzo** — elenco telecamere, scelta del tipo di sorgente, nuovo canale, ricerca ONVIF, scheda del canale con le sue cinque sezioni, autoconfigurazione, regole e canali di automazione sono pagine navigabili invece che pannelli sovrapposti; **router a segmenti** e **test automatico del grafo dei moduli dell'interfaccia**.
 
 Aggiunte della versione 0.18.3: **corretti due argomenti ffmpeg che rompevano tutto in silenzio** — `-thread_queue_size` passato anche a ffprobe (ogni verifica di sorgente falliva con "Stream unreachable or credentials rejected") e `-stimeout`, rimosso dalle build recenti, che impediva l'apertura di **qualunque** telecamera RTSP.
 
