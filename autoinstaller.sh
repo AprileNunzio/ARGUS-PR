@@ -248,10 +248,11 @@ setup_vision() {
 
     if [[ -f "${INSTALL_DIR}/bin/argus.js" ]]; then
         ( cd "$INSTALL_DIR" && "$NODE_BIN" -e "
-            import { ensureModel, loadCatalog } from './src/features/vision/vision_provision.js';
-            const cat = loadCatalog('./vision/models_catalog.json');
-            for (const m of cat.models) {
-                ensureModel(m, '${DATA_DIR}/models').then(r => console.log('Modello ' + r.name + ': ' + r.status)).catch(e => console.warn(e.message));
+            import { ensureModels, loadCatalog } from './src/features/vision/vision_provision.js';
+            const catalog = loadCatalog('./vision/models_catalog.json');
+            const results = await ensureModels(null, '${DATA_DIR}/models', { catalog, root: process.cwd() });
+            for (const result of results) {
+                console.log('Modello ' + result.name + ': ' + result.status + (result.error ? ' (' + result.error + ')' : ''));
             }
         " ) || true
     fi

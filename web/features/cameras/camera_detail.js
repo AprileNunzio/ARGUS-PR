@@ -3,6 +3,7 @@ import { icon } from '/assets/icons.js';
 import { createCameraForm } from './camera_form.js';
 import { probeSummary } from './camera_wizard.js';
 import { renderAutoconfigure } from './camera_autoconfig.js';
+import { renderCameraAnalytics } from './camera_analytics.js';
 import { renderScheduleEditor } from '/features/scheduling/schedule_editor.js';
 import { renderZoneEditor } from '/features/motion/zone_editor.js';
 
@@ -10,6 +11,7 @@ const TABS = Object.freeze([
     { id: 'general', label: 'Generale', glyph: 'settings' },
     { id: 'recording', label: 'Registrazione', glyph: 'record' },
     { id: 'zones', label: 'Zone di movimento', glyph: 'crop' },
+    { id: 'analytics', label: 'Analisi AI', glyph: 'sparkles' },
     { id: 'diagnostics', label: 'Diagnostica', glyph: 'activity' }
 ]);
 
@@ -164,7 +166,7 @@ function diagnosticsTab({ api, camera, onChanged }) {
     ]);
 }
 
-export function renderCameraDetail({ api, camera, recorder, onBack, onChanged }) {
+export function renderCameraDetail({ api, session, camera, recorder, onBack, onChanged }) {
     const outlet = el('div', { className: 'stack' });
     const content = el('div', { className: 'panel__body' });
     let activeTab = 'general';
@@ -188,6 +190,10 @@ export function renderCameraDetail({ api, camera, recorder, onBack, onChanged })
             content.replaceChildren(camera.sourceKind === 'usb' && !camera.deviceId
                 ? empty('Configura prima la periferica di acquisizione.')
                 : renderZoneEditor({ camera, api, onSaved: () => undefined, onCancel: () => undefined }));
+            return;
+        }
+        if (activeTab === 'analytics') {
+            content.replaceChildren(renderCameraAnalytics({ api, camera, session }));
             return;
         }
         content.replaceChildren(diagnosticsTab({ api, camera, onChanged }));

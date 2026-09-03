@@ -168,31 +168,61 @@ $modelsDir = Join-Path $DataPath 'models'
 
 if (Test-Path $catalogFile) {
     $cat = Get-Content $catalogFile -Raw | ConvertFrom-Json
+    $bundleDir = if ($cat.bundleDir) { Join-Path $InstallPath ($cat.bundleDir -replace '/', '\') } else { $null }
+
     foreach ($m in $cat.models) {
         $dest = Join-Path $modelsDir $m.filename
-        $needDownload = $true
+        $expected = $m.sha256.ToLower()
+
         if (Test-Path $dest) {
             $hash = (Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLower()
-            if ($hash -eq $m.sha256.ToLower()) {
+            if ($hash -eq $expected) {
                 Write-Host "  Modello $($m.name): gia' presente e verificato" -ForegroundColor Green
-                $needDownload = $false
+                continue
             }
         }
-        if ($needDownload) {
-            Write-Host "  Download $($m.name) da $($m.url)..." -ForegroundColor Yellow
+
+        $installed = $false
+
+        if ($bundleDir) {
+            $bundled = Join-Path $bundleDir $m.filename
+            if (Test-Path $bundled) {
+                $bundleHash = (Get-FileHash -Path $bundled -Algorithm SHA256).Hash.ToLower()
+                if ($bundleHash -eq $expected) {
+                    Copy-Item -Force $bundled $dest
+                    Write-Host "  Modello $($m.name): copiato dalla versione inclusa" -ForegroundColor Green
+                    $installed = $true
+                }
+            }
+        }
+
+        $sources = @()
+        if ($m.sources) { $sources += $m.sources }
+        if ($m.url) { $sources += $m.url }
+        if ($cat.mirror) { $sources += "$($cat.mirror)/$($m.filename)" }
+
+        foreach ($source in $sources) {
+            if ($installed) { break }
+            Write-Host "  Modello $($m.name): scarico da $source" -ForegroundColor Yellow
             try {
-                Invoke-WebRequest -Uri $m.url -OutFile "$dest.tmp" -UseBasicParsing
+                Invoke-WebRequest -Uri $source -OutFile "$dest.tmp" -UseBasicParsing
                 $downHash = (Get-FileHash -Path "$dest.tmp" -Algorithm SHA256).Hash.ToLower()
-                if ($downHash -eq $m.sha256.ToLower()) {
+                if ($downHash -eq $expected) {
                     Move-Item -Force "$dest.tmp" $dest
                     Write-Host "  Modello $($m.name): scaricato e verificato" -ForegroundColor Green
+                    $installed = $true
                 } else {
-                    Remove-Item -Force "$dest.tmp"
-                    Write-Warning "Checksum mismatch per $($m.name)"
+                    Remove-Item -Force "$dest.tmp" -ErrorAction SilentlyContinue
+                    Write-Warning "  Impronta diversa da $source, origine scartata"
                 }
             } catch {
-                Write-Warning "Impossibile scaricare $($m.name): $_"
+                Remove-Item -Force "$dest.tmp" -ErrorAction SilentlyContinue
+                Write-Warning "  Origine non raggiungibile: $source"
             }
+        }
+
+        if (-not $installed) {
+            Write-Warning "Modello $($m.name) non installato: la visione AI restera' parziale finche' non lo si scarica dal pannello Telecamere."
         }
     }
 }

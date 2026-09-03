@@ -17,3 +17,5 @@ vendor/ffmpeg/
 dist/
 
 build/
+__pycache__/
+*.pyc

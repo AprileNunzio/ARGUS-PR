@@ -425,3 +425,5 @@
 .auto-step--warn .auto-step__icon { color: #b45309; }
 .auto-step--fail { border-color: #fecaca; }
 .auto-step--fail .auto-step__icon { color: #b91c1c; }
+
+.cap-card { display: flex; flex-direction: column; gap: var(--gap-2); padding: var(--gap-3); border: 1px solid var(--rule); border-radius: var(--radius-md); background: var(--surface); }

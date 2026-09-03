@@ -81,13 +81,13 @@ Salvare una modifica pubblica `Topic.CAMERA_UPDATED`. Diretta, registrazione e m
 
 ---
 
-## 2. Blocco progettato: analisi per telecamera e scelta dei motori
+## 2. Blocco costruito (v0.17.0): analisi per telecamera e scelta dei motori
 
-Oggi `vision_hub.js` avvia il worker di visione su **ogni** telecamera abilitata ed esegue **tutto** il catalogo di modelli. Non esiste un interruttore per capacità, né una scelta di algoritmo. È il limite più grave rimasto.
+Fino alla 0.16.0 `vision_hub.js` avviava il worker su **ogni** telecamera abilitata ed eseguiva **tutto** il catalogo di modelli: nessun interruttore per capacita, nessuna scelta di algoritmo. Ora ogni canale porta il proprio profilo e il worker carica solo cio che serve.
 
 ### 2.1 Tabella `camera_analytics`
 
-Una riga per telecamera e per capacità:
+Una riga per telecamera e per capacita (migrazione `010`):
 
 ```sql
 CREATE TABLE camera_analytics (
@@ -136,7 +136,7 @@ I modelli **non entrano nel repository**: si scaricano al primo uso con verifica
 
 ---
 
-## 3. Blocco progettato: eventi, notifiche e varchi (F6)
+## 3. Blocco progettato: eventi, notifiche e varchi (F7.3)
 
 Il motore delle regole trasforma un rilevamento in un'azione:
 
@@ -155,8 +155,27 @@ Le azioni che aprono varchi sono irreversibili nel mondo fisico. Richiedono conf
 
 ---
 
-## 4. Cosa non è ancora vero
+## 4. Le origini dei modelli, e perche non dipendiamo da nessuno
 
-- Nessuna telecamera USB è stata provata su hardware reale: la catena è verificata sui soli argomenti generati e sull'avvio del processo.
-- L'enumerazione delle periferiche non è mai stata eseguita su Linux con un dispositivo v4l2 fisico.
-- I blocchi 2 e 3 non esistono: questo documento li progetta, non li descrive.
+I pesi delle reti neurali vivono su repository di terzi. Se domani chi li pubblica cancella la release, un'installazione nuova non riesce piu a completarsi. La risposta non e sperare, ne copiare tutto dentro il pacchetto: e **l'indirizzamento per contenuto**.
+
+Ogni modello nel catalogo porta il proprio SHA-256, e l'installazione prova le origini in quest'ordine:
+
+1. **il file gia presente**, se l'impronta corrisponde: non si scarica niente;
+2. **la copia inclusa** nel pacchetto (`bundleDir`), se integra: si copia dal disco;
+3. **le origini remote in ordine**: prima quella originale degli autori, poi il **nostro mirror** (release `models-v1` di questo repository).
+
+Il mirror e marcato *prerelease* di proposito: `releases/latest`, che guida l'aggiornamento automatico, ignora le prerelease e non puo scambiarlo per una versione del programma.
+
+L'impronta e la stessa in tutti e tre i casi. Un mirror che servisse un file diverso da quello atteso viene scartato, non installato: il mirror aggiunge disponibilita, non fiducia. Vale per il percorso Node (`ensureModel`), per `install.ps1` su Windows e per `autoinstaller.sh` su Linux.
+
+Restano fuori i modelli con licenza che ne vieta la ridistribuzione: quelli si possono solo scaricare dall'origine, e il catalogo lo dichiara.
+
+---
+
+## 5. Cosa non e ancora vero
+
+- Nessuna telecamera USB e stata provata *fino in fondo* su hardware reale: il guasto e stato riprodotto e corretto, ma la verifica finale dei quattro consumatori simultanei attende una macchina con la periferica libera.
+- L'enumerazione delle periferiche non e mai stata eseguita su Linux con un dispositivo v4l2 fisico.
+- Il blocco 3 non esiste: questo documento lo progetta, non lo descrive.
+- I motori marcati `planned` nel registro (NanoDet, SCRFD, MobileFaceNet, PaddleOCR, analitica di bordo ONVIF) sono voci di catalogo, non codice.

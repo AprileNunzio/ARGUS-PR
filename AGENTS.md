@@ -331,6 +331,35 @@ Divisione dei compiti:
 
 ---
 
+## 5o. Analisi per telecamera e scelta dei motori (F7.2)
+
+`src/features/vision/engines_catalog.js` + `analytics_profile.js` + `analytics_repository.js` + `analytics_routes.js` + `models_service.js`.
+
+Prima l'analisi era un interruttore invisibile: il worker partiva su **ogni** telecamera abilitata e caricava **tutti** i modelli. Ora ogni canale ha un profilo per capacita' (`camera_analytics`, migrazione 010): `motion`, `person`, `vehicle`, `animal`, `face_detect`, `face_recognize`, `plate`. Una riga per capacita': aggiungerne una domani e' un INSERT, non una migrazione.
+
+- **Registro dei motori** dichiarativo, con licenza, costo e stato (`ready` o `planned`). L'interfaccia mostra anche quelli non ancora costruiti, disabilitati: non si promette cio' che non esiste. Motori pronti: YOLOX-nano e YOLOX-tiny per gli oggetti, YuNet per i volti, SFace per l'identita', ricerca morfologica o CRNN per le targhe.
+- **Dipendenze fra capacita'**: il riconoscimento facciale non si accende senza il rilevamento volti, e le targhe accendono comunque il rilevamento veicoli dentro il worker (senza emettere eventi veicolo se la capacita' e' spenta). La regola vive in `applyDependencies`, pura e testata.
+- **Il worker carica solo il necessario**: `vision/worker.py` riceve `--profile` con i file dei modelli scelti e le soglie. Un canale che vuole solo i volti non carica i 38 MB di SFace se il riconoscimento e' spento.
+- **Il riconoscimento facciale resta spento per impostazione predefinita** e l'interfaccia lo marca come dato biometrico (GDPR, vedi docs/VISIONE.md §7.5).
+- **Se mancano i modelli il canale non parte**, e l'interfaccia dice quali mancano con un pulsante per scaricarli. Meglio fermo e dichiarato che silenziosamente cieco.
+- Il worker Python e' diviso in `vision_common.py`, `vision_engine.py`, `vision_enroll.py` e `worker.py`: nessun file oltre le 500 righe.
+
+---
+
+## 5p. Dipendenze scaricate: nessuna origine singola
+
+`vision/models_catalog.json` + `src/features/vision/vision_provision.js`.
+
+Il rischio e' concreto: i pesi delle reti stanno su repository di terzi, e se domani spariscono un'installazione nuova non riesce piu' a completarsi. La difesa e' **l'indirizzamento per contenuto**, non la fiducia in una origine:
+
+1. il file gia' installato, se l'impronta SHA-256 corrisponde, vale come valido e non si scarica nulla;
+2. la copia **inclusa** nel pacchetto (`bundleDir`), se presente e integra, viene copiata;
+3. le **origini remote in ordine**: prima quella originale, poi il nostro mirror (release `models-v1` di questo repository, marcata *prerelease* perche' `releases/latest` non la scambi per una versione del programma).
+
+Ogni origine e' verificata con lo stesso SHA-256: un mirror che servisse un file diverso viene scartato, non installato. Vale sia per il percorso Node (`ensureModel`) sia per gli installatori Windows e Linux.
+
+---
+
 ## 5m. Periferiche locali: una sola apertura, molti consumatori
 
 `src/features/cameras/local_capture.js`.
@@ -572,6 +601,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
+Aggiunte della versione 0.17.0: **analisi configurabile per telecamera e per capacita'** (movimento, persone, veicoli, animali, volti, riconoscimento facciale, targhe) con **scelta dell'algoritmo per ogni funzione** fra i motori pronti (YOLOX-nano, YOLOX-tiny, YuNet, SFace, lettura targhe morfologica o CRNN) e i motori dichiarati ma non costruiti mostrati come tali, **worker Python che carica solo i modelli richiesti dal profilo**, **catalogo modelli multi-origine con mirror proprio e verifica SHA-256 a ogni passo**, **una sola apertura delle periferiche USB con quattro consumatori simultanei**, **registrazione codificata per le sorgenti grezze**, **autoconfigurazione guidata a passi con prove reali** su sorgenti locali e di rete.
+
 Aggiunte della versione 0.16.0: **app Telecamere spostata nella macro-area Sistema** e riscritta come console di configurazione (elenco a schede con filtro, wizard di aggiunta in due passi con verifica della sorgente prima del salvataggio, scheda per canale a tab Generale / Registrazione / Zone / Diagnostica), **sorgenti USB locali** (dshow, v4l2, avfoundation) con **enumerazione delle periferiche del server e dei loro formati**, **sorgenti MJPEG e HTTP con riconnessione automatica**, **descrittore d'ingresso unico** condiviso da diretta, registrazione, movimento, visione e probe, **profilo canale esteso** (risoluzione, cadenza, formato, audio, posizione, gruppo, ritenzione dedicata, accelerazione, note), **applicazione a caldo delle modifiche** via `Topic.CAMERA_UPDATED`, **audio di registrazione governato per canale**, correzione del percorso ffmpeg nel processo di visione (con ffmpeg installato in `vendor/` il worker non partiva).
 
 Aggiunte della versione 0.15.0: **nuova architettura UI Launchpad / App Portal a 2 livelli** (navigazione fluida e spaziosa a card con apertura sottocategorie, selettore vista a cartelle o esteso), **icone 3D fluency ad alta definizione scaricate da Icons8** (17 icone PNG 3D collocate in web/assets/icons/ fluttuanti senza sfondo invadente e con fallback automatico ad SVG inline), **command toolbar unificata a riga singola** (spazio ottimizzato al 100%, badge live Operativo, chip telemetrici interattivi Canali/Uptime/Versione, ricerca globale istantanea con scorciatoia da tastiera Ctrl+K e reset 1-clic, pulsante Muro Video fullscreen rapido e ricarica telemetria a caldo), **pannello Impostazioni autogenerante schema-driven** (micro-sezioni pulite, parametri raggruppati, tooltip descrittivi nativi), **visione AI estesa con arruolamento volti da fototessera** (endpoint POST /api/people/extract-face con estrazione automatica coordinate e embedding YuNet + SFace), **ANPR avanzato con classificazione veicoli e voto ponderato multi-frame**, **rilevamento animali esteso**.
@@ -611,7 +642,8 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FC | Impostazioni complete dal browser, politica di riavvio, finestra di manutenzione | completata |
 | FS2 | MFA TOTP (fatta), firma aggiornamenti, integrita archivio e audit | in corso |
 | F7.1 | Telecamere in Sistema, ingresso unico, sorgenti USB/MJPEG, console a tab | completata |
-| F7.2 | Analisi per telecamera e per capacita', registro dei motori selezionabili | da fare |
+| F7.2 | Analisi per telecamera e per capacita', registro dei motori selezionabili | completata |
+| F7.3 | Regole evento-azione: notifiche, email, webhook, MQTT, rele' e varchi | da fare |
 | F6 | Planimetria, preset, notifiche Telegram/MQTT, relè, diagnostica, watchdog | da fare |
 
 

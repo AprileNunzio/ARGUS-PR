@@ -89,6 +89,7 @@ export async function renderCameras({ api, session }) {
             if (camera) {
                 outlet.replaceChildren(renderCameraDetail({
                     api,
+                    session,
                     camera,
                     recorder: recorders.find((entry) => entry.cameraId === camera.id),
                     onBack: () => { state.selected = null; refresh(); },
