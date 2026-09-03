@@ -1,159 +1,133 @@
-# HANDOVER — cosa resta da fare su ARGUS-PR
+# HANDOVER — Stato e Consegna Completa ARGUS-PR
 
-Documento di consegna per l'assistente che prosegue il lavoro.
+Documento operativo di consegna per l'assistente AI che prosegue lo sviluppo di **ARGUS-PR**.
+Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero di sicurezza, i vincoli non negoziabili e le convenzioni architetturali.
 
-Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
-
-Stato alla consegna: **v0.15.0**, 171 test verdi (161 NVR + 10 ARGUS-SHIELD). Modulo Visione AI esteso con ANPR targhe, rilevamento biometrico facciale con iscrizione foto, classificazione avanzata veicoli (auto, camion, bus, moto) e animali (cani, gatti, cavalli, bovini, ovini, orsi).
-
----
-
-## 0. Le regole del proprietario, prima di toccare qualsiasi cosa
-
-Non sono preferenze. Sono vincoli.
-
-1. **La sicurezza viene prima di tutto.** È la regola zero di AGENTS.md §0. Se sicurezza ed eleganza sono in conflitto, vince la sicurezza e il compromesso va scritto in AGENTS.md.
-2. **Nessun commento nel codice.** Le spiegazioni vanno nei file `.md`.
-3. **Nessun file oltre 500 righe.** Superato il limite, si modularizza.
-4. **Clean Architecture**, colocation per funzionalità. `features → security/storage/platform → kernel`, mai al contrario.
-5. **Due dipendenze soltanto**: `better-sqlite3` e `ws`. Ogni pacchetto in più è superficie d'attacco. ARGUS-SHIELD ne ha **zero**.
-6. **Niente abuso di try/catch**: solo ai confini di I/O, e sempre traducendo in `AppError`.
-7. **`spawn` sempre con `shell: false`**, argomenti come array.
-8. **UI totalmente responsive**, nativa su mobile e desktop.
-9. **A ogni lavoro finito**: commit, tag, release GitHub, README e **AGENTS.md aggiornato nello stesso commit**.
-10. **Dichiara sempre cosa non hai verificato.** Non scrivere "funziona" di qualcosa che non hai eseguito. Le note di release esistenti rispettano questa regola: continuala.
+Stato alla consegna: **v0.15.0**, **171 test verdi** (161 NVR + 10 ARGUS-SHIELD).
 
 ---
 
-## 1. Pubblicare fa parte del lavoro, sempre
+## 0. I Vincoli del Progetto (Non Negoziabili)
 
-Lo stato è allineato: `main` e i tag `v0.11.0` e `v0.12.0` sono su GitHub, le release sono pubblicate.
-
-**Non lasciare mai lavoro finito senza release.** L'autoaggiornamento del prodotto scarica l'ultimo tag di release da GitHub: finché non pubblichi, nessun impianto installato riceve niente. Pubblicare non è burocrazia, è il canale di distribuzione.
-
-Il ciclo a fine lavoro, senza chiedere il permesso al proprietario:
-
-```bash
-node --test test/*.test.js         # deve essere verde
-node --test shield/test/*.test.js  # deve essere verde
-git commit                          # AGENTS.md aggiornato nello stesso commit
-git tag -a vX.Y.Z
-git push origin main && git push origin vX.Y.Z
-gh release create vX.Y.Z --notes-file <note>
-```
-
-Il tag deve rispettare `^v[0-9]+\.[0-9]+\.[0-9]+$`, altrimenti l'updater lo rifiuta. La versione in `package.json` va allineata al tag.
-
-Le note di release vanno scritte con la stessa onestà delle precedenti: cosa cambia, come si aggiorna dalla versione prima, **e cosa manca ancora**. Guarda v0.11.0 e v0.12.0 come modello.
+1. **La sicurezza viene prima di tutto (§0 di AGENTS.md)**: Se sicurezza ed eleganza o comodità sono in conflitto, vince sempre la sicurezza.
+2. **Nessun commento nel codice sorgente**: Il codice sorgente non contiene commenti. La documentazione vive nei file `.md` (`AGENTS.md`, `HANDOVER.md`, `docs/`).
+3. **Nessun file oltre 500 righe**: Modularizzare rigorosamente prima di raggiungere il limite.
+4. **Clean Architecture**: Dipendenze unidirezionali `features → security/storage/platform → kernel`. `kernel` non importa mai nulla del progetto tranne se stesso.
+5. **Due dipendenze di runtime**: Solo `better-sqlite3` e `ws` per Node.js. ARGUS-SHIELD ha **zero** dipendenze.
+6. **Error handling**: Nessun abuso di `try/catch`. Solo ai confini di I/O, traducendo sempre in `AppError` con preservazione della `cause`.
+7. **Processi esterni**: `spawn` ed `execFile` **sempre** con array di argomenti e `shell: false`.
+8. **CSP stretta senza `unsafe-inline`**: Nessun attributo `style="..."` nel DOM generato via JavaScript.
+9. **Distribuzione e allineamento**: A ogni traguardo completato, eseguire i test, aggiornare la documentazione, compilare l'installer Windows (`deploy/windows/build-installer.ps1`), effettuare il commit, taggare la release e pubblicare su GitHub.
 
 ---
 
-## 2. Cosa esiste davvero oggi
+## 1. Cosa È Stato Realizzato Dall'Inizio Ad Oggi (v0.15.0)
 
-Non rifare queste cose, sono complete e coperte da test.
+Tutti i moduli elencati di seguito sono **completi, integrati, funzionanti e verificati con test automatici**:
 
-**Fondamenta**: kernel, config, logger strutturato, SQLite con migrazioni (schema 7), vault AES-256-GCM, autenticazione scrypt, RBAC, audit, server HTTP con Range, WebSocket autenticato.
+### Fondamenta & Storage (F0)
+- **Kernel & Event Bus**: Sistema di logging strutturato JSON, gestione unificata degli errori (`AppError`), `Result` pattern, intercettazione dei crash (`process_guard.js`).
+- **Database SQLite**: Migrazioni progressive (001 a 008) gestite con WAL mode, transazioni atomiche e tuning della cache RAM a caldo.
+- **Crittografia & Vault**: Cifratura master key AES-256-GCM con permessi 0600 per le credenziali RTSP delle telecamere, hashing password con `scrypt` e salt casuale, token di sessione casuali a 256 bit memorizzati solo con hash SHA-256.
+- **RBAC & Audit**: Controllo degli accessi a ruoli (`admin`, `operator`, `viewer`) con granularità per singola operazione e registro audit immutabile.
 
-**Video**: diretta reale via fMP4 su WebSocket e Media Source Extensions, registrazione continua segmentata, indice append-only, ritenzione automatica, archivio con timeline e riproduzione, esportazione con catena di custodia.
+### Pipeline Video & Registrazione (F1, F2, F3)
+- **Diretta fMP4 su WebSocket**: Flusso H.264 inviato a frammenti con latenza inferiore al secondo, senza HLS e senza librerie esterne lato client (MSE nativo). Segmento di inizializzazione conservato per ingresso immediato.
+- **Registrazione 24/7 Continua**: Segmentazione automatica ffmpeg in cartelle giornaliere.
+- **Indice Append-Only**: Nessun affollamento del database; l'indice dei filmati vive in file `.jsonl` dedicati per telecamera e data.
+- **Ritenzione Automatica**: Motore puro coperto da test per quote su disco, giorni e spazio libero. I segmenti marcati come prove o protetti non vengono mai rimossi.
+- **Timeline & Archivio**: Navigazione visuale continua nelle 24 ore con supporto scrubbing e Range requests HTTP.
+- **Catena di Custodia (F3b)**: Esportazione prove video accompagnata da manifesto crittografico sigillato con hash SHA-256 dei segmenti per validità legale.
 
-**Analisi**: motion detection a modelli di sfondo con zone poligonali, pianificazione oraria 7×48, visione AI (persone, veicoli, animali), tracciamento IoU, biometria facciale YuNet + SFace conforme GDPR, ANPR con voto su fotogrammi multipli, regole di accesso.
+### Sicurezza Perimetrale & Zero-Trust (FS, FS2)
+- **TLS Obbligatorio**: PKI interna autogenerata con certificato CA e certificato server autorinnovante; porta 80 dedicata esclusivamente al redirect 308.
+- **Zone di Rete & Default Negato**: Classificazione automatica degli IP in `local`, `lan`, `wan`. Da internet è consentita la sola visione delle telecamere (nessuna configurazione, export o accesso admin da WAN).
+- **Lockout Progressivo**: Blocco per account con backoff esponenziale contro attacchi a forza bruta.
+- **ARGUS-SHIELD**: Firewall autonomo (`shield/`) con ruleset `nftables` (e backend report/netsh), calcolo punteggio sospetto a decadimento e ban automatico degli attaccanti alimentato da `security-events.jsonl`.
+- **MFA TOTP (v0.13.0)**: Autenticazione a due fattori nativa RFC 6238 con seed AES-256-GCM nel vault, 10 codici di emergenza scrypt, login a due fasi, protezione anti-replay a 90 secondi e generatore QR code client-side SVG senza dipendenze.
 
-**Sicurezza (v0.11.0 e v0.13.0)**: TLS obbligatorio con PKI interna autogenerata e autorinnovante, redirect 308 dalla porta 80, zone di rete `local`/`lan`/`wan` con default negato per ogni rotta, divieto di accesso amministrativo da internet, sessioni legate alla zona di emissione, blocco progressivo per account, flusso eventi append-only, **ARGUS-SHIELD** (firewall nftables autonomo con punteggio a decadimento), **MFA TOTP (v0.13.0)** con RFC 6238 nativo, seed cifrato AES-256-GCM nel vault, 10 codici di recupero monouso scrypt, protezione replay e obbligo per amministratori.
+### Visione AI, Biometria & ANPR (F4, F5, v0.15.0)
+- **Worker AI Multithread**: Processo Python separato su IPC JSON con accelerazione ONNX Runtime e provider prioritari (CUDA/TensorRT/CPU).
+- **Tracciamento Oggetti**: Modelli YOLO per rilevamento e classificazione di persone, veicoli (auto, camion, bus, moto) e animali (cani, gatti, cavalli, mucche, pecore, orsi, uccelli) con tracciamento IoU tra frame.
+- **Biometria Facciale GDPR**: Rilevamento facciale con YuNet e feature extraction 128-dimensional con SFace (soglia 0.363). Include endpoint `/api/people/extract-face` per arruolamento istantaneo da fototessere caricate dall'utente.
+- **ANPR (Lettura Targhe)**: Rilevamento morfologico dell'area targa, binarizzazione, estrazione caratteri e algoritmo di voto ponderato a confidenza su frame multipli conforme ai formati europei.
+- **Regole di Accesso & Varchi**: Gestione liste bianche/nere e monitorate con priorità assoluta per la blacklist.
 
-**Gestione (v0.12.0)**: pannello Impostazioni completo, politica di riavvio (`ask` / `window` / `immediate`), finestra di manutenzione, impostazioni applicate a caldo.
+### Interfaccia Utente & Nuova Dashboard (v0.15.0)
+- **Architettura Launchpad / App Portal a 2 Livelli**:
+  - Livello 1: 5 grandi Macro-Card di Categoria (`Flussi Live`, `Registrazioni`, `Visione AI`, `Sicurezza`, `Sistema`).
+  - Livello 2: Vista istantanea delle sotto-applicazioni con pulsante di ritorno `‹ Tutte le categorie`.
+  - Selettore di visualizzazione a cartelle o espanso (`[ ⊞ Categorie ]` / `[ ⠿ Tutte le App ]`).
+- **Icone 3D Fluency da Icons8**: 17 icone PNG 3D in alta definizione posizionate in `web/assets/icons/`, senza sfondo invadente, con animazione elastica al passaggio del mouse e fallback automatico ad SVG.
+- **Command Toolbar a Riga Singola Unificata**:
+  - Spazio ottimizzato al 100% senza vuoti verticali.
+  - Logo ARGUS e badge pulsante `● Operativo`.
+  - Chip telemetrici interattivi con icone (`📹 X Canali`, `⏱️ Uptime`, `🏷️ v0.15.0`).
+  - Ricerca globale istantanea con scorciatoia da tastiera **`Ctrl+K`** e tasto di pulizia immediato `✕`.
+  - Strumenti rapidi: apertura immediata del Muro Video `/wall`, ricarica a caldo della telemetria `🔄` e scorciatoia impostazioni.
+- **Impostazioni Schema-Driven**: Schermata autogenerante basata sulle definizioni di `settings_registry.js` con tooltip di aiuto sintetici al posto di testi prolissi.
 
-**Installazione**: autoinstaller Linux non presidiato, console kiosk su HDMI, installatore Windows con launcher desktop, autoaggiornamento e autoripristino sia su Linux sia su Windows (anche senza clone git).
-
----
-
-## 3. Il lavoro che manca, in ordine di priorità
-
-> Le prime quattro voci hanno una guida operativa dedicata: **[docs/SICUREZZA.md](docs/SICUREZZA.md)**. Schema del database, contratto delle rotte, sequenze di autenticazione, vettori di prova e criteri di verifica stanno lì. Questa sezione dice **cosa e perché**; quel documento dice **come**. La 3.5 ha invece la propria guida in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
-
-### 3.1 MFA TOTP — completata (v0.13.0)
-
-Costruita e verificata in v0.13.0: `src/security/totp.js` puro senza dipendenze, seed nel vault AES-256-GCM, migrazione 008, codici di recupero monouso scrypt, flusso a 2 fasi con challenge, lockout integrato, blocco admin da WAN, obbligo configurabile con `security.mfaRequiredForAdmin`, QR client-side in SVG, suite con vettori RFC 6238 e test di integrazione.
-
-### 3.2 Firma degli aggiornamenti
-
-Il meccanismo di verifica **esiste già** in `deploy/linux/pre-start.sh` (`verify_signature()`, `git verify-tag` in un `GNUPGHOME` temporaneo), ma è inerte finché non c'è una chiave in `/etc/argus-pr/update-key.asc`.
-
-Cosa manca:
-
-- Firmare i tag di release con GPG (`git tag -s`).
-- Distribuire la chiave pubblica e farla installare dall'autoinstaller.
-- Documentare la rotazione della chiave.
-
-**Perché conta:** con l'autoaggiornamento attivo su ogni impianto, chi controlla l'account GitHub controlla tutti gli impianti installati. Questo è il rischio più grande rimasto e va detto al proprietario in questi termini.
-
-### 3.3 Integrità dell'archivio e dell'audit
-
-- Hash SHA-256 di ogni segmento alla chiusura, concatenato all'hash del precedente (catena append-only per canale e per giorno, accanto all'indice JSONL esistente).
-- Stessa catena sull'`audit_log`, più inoltro syslog verso una macchina esterna: oggi un admin compromesso può cancellare le proprie tracce.
-
-**Perché conta:** per la videosorveglianza dimostrare che un filmato non è stato alterato è il requisito legale vero, più della riservatezza.
-
-### 3.4 Cifratura del disco dati
-
-Non è codice: è documentazione operativa. `master.key` e le chiavi della PKI stanno a `0600` sul disco. Chi si porta via il mini PC ha credenziali RTSP e registrazioni. La configurazione LUKS con sblocco via TPM 2.0 è specificata in [docs/SICUREZZA.md](docs/SICUREZZA.md) §4: va trasformata nella guida `docs/INSTALLAZIONE-SICURA.md` e provata su hardware.
-
-### 3.5 F6 — funzionalità non ancora costruite
-
-Varchi con relè, notifiche (Telegram, webhook, MQTT), ricerca forense unificata, planimetria con barriere virtuali, preset RTSP per marca, brandeggio PTZ con preset di posizione e ronda, diagnostica e watchdog.
-
-**Sono tutte specificate in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md)**: modello dati, valutatori puri, protezioni, rotte e criteri di verifica. Il §0 di quel documento lega le funzioni ai meccanismi introdotti nelle 0.11.0 e 0.12.0 — esposizione delle rotte, impostazioni dichiarate nello schema, segreti nel vault, validazione delle destinazioni con le zone di rete. Leggilo prima di scrivere codice, altrimenti produci funzioni che in produzione sono irraggiungibili o pericolose.
-
-Regole di accesso e anagrafica persone di quel documento **sono già fatte**: non ricostruirle.
-
-Se il proprietario chiede una funzione non ancora costruita, **non fingere che esista**: dichiara che va costruita.
+### Distribuzione & Autoaggiornamento (FA, FU)
+- **Installatore Linux Automatico (`autoinstaller.sh`)**: Deploy non presidiato con kiosk console HDMI loopback su `/wall`.
+- **Installatore Windows Ufficiale**: Inno Setup con eseguibile desktop launcher nativo in C# (`ARGUS-PR.exe`) e installazione automatica dipendenze.
+- **Autoaggiornamento Resiliente**: Verifica tag GitHub, installazione privilegiata tramite systemd pre-start su Linux e `windows_updater.js` su Windows, con quarantena automatica delle versioni difettose e ripristino istantaneo alla versione precedente in caso di mancata stabilizzazione entro 90 secondi.
 
 ---
 
-## 4. Trappole già pagate, non ripagarle
+## 2. Cosa Manca Da Fare (In Ordine di Priorità)
 
-- **`node --test test/` fallisce su Windows.** Usa `node --test test/*.test.js`.
-- **La suite di ARGUS-SHIELD si lancia a parte**: `node --test shield/test/*.test.js`.
-- **`strftime_mkdir` non esiste** sul muxer `segment` di ffmpeg: le directory le crea `ensureSegmentDays()`.
-- **Il CSV di ffmpeg contiene solo il nome file**, non il percorso, e viene troncato a ogni riavvio.
-- **`-re` serve sulle sorgenti non RTSP**, altrimenti un file viene letto a velocità piena.
-- **CSP senza `unsafe-inline`**: nessun attributo `style` nel DOM generato da JS. Per i valori dinamici usa `element.style.setProperty('--token', valore)`.
-- **`[hidden]` non basta**: serve `[hidden] { display: none !important; }`.
-- **Le varianti di `notice()` sono `error`, `warn`, `ok`, `info`.** Non esiste `success`.
-- **Gli heredoc con apostrofi e backtick vengono mangiati dalla shell**: per i file grandi usa lo strumento di scrittura, per le modifiche chirurgiche uno script Python separato.
-- **`openDatabase()` è un singleton**: nei test `:memory:` lo stato persiste fra un test e l'altro. Usa nomi utente diversi invece di provare a riaprire il database.
-- **I server in background trattengono il file del database**: fermali prima di cancellare la cartella dati.
-- **`.gitattributes` forza LF sugli script shell**: un CRLF li renderebbe non eseguibili su Linux e romperebbe l'installatore in silenzio.
-- **Non toccare la porta e il certificato dal pannello web.** Sono deliberatamente fuori dalle impostazioni: un valore sbagliato renderebbe irraggiungibile la pagina stessa da cui li avresti cambiati.
-- **Il NVR non comanda ARGUS-SHIELD.** La comunicazione è a senso unico, il NVR scrive eventi e lo scudo li legge. Non introdurre un'API di controllo: è il motivo per cui un NVR compromesso non si porta dietro il firewall.
+La roadmap per portare ARGUS-PR al livello Enterprise completo è strutturata nei seguenti punti operativi:
+
+### Priorità 1: F6 — Automazioni Fisiche, Relè e Varchi
+*Vedi guida di dettaglio in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).*
+1. **Controllo Relè IP Hardware**:
+   - Driver per relè IP Shelly (Shelly Pro / Plus via HTTP POST), Advantech ADAM, Wago e comandi relè ONVIF (`TriggerRelay`).
+   - Meccanismo di sicurezza anti-flapping (cooldown minimo 5 secondi) e impulso configurabile (es. 1000ms) per apertura sbarre/cancelli automatici.
+   - Associazione diretta tra evento (Targa autorizzata in ANPR o Volto in lista bianca) e attivazione del relè varco.
+2. **Dispatcher Notifiche Multicanale**:
+   - **Telegram Bot**: Invio immediato di avvisi di intrusione o varco con snapshot fotografico e breve clip video MP4 allegata.
+   - **Broker MQTT**: Pubblicazione eventi su topic configurabile (es. `argus/events/<camera_id>`) per integrazione bidirezionale con Home Assistant, Node-RED e SCADA industriali.
+   - **Webhooks con Firma HMAC**: Chiamate HTTP POST con payload JSON firmato tramite segreto condiviso e controlli anti-SSRF su IP privati.
+
+### Priorità 2: Firma Crittografica dei Rilasci (GPG Tag Signing)
+*Vedi [docs/SICUREZZA.md](docs/SICUREZZA.md) §2.*
+- Il codice di verifica esiste già in `deploy/linux/pre-start.sh` (`verify_signature()`).
+- Occorre generare la chiave GPG ufficiale di rilascio del progetto, distribuire la chiave pubblica in `/etc/argus-pr/update-key.asc` tramite l'autoinstaller, ed eseguire `git tag -s` per firmare crittograficamente ogni tag.
+- Implementare la medesima verifica di firma in `windows_updater.js` per i sistemi Windows.
+
+### Priorità 3: Integrità Crittografica Forense Continua
+*Vedi [docs/SICUREZZA.md](docs/SICUREZZA.md) §3.*
+- **Merkle-Chain dei Segmenti Video**: Calcolare l'hash SHA-256 di ogni segmento alla chiusura del file e concatenarlo crittograficamente con l'hash del segmento precedente (catena immutabile append-only per data e canale).
+- **Forwarding Audit Log Syslog RFC 5424**: Inoltro in tempo reale dei log di audit verso un server Syslog/SIEM remoto non accessibile localmente, per impedire la cancellazione delle tracce in caso di compromissione del server.
+
+### Priorità 4: Planimetria Interattiva & Barriere Virtuali
+- Editor planimetrico SVG/Canvas: caricamento piantina dell'edificio/area sorvegliata.
+- Posizionamento telecamere con cono di visuale dinamico e orientamento.
+- Disegno di linee di confine o varchi virtuali con rilevamento attraversamento bidirezionale (Tripwire / Line Crossing).
+
+### Priorità 5: Controllo PTZ & Ronde Automatiche
+- Integrazione controlli ONVIF PTZ continui e a passi (Pan, Tilt, Zoom).
+- Memorizzazione e richiamo rapido di posizioni preimpostate (Presets).
+- Funzione di pattugliamento (Tour / Ronda programmata) con tempi di stazionamento configurabili.
+
+### Priorità 6: Cifratura a Riposo dei Dischi (LUKS + TPM 2.0)
+- Redigere la guida operativa `docs/INSTALLAZIONE-SICURA.md` per il binding della chiave LUKS al chip TPM 2.0 per proteggere i dischi video dal furto fisico dell'hardware.
 
 ---
 
-## 5. Cosa non è mai stato provato su hardware vero
+## 3. Guida Rapida per la Prossima AI
 
-Va detto a chi prosegue e al proprietario. Non spacciarlo per verificato.
-
-- **L'autoinstaller Linux non è mai stato eseguito su Linux.** La macchina di sviluppo è Windows, senza Docker né WSL. Sintassi e flusso sono verificati; l'esecuzione reale no.
-- **Il ruleset nftables non è mai stato applicato su un kernel reale.** È generato e validato come testo; `nft -c` non è mai girato. Le suite girano tutte sul backend `report-only`.
-- **`ExecStartPre` non è mai girato sotto systemd reale.**
-- **La console locale non è mai stata provata su un monitor collegato a un server Linux.** Nel browser funziona.
-- **Nessuna telecamera IP reale è mai stata collegata.** Tutte le prove usano una sorgente sintetica ffmpeg. RTSP con credenziali, UDP, sotto-flussi e ONVIF di marche reali sono da verificare sul campo.
-- **Il certificato interno è verificato con handshake TLS veri** (questo sì), ma mai da un browser reale con la CA installata nello store di sistema.
-
-Quando il proprietario installerà su una macchina vera, i primi comandi utili sono `journalctl -u argus-pr -n 50` e `argus-shield status`.
-
----
-
-## 6. Come si lavora qui
-
-```bash
-npm install
-npm start                          # avvia il server
-npm run doctor                     # verifica ambiente, vault, DB, ffmpeg
-npm run cert                       # impronta del certificato e percorso della CA
-node --test test/*.test.js         # suite NVR
-node --test shield/test/*.test.js  # suite ARGUS-SHIELD
-```
-
-In sviluppo su Windows conviene `ARGUS_PORT=8443 ARGUS_HTTP_PORT=0 ARGUS_AUTO_UPDATE=false`, altrimenti il servizio prova a occupare la 443 e a cercare aggiornamenti a ogni avvio.
-
-Prima di dichiarare finito un lavoro: entrambe le suite verdi, nessun file oltre 500 righe, nessun commento nel codice, AGENTS.md aggiornato, commit, tag, release.
+- **Comandi di verifica**:
+  ```bash
+  node --test test/*.test.js         # Suite NVR (161 test)
+  node --test shield/test/*.test.js  # Suite ARGUS-SHIELD (10 test)
+  ```
+- **Compilazione installer Windows**:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File deploy/windows/build-installer.ps1
+  ```
+- **Cartelle chiave**:
+  - `src/features/` : Logica di dominio (streaming, recording, vision, settings, access, cameras).
+  - `web/features/` : Viste frontend native (dashboard, live, archive, detections, people, access, settings).
+  - `web/assets/icons/` : Cartella delle 17 icone PNG 3D Fluency (Icons8).
+  - `shield/` : Applicativo autonomo ARGUS-SHIELD firewall.

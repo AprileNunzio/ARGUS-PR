@@ -19,7 +19,7 @@ ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete c
 
 Non è un'applicazione desktop. Gira **headless**: puoi installarlo su una macchina senza monitor con Ubuntu Server, lasciarla in un armadio, e amministrarla dal browser.
 
-> **Stato attuale: 0.9.0.** Massime prestazioni hardware (GPU, CPU, RAM): accelerazione video GPU (CUDA/NVENC, QSV, D3D11VA, VAAPI, VideoToolbox, AMF), inferenza AI ONNX multithread, tuning estremo RAM per SQLite (fino a 2GB cache, 4GB mmap), rilevamento persone/veicoli/animali, biometria volti GDPR, ANPR e installatori autonomi Windows/Linux. Vedi [Roadmap](#roadmap).
+> **Stato attuale: 0.15.0.** Massime prestazioni hardware (GPU, CPU, RAM): accelerazione video GPU (CUDA/NVENC, QSV, D3D11VA, VAAPI, VideoToolbox, AMF), inferenza AI ONNX multithread, tuning estremo RAM per SQLite (fino a 2GB cache, 4GB mmap), rilevamento persone/veicoli/animali, biometria volti GDPR, ANPR e installatori autonomi Windows/Linux. Vedi [Roadmap](#roadmap).
 
 ---
 ## Perché esiste
@@ -85,7 +85,7 @@ Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza
 
 ### Windows — installazione autonoma (consigliata)
 
-Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.9.0-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
+Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.15.0-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
 
 Al termine trovi sul desktop e nel menu Start l'icona **ARGUS-PR**. E' un eseguibile vero (`ARGUS-PR.exe`), non un collegamento a una pagina web: all'avvio verifica il servizio `ArgusPR`, lo avvia se e' fermo, attende che risponda e apre la console in una finestra applicativa dedicata, senza barra degli indirizzi. Se il servizio non parte mostra un messaggio con il percorso del registro, invece di lasciare il browser su "connessione rifiutata".
 
