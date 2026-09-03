@@ -51,7 +51,7 @@ function currentRoute() {
 async function mountRoute() {
     const name = currentRoute();
     state.route = name;
-    setActiveRoute(name);
+    setActiveRoute(name, visibleRoutes());
 
     const outlet = document.getElementById('outlet');
     if (!outlet) return;

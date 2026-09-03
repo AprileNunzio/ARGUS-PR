@@ -4,7 +4,7 @@ Documento di consegna per l'assistente che prosegue il lavoro.
 
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
-Stato alla consegna: **v0.13.2**, 170 test verdi (160 NVR + 10 ARGUS-SHIELD).
+Stato alla consegna: **v0.14.0**, 170 test verdi (160 NVR + 10 ARGUS-SHIELD).
 
 ---
 
