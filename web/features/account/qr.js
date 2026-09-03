@@ -17,9 +17,10 @@ function rsPoly(n) {
     let p = [1];
     for (let i = 0; i < n; i++) {
         const next = new Array(p.length + 1).fill(0);
+        const root = EXP[i];
         for (let j = 0; j < p.length; j++) {
-            next[j] ^= gmul(p[j], EXP[i]);
-            next[j + 1] ^= p[j];
+            next[j] ^= p[j];
+            next[j + 1] ^= gmul(p[j], root);
         }
         p = next;
     }
@@ -33,7 +34,9 @@ function rsCalc(data, ecLen) {
     for (let i = 0; i < data.length; i++) {
         const coef = res[i];
         if (coef !== 0) {
-            for (let j = 0; j < gen.length; j++) res[i + j] ^= gmul(gen[j], coef);
+            for (let j = 0; j < gen.length; j++) {
+                res[i + j] ^= gmul(gen[j], coef);
+            }
         }
     }
     return res.subarray(data.length);
@@ -64,8 +67,7 @@ function encodeData(text, spec) {
         ? new TextEncoder().encode(text)
         : Buffer.from(text, 'utf8');
 
-    let bits = '';
-    bits += '0100';
+    let bits = '0100';
     bits += bytes.length.toString(2).padStart(8, '0');
     for (let i = 0; i < bytes.length; i++) {
         bits += bytes[i].toString(2).padStart(8, '0');
@@ -117,6 +119,13 @@ function encodeData(text, spec) {
     return finalBytes;
 }
 
+function isFinderZone(r, c, size) {
+    if (r <= 8 && c <= 8) return true;
+    if (r <= 8 && c >= size - 9) return true;
+    if (r >= size - 9 && c <= 8) return true;
+    return false;
+}
+
 function createMatrix(spec) {
     const size = spec.size;
     const grid = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
@@ -135,26 +144,24 @@ function createMatrix(spec) {
     setFinder(size - 7, 0);
 
     for (let i = 0; i < 8; i++) {
-        if (size - 8 >= 0) {
-            grid[7][i] = 0;
-            grid[i][7] = 0;
-            grid[7][size - 1 - i] = 0;
-            grid[i][size - 8] = 0;
-            grid[size - 8][i] = 0;
-            grid[size - 1 - i][7] = 0;
-        }
+        grid[7][i] = 0;
+        grid[i][7] = 0;
+        grid[7][size - 1 - i] = 0;
+        grid[i][size - 8] = 0;
+        grid[size - 8][i] = 0;
+        grid[size - 1 - i][7] = 0;
     }
 
     for (let i = 8; i < size - 8; i++) {
         const bit = i % 2 === 0 ? 1 : 0;
-        if (grid[6][i] === -1) grid[6][i] = bit;
-        if (grid[i][6] === -1) grid[i][6] = bit;
+        grid[6][i] = bit;
+        grid[i][6] = bit;
     }
 
     const coords = spec.align;
     for (const r of coords) {
         for (const c of coords) {
-            if (grid[r][c] !== -1) continue;
+            if (isFinderZone(r, c, size)) continue;
             for (let dr = -2; dr <= 2; dr++) {
                 for (let dc = -2; dc <= 2; dc++) {
                     const isBlack = Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0);
@@ -164,7 +171,22 @@ function createMatrix(spec) {
         }
     }
 
-    grid[4 * spec.v + 9][8] = 1;
+    grid[size - 8][8] = 1;
+
+    if (spec.v >= 7) {
+        const v = spec.v;
+        let d = v << 12;
+        const g = 0x1f25;
+        for (let i = 17; i >= 12; i--) {
+            if ((d >> i) & 1) d ^= (g << (i - 12));
+        }
+        const vbits = (v << 12) | d;
+        for (let i = 0; i < 18; i++) {
+            const bit = (vbits >> i) & 1;
+            grid[size - 11 + (i % 3)][Math.floor(i / 3)] = bit;
+            grid[Math.floor(i / 3)][size - 11 + (i % 3)] = bit;
+        }
+    }
 
     for (let i = 0; i < 9; i++) {
         if (grid[8][i] === -1) grid[8][i] = 0;
@@ -178,21 +200,29 @@ function createMatrix(spec) {
     return grid;
 }
 
+const FORMAT_COORDS_1 = [
+    [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8],
+    [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8]
+];
+
 function applyFormat(grid, size, mask = 0) {
     const FORMAT_INFO = [
         0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976
     ];
     const bits = FORMAT_INFO[mask];
-    for (let i = 0; i < 15; i++) {
-        const bit = (bits >> i) & 1;
-        if (i <= 5) grid[8][i] = bit;
-        else if (i === 6) grid[8][7] = bit;
-        else if (i === 7) grid[8][8] = bit;
-        else if (i === 8) grid[7][8] = bit;
-        else grid[14 - i][8] = bit;
+    const formatCoords2 = [
+        [8, size - 1], [8, size - 2], [8, size - 3], [8, size - 4],
+        [8, size - 5], [8, size - 6], [8, size - 7], [8, size - 8],
+        [size - 7, 8], [size - 6, 8], [size - 5, 8], [size - 4, 8],
+        [size - 3, 8], [size - 2, 8], [size - 1, 8]
+    ];
 
-        if (i < 8) grid[size - 1 - i][8] = bit;
-        else grid[8][size - 15 + i] = bit;
+    for (let i = 0; i < 15; i++) {
+        const bit = (bits >> (14 - i)) & 1;
+        const [r1, c1] = FORMAT_COORDS_1[i];
+        const [r2, c2] = formatCoords2[i];
+        grid[r1][c1] = bit;
+        grid[r2][c2] = bit;
     }
 }
 
@@ -203,13 +233,11 @@ function placeData(grid, spec, dataBytes, mask = 0) {
 
     function getBit(idx) {
         if (idx >= totalBits) return 0;
-        const b = dataCodewords[idx >> 3];
+        const b = dataBytes[idx >> 3];
         return (b >> (7 - (idx & 7))) & 1;
     }
 
-    const dataCodewords = dataBytes;
     let upward = true;
-
     for (let c = size - 1; c > 0; c -= 2) {
         if (c === 6) c--;
         for (let step = 0; step < size; step++) {
@@ -239,7 +267,7 @@ export function renderQrSvg(text, options = {}) {
     const size = matrix.length;
     const margin = options.margin ?? 4;
     const totalSize = size + margin * 2;
-    const displaySize = options.size ?? 220;
+    const displaySize = options.size ?? 180;
 
     let pathD = '';
     for (let r = 0; r < size; r++) {

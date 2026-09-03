@@ -29,3 +29,16 @@ test('renderQrSvg produce una stringa SVG valida con percorsi in ambiente senza 
     assert.ok(svg.includes('<path d="M'));
     assert.ok(svg.endsWith('</svg>'));
 });
+
+test('generateQrMatrix imposta modulo scuro e pattern di sincronizzazione corretti', () => {
+    const matrix = generateQrMatrix('ARGUS-PR');
+    const size = matrix.length;
+
+    assert.equal(matrix[size - 8][8], 1);
+
+    for (let i = 8; i < size - 8; i++) {
+        const expected = i % 2 === 0 ? 1 : 0;
+        assert.equal(matrix[6][i], expected);
+        assert.equal(matrix[i][6], expected);
+    }
+});

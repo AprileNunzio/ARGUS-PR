@@ -7,7 +7,7 @@ export function renderMfaEnrollment({ session, onComplete }) {
     const feedback = el('div', {});
     const content = el('div', { className: 'stack' });
 
-    const card = el('div', { className: 'login__card' }, [
+    const card = el('div', { className: 'login__card login__card--mfa' }, [
         el('div', { className: 'login__brand' }, [
             el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('div', {}, [
@@ -55,11 +55,32 @@ export function renderMfaEnrollment({ session, onComplete }) {
             textContent: 'Verifica e attiva'
         });
 
-        const qrContainer = el('div', { className: 'qr-wrap' }, [renderQrSvg(uri, { size: 200 })]);
-        const secretCode = el('code', { className: 'chip', textContent: secret });
+        const qrContainer = el('div', { className: 'qr-wrap' }, [renderQrSvg(uri, { size: 160 })]);
+        const secretBox = el('div', { className: 'mfa-secret-box' }, [
+            el('span', { className: 'mfa-secret-label', textContent: 'Chiave manuale' }),
+            el('code', { className: 'mfa-secret-val', textContent: secret })
+        ]);
+        const qrPane = el('div', { className: 'mfa-qr-pane' }, [
+            qrContainer,
+            secretBox
+        ]);
+
+        const actionPane = el('div', { className: 'mfa-action-pane' }, [
+            el('p', { className: 'mfa-step' }, [
+                el('strong', { textContent: '1. ' }),
+                'Scansiona con Google Authenticator, Aegis o Bitwarden:'
+            ]),
+            el('p', { className: 'mfa-step' }, [
+                el('strong', { textContent: '2. ' }),
+                'Inserisci il codice di verifica a 6 cifre:'
+            ]),
+            field('Codice TOTP', codeInput),
+            feedback,
+            verifyButton
+        ]);
 
         const form = el('form', {
-            className: 'stack',
+            className: 'mfa-grid',
             onsubmit: async (event) => {
                 event.preventDefault();
                 feedback.replaceChildren();
@@ -82,24 +103,15 @@ export function renderMfaEnrollment({ session, onComplete }) {
 
                 showRecoveryCodes(confirmOutcome.data.recoveryCodes);
             }
-        }, [
-            el('p', { textContent: '1. Scansiona il codice QR con Google Authenticator, Aegis, 1Password o Bitwarden:' }),
-            qrContainer,
-            el('p', { textContent: 'Oppure inserisci manualmente questa chiave segreta:' }),
-            el('div', {}, [secretCode]),
-            el('p', { textContent: '2. Inserisci il codice a 6 cifre generato dall app per confermare:' }),
-            field('Codice TOTP', codeInput),
-            feedback,
-            verifyButton
-        ]);
+        }, [qrPane, actionPane]);
 
         content.replaceChildren(form);
         queueMicrotask(() => codeInput.focus());
     }
 
     function showRecoveryCodes(recoveryCodes) {
-        const codeChips = recoveryCodes.map((code) => el('code', { className: 'chip', textContent: code }));
-        const codeGrid = el('div', { className: 'grid form-grid' }, codeChips);
+        const codeChips = recoveryCodes.map((code) => el('code', { className: 'mfa-secret-val', textContent: code }));
+        const codeGrid = el('div', { className: 'mfa-codes-grid' }, codeChips);
 
         const proceedBtn = el('button', {
             className: 'btn btn--primary',
