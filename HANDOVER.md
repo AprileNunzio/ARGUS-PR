@@ -4,7 +4,7 @@ Documento di consegna per l'assistente che prosegue il lavoro.
 
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
-Stato alla consegna: **v0.12.0**, 150 test verdi (140 NVR + 10 ARGUS-SHIELD), due commit pronti in locale **non ancora pubblicati** (vedi §1).
+Stato alla consegna: **v0.12.0**, 150 test verdi (140 NVR + 10 ARGUS-SHIELD), tutto pubblicato su GitHub fino al tag v0.12.0.
 
 ---
 
@@ -25,23 +25,26 @@ Non sono preferenze. Sono vincoli.
 
 ---
 
-## 1. La prima cosa da fare: pubblicare
+## 1. Pubblicare fa parte del lavoro, sempre
 
-Due commit sono già in locale su `main`, con i tag creati, ma **il push non è stato eseguito**: l'assistente precedente era bloccato dai permessi della propria sessione.
+Lo stato è allineato: `main` e i tag `v0.11.0` e `v0.12.0` sono su GitHub, le release sono pubblicate.
 
-- `0452d1a` — v0.11.0: TLS obbligatorio, zone di rete, ARGUS-SHIELD, autoaggiornamento
-- `79ead56` — v0.12.0: politica di riavvio e impostazioni complete dal browser
+**Non lasciare mai lavoro finito senza release.** L'autoaggiornamento del prodotto scarica l'ultimo tag di release da GitHub: finché non pubblichi, nessun impianto installato riceve niente. Pubblicare non è burocrazia, è il canale di distribuzione.
+
+Il ciclo a fine lavoro, senza chiedere il permesso al proprietario:
 
 ```bash
-git push origin main
-git push origin v0.11.0 v0.12.0
-gh release create v0.11.0 --title "ARGUS-PR v0.11.0" --notes-file <note>
-gh release create v0.12.0 --title "ARGUS-PR v0.12.0" --notes-file <note>
+node --test test/*.test.js         # deve essere verde
+node --test shield/test/*.test.js  # deve essere verde
+git commit                          # AGENTS.md aggiornato nello stesso commit
+git tag -a vX.Y.Z
+git push origin main && git push origin vX.Y.Z
+gh release create vX.Y.Z --notes-file <note>
 ```
 
-**Perché è la priorità:** l'autoaggiornamento del prodotto scarica l'ultimo tag di release da GitHub. Finché non pubblichi, nessun impianto installato riceve niente. Le note vanno scritte con la stessa onestà delle precedenti: cosa cambia, come si aggiorna dalla versione prima, cosa manca ancora.
+Il tag deve rispettare `^v[0-9]+\.[0-9]+\.[0-9]+$`, altrimenti l'updater lo rifiuta. La versione in `package.json` va allineata al tag.
 
-Verifica prima di pubblicare: `node --test test/*.test.js` e `node --test shield/test/*.test.js` devono essere entrambi verdi.
+Le note di release vanno scritte con la stessa onestà delle precedenti: cosa cambia, come si aggiorna dalla versione prima, **e cosa manca ancora**. Guarda v0.11.0 e v0.12.0 come modello.
 
 ---
 
