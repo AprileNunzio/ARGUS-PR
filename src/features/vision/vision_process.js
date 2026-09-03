@@ -3,6 +3,9 @@ import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { createLogger } from '../../kernel/logger.js';
+import { getMediaTools, mediaToolsStatus } from '../../platform/media_tools.js';
+import { getCameraSecrets } from '../cameras/camera_repository.js';
+import { resolveInput, buildCaptureArgs } from '../cameras/camera_input.js';
 
 const log = createLogger('vision-process');
 
@@ -23,23 +26,34 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
     let isTerminated = false;
     let restartTimer = null;
 
-    const streamUrl = camera.subStreamUrl ?? camera.mainStreamUrl;
     const workerScript = join(process.cwd(), 'vision', 'worker.py');
 
     function start() {
         if (isTerminated) return;
 
-        const ffmpegArgs = [
-            '-hide_banner',
-            '-loglevel', 'error',
-            '-nostdin'
-        ];
-        if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
-            ffmpegArgs.push('-hwaccel', performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend);
+        const secrets = getCameraSecrets(camera.id);
+        if (!secrets) {
+            log.warn('vision skipped: camera missing', { cameraId: camera.id });
+            return;
         }
+
+        const status = mediaToolsStatus();
+        if (!status.available) {
+            log.warn('vision deferred: ffmpeg unavailable', { cameraId: camera.id });
+            scheduleRestart();
+            return;
+        }
+
+        const binary = ffmpegPath && ffmpegPath.length > 0 ? ffmpegPath : getMediaTools().ffmpeg.path;
+        const input = resolveInput(secrets, { preferSub: true });
+        const ffmpegArgs = buildCaptureArgs(input);
+
+        if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
+            const backend = performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend;
+            ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
+        }
+
         ffmpegArgs.push(
-            '-rtsp_transport', camera.transport === 'udp' ? 'udp' : 'tcp',
-            '-i', streamUrl,
             '-an',
             '-vf', 'fps=5,scale=640:360',
             '-f', 'rawvideo',
@@ -59,7 +73,7 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         }
 
         try {
-            ffmpegChild = spawn(ffmpegPath, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+            ffmpegChild = spawn(binary, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
             workerChild = spawn(resolvedPython, workerArgs, {
                 stdio: ['pipe', 'pipe', 'pipe']
             });

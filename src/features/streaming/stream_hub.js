@@ -32,8 +32,13 @@ export function installStreamHub() {
         stopSession(event.payload.id, 'camera-deleted');
     });
 
+    const unsubscribeUpdate = subscribe(Topic.CAMERA_UPDATED, (event) => {
+        stopSession(event.payload.id, 'camera-updated');
+    });
+
     onShutdown('stream-hub', () => {
         unsubscribe();
+        unsubscribeUpdate();
         for (const cameraId of Array.from(sessions.keys())) {
             stopSession(cameraId, 'shutdown');
         }

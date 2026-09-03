@@ -18,7 +18,7 @@ const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
     live: { label: 'Diretta', icon: 'play', render: renderLive },
     archive: { label: 'Archivio', icon: 'archive', render: renderArchive },
-    cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras },
+    cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras, permission: 'camera.manage' },
     detections: { label: 'Visione AI', icon: 'eye', render: renderDetectionsView },
     access: { label: 'Targhe & Accessi', icon: 'shield', render: renderAccessView },
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },

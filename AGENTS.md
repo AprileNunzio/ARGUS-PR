@@ -94,11 +94,14 @@ bin/argus.js              CLI: serve | doctor | cert | reset-admin
 src/
   kernel/                 config, result, errors, logger, process_guard, event_bus
   platform/               paths, ffmpeg, media_tools, version, tls, x509, metrics, hardware
-  storage/                database, migrations/ (001_core ... 008_mfa)
+  storage/                database, migrations/ (001_core ... 009_camera_profiles)
   security/               vault, password, sessions, rbac, guards, audit,
                           net_zones, lockout, security_events, totp
   http/                   server, router, http_utils, static_files, rate_limit, websocket
   features/<nome>/        <nome>_service.js, <nome>_routes.js, <nome>_repository.js
+  features/cameras/       camera_input.js e' l'UNICO punto che sa aprire una sorgente
+                          (rtsp, http, mjpeg, usb); local_devices.js enumera le
+                          periferiche di acquisizione; camera_payload.js valida
   features/settings/      settings_schema.js dichiara OGNI impostazione modificabile
   app.js                  composizione: avvio, registrazione rotte
 web/
@@ -108,6 +111,7 @@ web/
   wall.html               console locale a schermo intero (rotta /wall)
   features/<nome>/        vista della funzionalita'
                           system/ ospita la pagina Sistema e il pannello aggiornamenti
+                          cameras/ console Telecamere: elenco, wizard, scheda a tab
 shield/                   ARGUS-SHIELD: applicativo firewall autonomo, zero dipendenze
   bin/argus-shield.js     CLI: apply | watch | status | ban | unban | ruleset | flush
   src/                    config, addresses, ruleset, banlist, detectors, watcher,
@@ -313,6 +317,20 @@ Divisione dei compiti:
 
 ---
 
+## 5l. Telecamere: sorgenti di ogni tipo e console di configurazione (F7)
+
+`src/features/cameras/` + `web/features/cameras/`. Documento di riferimento: [docs/TELECAMERE.md](docs/TELECAMERE.md).
+
+- **Un solo descrittore d'ingresso**: `camera_input.js` (`resolveInput`, `buildCaptureArgs`, `buildProbeArgs`) genera gli argomenti ffmpeg per RTSP, HTTP, MJPEG e **USB locale** (dshow su Windows, v4l2 su Linux, avfoundation su macOS). Diretta, registrazione, movimento, visione e probe passano tutti da li': non costruire mai un URL autenticato o un `-f dshow` altrove.
+- **Identificativi di periferica validati** con `requireDeviceId` prima di finire in `spawn`; le periferiche rilevate che non superano la validazione vengono scartate.
+- **Enumerazione periferiche**: `GET /api/cameras/devices?formats=1` elenca le sorgenti locali con formati e risoluzioni, con rate limit perche' ogni chiamata avvia processi ffmpeg.
+- **Profilo canale esteso** (migrazione 009): periferica, formato, risoluzione, cadenza, audio, posizione, gruppo, ritenzione dedicata, accelerazione, note. `insertCamera` omette le colonne non fornite invece di scrivere NULL, cosi' i default dello schema restano validi.
+- **Verifica prima del salvataggio**: `POST /api/cameras/probe` analizza una configurazione non ancora persistita.
+- **Applicazione a caldo**: il salvataggio pubblica `Topic.CAMERA_UPDATED` e le pipeline del canale vengono ricreate senza riavviare il servizio.
+- **Collocazione**: l'app vive nella macro-area **Sistema** del Launchpad e richiede `camera.manage`.
+
+---
+
 ## 5j. Accelerazione hardware totale e ottimizzazione prestazioni (GPU, RAM, CPU)
 
 `src/platform/hardware.js` + `src/features/settings/performance_tuning.js` + `web/features/system/performance_panel.js`.
@@ -459,6 +477,8 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/cameras` | `camera.manage` |
 | PUT | `/api/cameras/:id` | `camera.manage` |
 | DELETE | `/api/cameras/:id` | `camera.manage` |
+| GET | `/api/cameras/devices` | `camera.manage`, rate limit 20/min |
+| POST | `/api/cameras/probe` | `camera.manage`, rate limit 15/min |
 | POST | `/api/cameras/:id/probe` | `camera.manage` |
 | POST | `/api/discovery/onvif` | `camera.manage` |
 | GET | `/api/cameras/:id/schedule` | `camera.manage` |
@@ -514,6 +534,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
+Aggiunte della versione 0.16.0: **app Telecamere spostata nella macro-area Sistema** e riscritta come console di configurazione (elenco a schede con filtro, wizard di aggiunta in due passi con verifica della sorgente prima del salvataggio, scheda per canale a tab Generale / Registrazione / Zone / Diagnostica), **sorgenti USB locali** (dshow, v4l2, avfoundation) con **enumerazione delle periferiche del server e dei loro formati**, **sorgenti MJPEG e HTTP con riconnessione automatica**, **descrittore d'ingresso unico** condiviso da diretta, registrazione, movimento, visione e probe, **profilo canale esteso** (risoluzione, cadenza, formato, audio, posizione, gruppo, ritenzione dedicata, accelerazione, note), **applicazione a caldo delle modifiche** via `Topic.CAMERA_UPDATED`, **audio di registrazione governato per canale**, correzione del percorso ffmpeg nel processo di visione (con ffmpeg installato in `vendor/` il worker non partiva).
+
 Aggiunte della versione 0.15.0: **nuova architettura UI Launchpad / App Portal a 2 livelli** (navigazione fluida e spaziosa a card con apertura sottocategorie, selettore vista a cartelle o esteso), **icone 3D fluency ad alta definizione scaricate da Icons8** (17 icone PNG 3D collocate in web/assets/icons/ fluttuanti senza sfondo invadente e con fallback automatico ad SVG inline), **command toolbar unificata a riga singola** (spazio ottimizzato al 100%, badge live Operativo, chip telemetrici interattivi Canali/Uptime/Versione, ricerca globale istantanea con scorciatoia da tastiera Ctrl+K e reset 1-clic, pulsante Muro Video fullscreen rapido e ricarica telemetria a caldo), **pannello Impostazioni autogenerante schema-driven** (micro-sezioni pulite, parametri raggruppati, tooltip descrittivi nativi), **visione AI estesa con arruolamento volti da fototessera** (endpoint POST /api/people/extract-face con estrazione automatica coordinate e embedding YuNet + SFace), **ANPR avanzato con classificazione veicoli e voto ponderato multi-frame**, **rilevamento animali esteso**.
 
 **Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **Setup .exe Inno Setup con launcher desktop nativo, icona propria e verifica della porta prima di dichiarare il successo**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
@@ -550,6 +572,8 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FU2 | Aggiornamento automatico a ogni avvio, quarantena, verifica firma | completata |
 | FC | Impostazioni complete dal browser, politica di riavvio, finestra di manutenzione | completata |
 | FS2 | MFA TOTP (fatta), firma aggiornamenti, integrita archivio e audit | in corso |
+| F7.1 | Telecamere in Sistema, ingresso unico, sorgenti USB/MJPEG, console a tab | completata |
+| F7.2 | Analisi per telecamera e per capacita', registro dei motori selezionabili | da fare |
 | F6 | Planimetria, preset, notifiche Telegram/MQTT, relè, diagnostica, watchdog | da fare |
 
 

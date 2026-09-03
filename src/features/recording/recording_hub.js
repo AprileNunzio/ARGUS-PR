@@ -89,6 +89,11 @@ export function installRecordingHub(config) {
         stopRecording(event.payload.id, 'camera-deleted');
     });
 
+    const unsubscribeUpdate = subscribe(Topic.CAMERA_UPDATED, (event) => {
+        stopRecording(event.payload.id, 'camera-updated');
+        applyRecordingPolicy();
+    });
+
     applyRecordingPolicy();
 
     const policyTimer = setInterval(() => {
@@ -107,6 +112,7 @@ export function installRecordingHub(config) {
         clearInterval(policyTimer);
         clearInterval(retentionTimer);
         unsubscribeDelete();
+        unsubscribeUpdate();
         for (const cameraId of Array.from(recorders.keys())) {
             stopRecording(cameraId, 'shutdown');
         }

@@ -35,6 +35,8 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 
 | | |
 |---|---|
+| **Sorgenti di ogni tipo** | Telecamere IP RTSP, flussi MJPEG e HTTP, e **periferiche USB collegate al server** (dshow su Windows, v4l2 su Linux, avfoundation su macOS), con enumerazione delle periferiche e dei loro formati |
+| **Console Telecamere** | Elenco a schede con filtro, wizard di aggiunta con verifica della sorgente prima del salvataggio, scheda per canale con Generale, Registrazione, Zone e Diagnostica |
 | **Scoperta automatica** | Trova le telecamere ONVIF sulla rete locale via WS-Discovery, senza inserire indirizzi a mano |
 | **Verifica flusso** | Interroga ogni telecamera con ffprobe e riporta codec, risoluzione e frame rate reali |
 | **Credenziali cifrate** | Le password delle telecamere sono protette con AES-256-GCM; la chiave sta sul disco con permessi 0600 e non lascia mai la macchina |
@@ -496,6 +498,8 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **FU** | Aggiornamento da GitHub con ripristino automatico | ✅ completata |
 | **F4** | Pianificazione oraria, rilevamento movimento con zone, ingressi rilevamenti | ✅ completata |
 | **F5** | Persone, biometria facciale, targhe ANPR, controllo accessi, installer autonomi | ✅ completata |
+| **F7.1** | Telecamere in Sistema, ingresso unico, sorgenti USB e MJPEG, console a schede | ✅ completata |
+| **F7.2** | Analisi per telecamera e per capacità, registro dei motori selezionabili | 🔜 da fare |
 | **F6** | Planimetria, preset, notifiche Telegram/MQTT, relè fisici | 🔜 in corso |
 
 Il motore di visione AI opera tramite worker Python dedicato alimentato da flussi rawvideo ffmpeg su pipe standard. Esegue YOLOX per rilevamento oggetti, YuNet per volti, SFace per biometria e OCR pesato per targhe ANPR, senza appesantire il processo Node.js.

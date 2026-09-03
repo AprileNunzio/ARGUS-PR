@@ -9,8 +9,7 @@ export const MACRO_AREAS = [
         getMetric: (info) => `${info.cameraCount ?? 0} canali attivi`,
         subapps: [
             { id: 'live', title: 'Diretta Streaming', desc: 'Flusso fMP4 realtime a bassissima latenza', icon: 'play', png: 'app_live', route: 'live', badge: { text: 'fMP4', tone: 'green' } },
-            { id: 'wall', title: 'Muro Video (Wall)', desc: 'Console multiview a pieno schermo per monitor', icon: 'monitor', png: 'app_wall', route: 'wall', isPage: true, badge: { text: 'Display', tone: 'blue' } },
-            { id: 'cameras', title: 'Telecamere', desc: 'Rilevamento ONVIF e gestione flussi RTSP', icon: 'camera', png: 'app_cameras', route: 'cameras', badge: { text: 'ONVIF', tone: 'blue' } }
+            { id: 'wall', title: 'Muro Video (Wall)', desc: 'Console multiview a pieno schermo per monitor', icon: 'monitor', png: 'app_wall', route: 'wall', isPage: true, badge: { text: 'Display', tone: 'blue' } }
         ]
     },
     {
@@ -60,8 +59,9 @@ export const MACRO_AREAS = [
         icon: 'server',
         png: 'area_sistema',
         color: 'cyan',
-        getMetric: (info) => `v${info.version ?? '0.15.0'}`,
+        getMetric: (info) => `v${info.version ?? '0.16.0'}`,
         subapps: [
+            { id: 'cameras', title: 'Telecamere', desc: 'Canali di rete e USB, parametri, orari e zone', icon: 'camera', png: 'app_cameras', route: 'cameras', badge: { text: 'Canali', tone: 'blue' }, permission: 'camera.manage' },
             { id: 'settings', title: 'Impostazioni', desc: 'Pannello schema-driven autogenerante', icon: 'settings', png: 'app_settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
             { id: 'system', title: 'Telemetria', desc: 'Monitoraggio CPU, RAM, storage e rete', icon: 'activity', png: 'app_telemetry', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' }
         ]

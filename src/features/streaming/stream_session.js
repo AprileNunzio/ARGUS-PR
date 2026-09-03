@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { authenticatedStreamUrl } from '../cameras/camera_url.js';
+import { resolveInput, isLocalKind } from '../cameras/camera_input.js';
 import { createFragmentSplitter } from './mp4_splitter.js';
 import { buildPreviewArgs } from './ffmpeg_args.js';
 import { probeStream } from '../cameras/stream_probe.js';
@@ -87,8 +87,7 @@ export class StreamSession {
         if (!camera) throw notFound('Camera');
 
         const tools = getMediaTools();
-        const source = camera.subStreamUrl ?? camera.mainStreamUrl;
-        const url = authenticatedStreamUrl(source, camera.username, camera.password);
+        const input = resolveInput(camera, { preferSub: true });
 
         const probe = await probeStream(this.cameraId, { preferSub: true })
             .then((result) => result.video)
@@ -96,7 +95,7 @@ export class StreamSession {
 
         const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
         const { args, transcoded } = buildPreviewArgs(
-            { url, transport: camera.transport },
+            input,
             probe,
             tools.accelerators,
             perf
@@ -105,7 +104,7 @@ export class StreamSession {
 
         log.info('stream starting', {
             camera: this.cameraId,
-            url: redactCredentials(source),
+            source: input.label,
             transcoded
         });
 
@@ -210,6 +209,10 @@ export class StreamSession {
 export function assertStreamable(cameraId) {
     const camera = getCameraSecrets(cameraId);
     if (!camera) throw notFound('Camera');
+    if (isLocalKind(camera.sourceKind)) {
+        if (!camera.deviceId) throw new AppError(ErrorCode.VALIDATION, 'Camera has no capture device configured');
+        return camera;
+    }
     if (!camera.mainStreamUrl && !camera.subStreamUrl) {
         throw new AppError(ErrorCode.VALIDATION, 'Camera has no stream URL configured');
     }

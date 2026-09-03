@@ -3,7 +3,9 @@
 Documento operativo di consegna per l'assistente AI che prosegue lo sviluppo di **ARGUS-PR**.
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero di sicurezza, i vincoli non negoziabili e le convenzioni architetturali.
 
-Stato alla consegna: **v0.15.0**, **171 test verdi** (161 NVR + 10 ARGUS-SHIELD).
+Stato alla consegna: **v0.16.0**, **193 test verdi** (183 NVR + 10 ARGUS-SHIELD).
+
+Ultimo blocco consegnato: **F7.1 — Telecamere**. L'app è stata spostata nella macro-area Sistema del Launchpad e riscritta come console di configurazione; è nato `src/features/cameras/camera_input.js`, l'unico punto del sistema che sa aprire una sorgente video (RTSP, HTTP, MJPEG, USB locale). Il progetto completo dei tre blocchi è in [docs/TELECAMERE.md](docs/TELECAMERE.md): il blocco 2 (analisi per telecamera con scelta del motore) e il blocco 3 (notifiche, email, varchi) sono progettati ma **non** costruiti.
 
 ---
 
@@ -27,7 +29,7 @@ Tutti i moduli elencati di seguito sono **completi, integrati, funzionanti e ver
 
 ### Fondamenta & Storage (F0)
 - **Kernel & Event Bus**: Sistema di logging strutturato JSON, gestione unificata degli errori (`AppError`), `Result` pattern, intercettazione dei crash (`process_guard.js`).
-- **Database SQLite**: Migrazioni progressive (001 a 008) gestite con WAL mode, transazioni atomiche e tuning della cache RAM a caldo.
+- **Database SQLite**: Migrazioni progressive (001 a 009) gestite con WAL mode, transazioni atomiche e tuning della cache RAM a caldo.
 - **Crittografia & Vault**: Cifratura master key AES-256-GCM con permessi 0600 per le credenziali RTSP delle telecamere, hashing password con `scrypt` e salt casuale, token di sessione casuali a 256 bit memorizzati solo con hash SHA-256.
 - **RBAC & Audit**: Controllo degli accessi a ruoli (`admin`, `operator`, `viewer`) con granularità per singola operazione e registro audit immutabile.
 

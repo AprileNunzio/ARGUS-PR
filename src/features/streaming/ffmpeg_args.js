@@ -1,23 +1,13 @@
+import { buildCaptureArgs } from '../cameras/camera_input.js';
+
 const COPYABLE_VIDEO = new Set(['h264', 'avc1']);
 
-export function buildInputArgs(camera) {
-    const args = ['-hide_banner', '-loglevel', 'error', '-nostdin'];
-
-    if (camera.url.startsWith('rtsp')) {
-        args.push('-rtsp_transport', camera.transport === 'udp' ? 'udp' : 'tcp');
-        args.push('-stimeout', '8000000');
-    } else {
-        args.push('-re');
-    }
-
-    args.push('-fflags', 'nobuffer', '-flags', 'low_delay');
-    args.push('-i', camera.url);
-
-    return args;
+export function buildInputArgs(input) {
+    return buildCaptureArgs(input);
 }
 
-export function buildPreviewArgs(camera, probe, accelerators = [], options = {}) {
-    const args = buildInputArgs(camera);
+export function buildPreviewArgs(input, probe, accelerators = [], options = {}) {
+    const args = buildInputArgs(input);
     const canCopy = probe && COPYABLE_VIDEO.has(String(probe.codec ?? '').toLowerCase());
 
     const hwaccel = options.hwaccelBackend ?? 'auto';
@@ -76,8 +66,8 @@ export function buildPreviewArgs(camera, probe, accelerators = [], options = {})
 }
 
 
-export function buildRecordArgs(camera, options) {
-    const args = buildInputArgs(camera);
+export function buildRecordArgs(input, options) {
+    const args = buildInputArgs(input);
 
     args.push('-map', '0:v:0');
     if (options.withAudio) args.push('-map', '0:a:0?');
@@ -98,14 +88,14 @@ export function buildRecordArgs(camera, options) {
     return args;
 }
 
-export function buildThumbnailArgs(camera, destination) {
-    const args = buildInputArgs(camera);
+export function buildThumbnailArgs(input, destination) {
+    const args = buildInputArgs(input);
     args.push('-frames:v', '1', '-q:v', '4', '-y', destination);
     return args;
 }
 
-export function buildMotionArgs(camera, accelerators = [], options = {}) {
-    const args = buildInputArgs(camera);
+export function buildMotionArgs(input, accelerators = [], options = {}) {
+    const args = buildInputArgs(input);
     const hwaccel = options.hwaccelBackend ?? 'auto';
     if (hwaccel !== 'none') {
         const targetAccel = hwaccel !== 'auto' && accelerators.includes(hwaccel)

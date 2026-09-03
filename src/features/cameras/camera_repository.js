@@ -2,26 +2,52 @@ import { getDatabase } from '../../storage/database.js';
 import { encryptSecret, decryptSecret } from '../../security/vault.js';
 import { redactCredentials } from '../../security/guards.js';
 
+const COLUMNS = Object.freeze({
+    name: 'name',
+    sourceKind: 'source_kind',
+    host: 'host',
+    port: 'port',
+    mainStreamUrl: 'main_stream_url',
+    subStreamUrl: 'sub_stream_url',
+    username: 'username',
+    onvifPort: 'onvif_port',
+    manufacturer: 'manufacturer',
+    model: 'model',
+    transport: 'transport',
+    deviceId: 'device_id',
+    inputFormat: 'input_format',
+    captureWidth: 'capture_width',
+    captureHeight: 'capture_height',
+    captureFps: 'capture_fps',
+    location: 'location',
+    group: 'camera_group',
+    retentionDays: 'retention_days',
+    hwaccel: 'hwaccel',
+    notes: 'notes'
+});
+
+const BOOLEAN_COLUMNS = Object.freeze({ enabled: 'enabled', audioEnabled: 'audio_enabled' });
+
 function toPublic(row) {
     if (!row) return null;
-    return {
+
+    const camera = {
         id: row.id,
-        name: row.name,
         enabled: row.enabled === 1,
-        sourceKind: row.source_kind,
-        host: row.host,
-        port: row.port,
-        mainStreamUrl: redactCredentials(row.main_stream_url),
-        subStreamUrl: redactCredentials(row.sub_stream_url),
-        username: row.username,
+        audioEnabled: row.audio_enabled === 1,
         hasPassword: Boolean(row.password_secret),
-        onvifPort: row.onvif_port,
-        manufacturer: row.manufacturer,
-        model: row.model,
-        transport: row.transport,
         createdAt: row.created_at,
         updatedAt: row.updated_at
     };
+
+    for (const [key, column] of Object.entries(COLUMNS)) {
+        camera[key] = row[column] ?? null;
+    }
+
+    camera.mainStreamUrl = redactCredentials(row.main_stream_url);
+    camera.subStreamUrl = redactCredentials(row.sub_stream_url);
+
+    return camera;
 }
 
 export function listCameras() {
@@ -38,42 +64,47 @@ export function getCamera(id) {
 export function getCameraSecrets(id) {
     const row = getDatabase().prepare('SELECT * FROM cameras WHERE id = ?').get(id);
     if (!row) return null;
+
     return {
         id: row.id,
         name: row.name,
+        sourceKind: row.source_kind,
         mainStreamUrl: row.main_stream_url,
         subStreamUrl: row.sub_stream_url,
         username: row.username,
         password: decryptSecret(row.password_secret),
-        transport: row.transport
+        transport: row.transport,
+        deviceId: row.device_id,
+        inputFormat: row.input_format,
+        captureWidth: row.capture_width,
+        captureHeight: row.capture_height,
+        captureFps: row.capture_fps,
+        audioEnabled: row.audio_enabled === 1,
+        hwaccel: row.hwaccel,
+        retentionDays: row.retention_days
     };
 }
 
 export function insertCamera(camera) {
     const at = new Date().toISOString();
+    const columns = ['id', 'created_at', 'updated_at', 'password_secret'];
+    const values = [camera.id, at, at, camera.password ? encryptSecret(camera.password) : null];
+
+    for (const [key, column] of Object.entries(BOOLEAN_COLUMNS)) {
+        columns.push(column);
+        values.push((camera[key] ?? true) ? 1 : 0);
+    }
+
+    for (const [key, column] of Object.entries(COLUMNS)) {
+        if (camera[key] === undefined) continue;
+        columns.push(column);
+        values.push(camera[key]);
+    }
+
     getDatabase()
-        .prepare(`INSERT INTO cameras
-                  (id, name, enabled, source_kind, host, port, main_stream_url, sub_stream_url,
-                   username, password_secret, onvif_port, manufacturer, model, transport, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(
-            camera.id,
-            camera.name,
-            camera.enabled ? 1 : 0,
-            camera.sourceKind,
-            camera.host,
-            camera.port,
-            camera.mainStreamUrl,
-            camera.subStreamUrl,
-            camera.username,
-            camera.password ? encryptSecret(camera.password) : null,
-            camera.onvifPort,
-            camera.manufacturer,
-            camera.model,
-            camera.transport,
-            at,
-            at
-        );
+        .prepare(`INSERT INTO cameras (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`)
+        .run(...values);
+
     return getCamera(camera.id);
 }
 
@@ -81,33 +112,28 @@ export function updateCamera(id, patch) {
     const existing = getDatabase().prepare('SELECT * FROM cameras WHERE id = ?').get(id);
     if (!existing) return null;
 
-    const passwordSecret = patch.password === undefined
-        ? existing.password_secret
-        : (patch.password ? encryptSecret(patch.password) : null);
+    const assignments = ['updated_at = ?'];
+    const values = [new Date().toISOString()];
 
-    getDatabase()
-        .prepare(`UPDATE cameras SET
-                    name = ?, enabled = ?, source_kind = ?, host = ?, port = ?,
-                    main_stream_url = ?, sub_stream_url = ?, username = ?, password_secret = ?,
-                    onvif_port = ?, manufacturer = ?, model = ?, transport = ?, updated_at = ?
-                  WHERE id = ?`)
-        .run(
-            patch.name ?? existing.name,
-            (patch.enabled ?? existing.enabled === 1) ? 1 : 0,
-            patch.sourceKind ?? existing.source_kind,
-            patch.host ?? existing.host,
-            patch.port ?? existing.port,
-            patch.mainStreamUrl ?? existing.main_stream_url,
-            patch.subStreamUrl ?? existing.sub_stream_url,
-            patch.username ?? existing.username,
-            passwordSecret,
-            patch.onvifPort ?? existing.onvif_port,
-            patch.manufacturer ?? existing.manufacturer,
-            patch.model ?? existing.model,
-            patch.transport ?? existing.transport,
-            new Date().toISOString(),
-            id
-        );
+    if (patch.password !== undefined) {
+        assignments.push('password_secret = ?');
+        values.push(patch.password ? encryptSecret(patch.password) : null);
+    }
+
+    for (const [key, column] of Object.entries(BOOLEAN_COLUMNS)) {
+        if (patch[key] === undefined) continue;
+        assignments.push(`${column} = ?`);
+        values.push(patch[key] ? 1 : 0);
+    }
+
+    for (const [key, column] of Object.entries(COLUMNS)) {
+        if (patch[key] === undefined) continue;
+        assignments.push(`${column} = ?`);
+        values.push(patch[key]);
+    }
+
+    values.push(id);
+    getDatabase().prepare(`UPDATE cameras SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
 
     return getCamera(id);
 }

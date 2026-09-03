@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { authenticatedStreamUrl } from '../cameras/camera_url.js';
+import { resolveInput } from '../cameras/camera_input.js';
 import { buildMotionArgs } from '../streaming/ffmpeg_args.js';
 import { MotionDetector, FRAME_BYTES } from './motion_detector.js';
 import { getSetting } from '../settings/settings_repository.js';
@@ -43,14 +43,10 @@ export class MotionProcess {
             return;
         }
 
-        const source = camera.subStreamUrl ?? camera.mainStreamUrl;
-        const url = authenticatedStreamUrl(source, camera.username, camera.password);
+        const input = resolveInput(camera, { preferSub: true });
 
         const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
-        const args = buildMotionArgs({
-            url,
-            transport: camera.transport
-        }, tools.accelerators, perf);
+        const args = buildMotionArgs(input, tools.accelerators, perf);
 
         const child = spawn(tools.ffmpeg.path, args, {
 

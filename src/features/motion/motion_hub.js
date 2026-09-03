@@ -81,12 +81,18 @@ export function installMotionHub(config) {
         stopMotion(event.payload.id);
     });
 
+    const unsubscribeUpdate = subscribe(Topic.CAMERA_UPDATED, (event) => {
+        stopMotion(event.payload.id);
+        applyMotionPolicy();
+    });
+
     applyMotionPolicy();
 
     log.info('motion hub ready', { active: processes.size });
 
     onShutdown('motion-hub', () => {
         unsubscribeDelete();
+        unsubscribeUpdate();
         for (const cameraId of Array.from(processes.keys())) {
             stopMotion(cameraId);
         }

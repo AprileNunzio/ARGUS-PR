@@ -1,21 +1,14 @@
 import crypto from 'node:crypto';
 import { listCameras, getCamera, insertCamera, updateCamera, deleteCamera } from './camera_repository.js';
-import { probeStream } from './stream_probe.js';
+import { probeStream, probeSource } from './stream_probe.js';
+import { listLocalDevices } from './local_devices.js';
+import { readCameraInput } from './camera_payload.js';
 import { Permission } from '../../security/rbac.js';
 import { Exposure, Zone } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
 import { notFound } from '../../kernel/errors.js';
-import {
-    requireString,
-    optionalString,
-    requireId,
-    optionalPort,
-    requireEnum,
-    requireBool,
-    requireStreamUrl,
-    optionalStreamUrl
-} from '../../security/guards.js';
+import { requireId } from '../../security/guards.js';
 
 function publicView(camera) {
     return {
@@ -26,39 +19,16 @@ function publicView(camera) {
     };
 }
 
-const SOURCE_KINDS = ['rtsp', 'http'];
-const TRANSPORTS = ['tcp', 'udp'];
-
-function readCameraInput(body, options = {}) {
-    const partial = options.partial === true;
-
-    const payload = {
-        name: partial && body.name === undefined ? undefined : requireString(body.name, 'Name', { max: 120 }),
-        sourceKind: partial && body.sourceKind === undefined ? undefined : requireEnum(body.sourceKind ?? 'rtsp', 'Source kind', SOURCE_KINDS),
-        transport: partial && body.transport === undefined ? undefined : requireEnum(body.transport ?? 'tcp', 'Transport', TRANSPORTS),
-        mainStreamUrl: partial && body.mainStreamUrl === undefined ? undefined : requireStreamUrl(body.mainStreamUrl, 'Main stream URL'),
-        subStreamUrl: body.subStreamUrl === undefined ? undefined : optionalStreamUrl(body.subStreamUrl, 'Sub stream URL'),
-        host: body.host === undefined ? undefined : optionalString(body.host, 'Host', { max: 253 }),
-        port: body.port === undefined ? undefined : optionalPort(body.port, 'Port'),
-        onvifPort: body.onvifPort === undefined ? undefined : optionalPort(body.onvifPort, 'ONVIF port'),
-        username: body.username === undefined ? undefined : optionalString(body.username, 'Username', { max: 120 }),
-        password: body.password === undefined ? undefined : optionalString(body.password, 'Password', { max: 200 }),
-        manufacturer: body.manufacturer === undefined ? undefined : optionalString(body.manufacturer, 'Manufacturer', { max: 120 }),
-        model: body.model === undefined ? undefined : optionalString(body.model, 'Model', { max: 120 }),
-        enabled: body.enabled === undefined ? undefined : requireBool(body.enabled)
-    };
-
-    for (const key of Object.keys(payload)) {
-        if (payload[key] === undefined) delete payload[key];
-    }
-
-    return payload;
-}
-
 export function registerCameraRoutes(router) {
     router.get('/api/cameras', async (ctx) => ({
         body: { cameras: listCameras().map((camera) => (ctx.zone === Zone.WAN ? publicView(camera) : camera)) }
     }), { permission: Permission.LIVE_VIEW, exposure: Exposure.PUBLIC });
+
+    router.get('/api/cameras/devices', async (ctx) => {
+        const withFormats = ctx.query?.formats === '1' || ctx.query?.formats === 'true';
+        const result = await listLocalDevices({ withFormats });
+        return { body: result };
+    }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
 
     router.get('/api/cameras/:id', async (ctx) => {
         const camera = getCamera(requireId(ctx.params.id, 'Camera id'));
@@ -71,14 +41,7 @@ export function registerCameraRoutes(router) {
         const camera = insertCamera({
             id: crypto.randomUUID(),
             enabled: input.enabled ?? true,
-            host: null,
-            port: null,
-            subStreamUrl: null,
-            username: null,
-            password: null,
-            onvifPort: null,
-            manufacturer: null,
-            model: null,
+            audioEnabled: input.audioEnabled ?? true,
             ...input
         });
 
@@ -88,7 +51,7 @@ export function registerCameraRoutes(router) {
             actorName: ctx.actor.username,
             target: camera.id,
             remoteAddr: ctx.address,
-            detail: { name: camera.name }
+            detail: { name: camera.name, sourceKind: camera.sourceKind }
         });
         publish(Topic.CAMERA_CREATED, { id: camera.id, name: camera.name });
 
@@ -97,9 +60,11 @@ export function registerCameraRoutes(router) {
 
     router.put('/api/cameras/:id', async (ctx) => {
         const id = requireId(ctx.params.id, 'Camera id');
-        const input = readCameraInput(ctx.body, { partial: true });
+        const current = getCamera(id);
+        if (!current) throw notFound('Camera');
+
+        const input = readCameraInput(ctx.body, { partial: true, currentKind: current.sourceKind });
         const camera = updateCamera(id, input);
-        if (!camera) throw notFound('Camera');
 
         recordAudit({
             action: AuditAction.CAMERA_UPDATED,
@@ -109,6 +74,7 @@ export function registerCameraRoutes(router) {
             remoteAddr: ctx.address,
             detail: { fields: Object.keys(input) }
         });
+        publish(Topic.CAMERA_UPDATED, { id, name: camera.name });
 
         return { body: { camera } };
     }, { permission: Permission.CAMERA_MANAGE });
@@ -128,6 +94,12 @@ export function registerCameraRoutes(router) {
 
         return { body: { ok: true } };
     }, { permission: Permission.CAMERA_MANAGE });
+
+    router.post('/api/cameras/probe', async (ctx) => {
+        const input = readCameraInput(ctx.body);
+        const result = await probeSource(input, { preferSub: false });
+        return { body: result };
+    }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 15, windowMs: 60 * 1000 } });
 
     router.post('/api/cameras/:id/probe', async (ctx) => {
         const id = requireId(ctx.params.id, 'Camera id');

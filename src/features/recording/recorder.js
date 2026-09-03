@@ -1,13 +1,12 @@
 import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { authenticatedStreamUrl } from '../cameras/camera_url.js';
+import { resolveInput } from '../cameras/camera_input.js';
 import { buildRecordArgs } from '../streaming/ffmpeg_args.js';
 import { segmentPattern, listingFile, ensureSegmentDays } from './segment_paths.js';
 import { createSegmentWatcher } from './segment_watcher.js';
 import { createLogger } from '../../kernel/logger.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
-import { redactCredentials } from '../../security/guards.js';
 import { notFound } from '../../kernel/errors.js';
 
 const log = createLogger('recorder');
@@ -42,17 +41,16 @@ export class Recorder {
         if (!camera) throw notFound('Camera');
 
         const tools = getMediaTools();
-        const source = camera.mainStreamUrl ?? camera.subStreamUrl;
-        const url = authenticatedStreamUrl(source, camera.username, camera.password);
+        const input = resolveInput(camera, { preferSub: false });
         const listingPath = listingFile(this.config, this.cameraId);
 
         const args = buildRecordArgs(
-            { url, transport: camera.transport },
+            input,
             {
                 segmentSeconds: this.segmentSeconds,
                 pattern: segmentPattern(this.config, this.cameraId),
                 listingPath,
-                withAudio: true
+                withAudio: camera.audioEnabled !== false
             }
         );
 
@@ -76,7 +74,7 @@ export class Recorder {
 
         log.info('recording started', {
             camera: this.cameraId,
-            url: redactCredentials(source),
+            source: input.label,
             segmentSeconds: this.segmentSeconds
         });
 
