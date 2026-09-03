@@ -8,71 +8,24 @@ function renderBadge(badge) {
     return el('span', { className: `badge badge--${tone}`, textContent: badge.text });
 }
 
-function subAppTile(subapp, permissions) {
-    if (subapp.permission && !permissions.includes(subapp.permission)) {
-        return null;
-    }
-
-    const tone = subapp.badge?.tone ?? 'blue';
-    const tile = el('button', {
+function launchpadCard({ iconName, title, desc, tagNode, color = 'blue', onClick }) {
+    const card = el('button', {
         type: 'button',
-        className: 'hub-tile',
-        title: subapp.title,
-        onclick: () => {
-            if (subapp.isPage) {
-                window.open(`/${subapp.route}`, '_blank');
-            } else {
-                location.hash = `#/${subapp.route}`;
-            }
-        }
+        className: `launchpad-card launchpad-card--${color} rise`,
+        onclick: onClick
     }, [
-        el('div', { className: 'hub-tile__left' }, [
-            el('div', { className: `hub-tile__icon-wrap hub-tile__icon-wrap--${tone}` }, [
-                icon(subapp.icon ?? 'apps')
-            ]),
-            el('span', { className: 'hub-tile__title', textContent: subapp.title })
+        el('div', { className: `launchpad-card__icon-wrap launchpad-card__icon-wrap--${color}` }, [
+            icon(iconName ?? 'apps')
         ]),
-        el('div', { className: 'hub-tile__right' }, [
-            renderBadge(subapp.badge),
-            el('span', { className: 'hub-tile__arrow' }, [icon('chevronRight')])
-        ])
+        el('h3', { className: 'launchpad-card__title', textContent: title }),
+        el('p', { className: 'launchpad-card__desc', textContent: desc }),
+        el('div', { className: 'launchpad-card__footer' }, [tagNode])
     ]);
-
-    tile.dataset.search = subapp.title.toLowerCase();
-    return tile;
-}
-
-function macroAreaCard(area, info, permissions) {
-    const tiles = area.subapps
-        .map((s) => subAppTile(s, permissions))
-        .filter(Boolean);
-
-    if (tiles.length === 0) return null;
-
-    const metricText = area.getMetric ? area.getMetric(info) : '';
-    const color = area.color ?? 'blue';
-
-    const card = el('section', {
-        className: `hub-card hub-card--${color} rise`,
-        'data-area': area.id
-    }, [
-        el('div', { className: 'hub-card__header' }, [
-            el('div', { className: 'hub-card__brand' }, [
-                el('div', { className: `hub-card__icon-badge hub-card__icon-badge--${color}` }, [
-                    icon(area.icon ?? 'apps')
-                ]),
-                el('h2', { className: 'hub-card__title', textContent: area.title })
-            ]),
-            metricText ? el('span', { className: 'hub-card__metric', textContent: metricText }) : null
-        ]),
-        el('div', { className: 'hub-card__tiles' }, tiles)
-    ]);
-
     return card;
 }
 
 export async function renderDashboard({ session, api }) {
-    const root = el('div', { className: 'view hub-view' });
+    const root = el('div', { className: 'view launchpad-view' });
     const permissions = session?.permissions ?? [];
 
     const info = await api.get('/api/system/info').catch(() => ({
@@ -83,56 +36,209 @@ export async function renderDashboard({ session, api }) {
         cameraCount: 0
     }));
 
+    let currentAreaId = null;
+    let viewAllMode = false;
+    let searchQuery = '';
+
     const searchInput = el('input', {
         type: 'search',
-        className: 'hub-search__input',
-        placeholder: 'Cerca modulo o telecamera…'
+        className: 'launchpad-search__input',
+        placeholder: 'Cerca applicazione o strumento…'
     });
 
-    const searchBox = el('div', { className: 'hub-search' }, [
+    const searchBox = el('div', { className: 'launchpad-search' }, [
         icon('search'),
         searchInput
     ]);
 
-    const header = el('div', { className: 'hub-hero' }, [
-        el('div', { className: 'hub-hero__info' }, [
-            el('div', { className: 'hub-hero__headline' }, [
-                el('h1', { className: 'hub-hero__title', textContent: 'Centro di Controllo' }),
-                el('span', { className: 'hub-hero__status-pill' }, [
+    const modeCategoryBtn = el('button', {
+        type: 'button',
+        className: 'seg__btn seg__btn--on',
+        textContent: 'Categorie',
+        onclick: () => {
+            viewAllMode = false;
+            currentAreaId = null;
+            updateModeBtns();
+            renderGrid();
+        }
+    });
+
+    const modeAllBtn = el('button', {
+        type: 'button',
+        className: 'seg__btn',
+        textContent: 'Tutte le App',
+        onclick: () => {
+            viewAllMode = true;
+            currentAreaId = null;
+            updateModeBtns();
+            renderGrid();
+        }
+    });
+
+    const updateModeBtns = () => {
+        modeCategoryBtn.classList.toggle('seg__btn--on', !viewAllMode && !currentAreaId);
+        modeAllBtn.classList.toggle('seg__btn--on', viewAllMode);
+    };
+
+    const header = el('div', { className: 'launchpad-hero' }, [
+        el('div', { className: 'launchpad-hero__info' }, [
+            el('div', { className: 'launchpad-hero__headline' }, [
+                el('h1', { className: 'launchpad-hero__title', textContent: 'Centro di Controllo' }),
+                el('span', { className: 'launchpad-hero__status-pill' }, [
                     el('span', { className: 'status-dot status-dot--live' }),
                     'Sistema Operativo'
                 ])
             ]),
-            el('div', { className: 'hub-hero__meta-row' }, [
-                el('span', { className: 'hub-hero__meta-chip', textContent: `Host: ${info.hostname}` }),
-                el('span', { className: 'hub-hero__meta-chip', textContent: `${info.cameraCount ?? 0} Canali Attivi` }),
-                el('span', { className: 'hub-hero__meta-chip', textContent: `v${info.version}` }),
-                el('span', { className: 'hub-hero__meta-chip', textContent: `Uptime ${formatDuration(info.uptimeSeconds)}` })
+            el('div', { className: 'launchpad-hero__meta-row' }, [
+                el('span', { className: 'launchpad-hero__meta-chip', textContent: `Host: ${info.hostname}` }),
+                el('span', { className: 'launchpad-hero__meta-chip', textContent: `${info.cameraCount ?? 0} Canali` }),
+                el('span', { className: 'launchpad-hero__meta-chip', textContent: `v${info.version}` }),
+                el('span', { className: 'launchpad-hero__meta-chip', textContent: `Uptime ${formatDuration(info.uptimeSeconds)}` })
             ])
         ]),
-        searchBox
+        el('div', { className: 'launchpad-hero__actions' }, [
+            el('div', { className: 'seg-group' }, [modeCategoryBtn, modeAllBtn]),
+            searchBox
+        ])
     ]);
 
-    const cardsGrid = el('div', { className: 'hub-grid' });
-    for (const area of MACRO_AREAS) {
-        const node = macroAreaCard(area, info, permissions);
-        if (node) cardsGrid.append(node);
-    }
+    const navBarHost = el('div', { className: 'launchpad-navbar' });
+    const gridHost = el('div', { className: 'launchpad-grid' });
+
+    const openSubapp = (subapp) => {
+        if (subapp.isPage) {
+            window.open(`/${subapp.route}`, '_blank');
+        } else {
+            location.hash = `#/${subapp.route}`;
+        }
+    };
+
+    const renderGrid = () => {
+        gridHost.replaceChildren();
+        navBarHost.replaceChildren();
+
+        const q = searchQuery.trim().toLowerCase();
+
+        if (q.length > 0) {
+            navBarHost.append(
+                el('div', { className: 'launchpad-nav-title' }, [
+                    icon('search'),
+                    el('span', { textContent: `Risultati di ricerca per "${searchQuery}"` })
+                ])
+            );
+
+            let matchesCount = 0;
+            for (const area of MACRO_AREAS) {
+                for (const sub of area.subapps) {
+                    if (sub.permission && !permissions.includes(sub.permission)) continue;
+                    const match = `${sub.title} ${sub.desc} ${area.title}`.toLowerCase().includes(q);
+                    if (match) {
+                        matchesCount++;
+                        gridHost.append(launchpadCard({
+                            iconName: sub.icon,
+                            title: sub.title,
+                            desc: sub.desc,
+                            tagNode: renderBadge(sub.badge),
+                            color: area.color,
+                            onClick: () => openSubapp(sub)
+                        }));
+                    }
+                }
+            }
+
+            if (matchesCount === 0) {
+                gridHost.append(el('div', { className: 'launchpad-empty' }, [
+                    icon('search'),
+                    el('p', { textContent: 'Nessuna applicazione trovata' })
+                ]));
+            }
+            return;
+        }
+
+        if (viewAllMode) {
+            for (const area of MACRO_AREAS) {
+                for (const sub of area.subapps) {
+                    if (sub.permission && !permissions.includes(sub.permission)) continue;
+                    gridHost.append(launchpadCard({
+                        iconName: sub.icon,
+                        title: sub.title,
+                        desc: sub.desc,
+                        tagNode: renderBadge(sub.badge),
+                        color: area.color,
+                        onClick: () => openSubapp(sub)
+                    }));
+                }
+            }
+            return;
+        }
+
+        if (currentAreaId) {
+            const area = MACRO_AREAS.find((a) => a.id === currentAreaId);
+            if (!area) {
+                currentAreaId = null;
+                renderGrid();
+                return;
+            }
+
+            const backBtn = el('button', {
+                type: 'button',
+                className: 'launchpad-back-btn',
+                onclick: () => {
+                    currentAreaId = null;
+                    updateModeBtns();
+                    renderGrid();
+                }
+            }, [
+                icon('chevronLeft'),
+                el('span', { textContent: 'Tutte le categorie' })
+            ]);
+
+            const areaInfo = el('div', { className: 'launchpad-nav-title' }, [
+                el('span', { className: `badge badge--${area.color}`, textContent: area.title }),
+                el('span', { className: 'muted text-sm', textContent: `${area.subapps.length} applicazioni` })
+            ]);
+
+            navBarHost.append(backBtn, areaInfo);
+
+            for (const sub of area.subapps) {
+                if (sub.permission && !permissions.includes(sub.permission)) continue;
+                gridHost.append(launchpadCard({
+                    iconName: sub.icon,
+                    title: sub.title,
+                    desc: sub.desc,
+                    tagNode: renderBadge(sub.badge),
+                    color: area.color,
+                    onClick: () => openSubapp(sub)
+                }));
+            }
+            return;
+        }
+
+        for (const area of MACRO_AREAS) {
+            const availableSubs = area.subapps.filter((s) => !s.permission || permissions.includes(s.permission));
+            if (availableSubs.length === 0) continue;
+
+            gridHost.append(launchpadCard({
+                iconName: area.icon,
+                title: area.title,
+                desc: area.desc,
+                tagNode: el('span', { className: 'launchpad-card__chip', textContent: `${availableSubs.length} strumenti` }),
+                color: area.color,
+                onClick: () => {
+                    currentAreaId = area.id;
+                    updateModeBtns();
+                    renderGrid();
+                }
+            }));
+        }
+    };
 
     searchInput.addEventListener('input', () => {
-        const q = searchInput.value.trim().toLowerCase();
-        for (const card of cardsGrid.querySelectorAll('.hub-card')) {
-            let hasMatch = false;
-            for (const tile of card.querySelectorAll('.hub-tile')) {
-                const s = tile.dataset.search ?? '';
-                const match = q.length === 0 || s.includes(q);
-                tile.hidden = !match;
-                if (match) hasMatch = true;
-            }
-            card.hidden = !hasMatch;
-        }
+        searchQuery = searchInput.value;
+        renderGrid();
     });
 
-    root.replaceChildren(header, cardsGrid);
+    renderGrid();
+    root.replaceChildren(header, navBarHost, gridHost);
     return root;
 }
