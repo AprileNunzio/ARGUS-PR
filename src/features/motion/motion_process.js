@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { resolveInput } from '../cameras/camera_input.js';
+import { resolveInput, isLocalKind } from '../cameras/camera_input.js';
+import { attachLocalConsumer } from '../cameras/local_capture.js';
 import { buildMotionArgs } from '../streaming/ffmpeg_args.js';
 import { MotionDetector, FRAME_BYTES } from './motion_detector.js';
 import { getSetting } from '../settings/settings_repository.js';
@@ -45,6 +46,11 @@ export class MotionProcess {
 
         const input = resolveInput(camera, { preferSub: true });
 
+        if (isLocalKind(camera.sourceKind)) {
+            this.startLocal(camera);
+            return;
+        }
+
         const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
         const args = buildMotionArgs(input, tools.accelerators, perf);
 
@@ -61,29 +67,7 @@ export class MotionProcess {
 
         log.info('motion analysis started', { camera: this.cameraId });
 
-        child.stdout.on('data', (chunk) => {
-            if (this.stopped) return;
-
-            this.pending = this.pending.length === 0 ? chunk : Buffer.concat([this.pending, chunk]);
-
-            if (this.pending.length > MAX_PENDING_BYTES) {
-                log.warn('motion analysis buffer overflow, discarding backlog', {
-                    camera: this.cameraId,
-                    bytes: this.pending.length
-                });
-                this.pending = this.pending.subarray(this.pending.length - FRAME_BYTES);
-            }
-
-            while (this.pending.length >= FRAME_BYTES) {
-                const frame = this.pending.subarray(0, FRAME_BYTES);
-                this.pending = this.pending.subarray(FRAME_BYTES);
-
-                const events = this.detector.processFrame(frame, Date.now());
-                if (events.length > 0) {
-                    this.onEvent(events);
-                }
-            }
-        });
+        child.stdout.on('data', (chunk) => this.consume(chunk));
 
         child.stderr.on('data', (chunk) => {
             const text = chunk.toString('utf8').trim();
@@ -104,6 +88,36 @@ export class MotionProcess {
         });
     }
 
+    startLocal(camera) {
+        this.localHandle = attachLocalConsumer(camera, 'motion');
+        this.pending = Buffer.alloc(0);
+        this.detector.reset();
+        this.localHandle.stream.on('data', (chunk) => this.consume(chunk));
+        log.info('motion analysis started', { camera: this.cameraId, source: camera.deviceId });
+    }
+
+    consume(chunk) {
+        if (this.stopped) return;
+
+        this.pending = this.pending.length === 0 ? chunk : Buffer.concat([this.pending, chunk]);
+
+        if (this.pending.length > MAX_PENDING_BYTES) {
+            log.warn('motion analysis buffer overflow, discarding backlog', {
+                camera: this.cameraId,
+                bytes: this.pending.length
+            });
+            this.pending = this.pending.subarray(this.pending.length - FRAME_BYTES);
+        }
+
+        while (this.pending.length >= FRAME_BYTES) {
+            const frame = this.pending.subarray(0, FRAME_BYTES);
+            this.pending = this.pending.subarray(FRAME_BYTES);
+
+            const events = this.detector.processFrame(frame, Date.now());
+            if (events.length > 0) this.onEvent(events);
+        }
+    }
+
     recycle() {
         this.teardown();
         if (this.stopped) return;
@@ -119,6 +133,10 @@ export class MotionProcess {
     }
 
     teardown() {
+        if (this.localHandle) {
+            this.localHandle.stop();
+            this.localHandle = null;
+        }
         if (!this.process) return;
         const child = this.process;
         this.process = null;

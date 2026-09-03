@@ -2,6 +2,7 @@ import { el, notice, chip, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { createCameraForm } from './camera_form.js';
 import { probeSummary } from './camera_wizard.js';
+import { renderAutoconfigure } from './camera_autoconfig.js';
 import { renderScheduleEditor } from '/features/scheduling/schedule_editor.js';
 import { renderZoneEditor } from '/features/motion/zone_editor.js';
 
@@ -96,8 +97,27 @@ function recordingTab({ api, camera, recorder }) {
     ]);
 }
 
-function diagnosticsTab({ api, camera }) {
+function diagnosticsTab({ api, camera, onChanged }) {
     const result = el('div', {});
+    const autoHost = el('div', {});
+
+    const autoButton = el('button', { className: 'btn', type: 'button' }, [
+        icon('sparkles'),
+        el('span', { textContent: 'Autoconfigurazione guidata' })
+    ]);
+
+    autoButton.addEventListener('click', () => {
+        autoHost.replaceChildren(renderAutoconfigure({
+            api,
+            camera,
+            onApplied: async () => {
+                autoHost.replaceChildren();
+                await onChanged();
+            },
+            onClose: () => autoHost.replaceChildren()
+        }));
+        autoHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
 
     const probeButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Verifica sorgente' });
     probeButton.addEventListener('click', async () => {
@@ -131,6 +151,7 @@ function diagnosticsTab({ api, camera }) {
         ]),
         el('div', { className: 'row row--tight' }, [
             probeButton,
+            autoButton,
             el('button', {
                 className: 'btn',
                 type: 'button',
@@ -138,6 +159,7 @@ function diagnosticsTab({ api, camera }) {
                 onclick: () => { location.hash = '#/live'; }
             })
         ]),
+        autoHost,
         result
     ]);
 }
@@ -168,7 +190,7 @@ export function renderCameraDetail({ api, camera, recorder, onBack, onChanged })
                 : renderZoneEditor({ camera, api, onSaved: () => undefined, onCancel: () => undefined }));
             return;
         }
-        content.replaceChildren(diagnosticsTab({ api, camera }));
+        content.replaceChildren(diagnosticsTab({ api, camera, onChanged }));
     }
 
     const tabs = el('div', { className: 'tabs' }, TABS.map((tab) => {

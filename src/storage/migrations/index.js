@@ -7,8 +7,9 @@ import visionAccess from './006_vision_access.js';
 import hardening from './007_hardening.js';
 import mfa from './008_mfa.js';
 import cameraProfiles from './009_camera_profiles.js';
+import cameraAnalytics from './010_camera_analytics.js';
 
-export const migrations = [core, exportsMigration, schedules, motion, detections, visionAccess, hardening, mfa, cameraProfiles].sort((a, b) => a.version - b.version);
+export const migrations = [core, exportsMigration, schedules, motion, detections, visionAccess, hardening, mfa, cameraProfiles, cameraAnalytics].sort((a, b) => a.version - b.version);
 
 
 

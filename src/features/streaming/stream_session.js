@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
 import { resolveInput, isLocalKind } from '../cameras/camera_input.js';
+import { attachLocalConsumer } from '../cameras/local_capture.js';
 import { createFragmentSplitter } from './mp4_splitter.js';
 import { buildPreviewArgs } from './ffmpeg_args.js';
 import { probeStream } from '../cameras/stream_probe.js';
@@ -87,6 +88,12 @@ export class StreamSession {
         if (!camera) throw notFound('Camera');
 
         const tools = getMediaTools();
+
+        if (isLocalKind(camera.sourceKind)) {
+            this.startLocal(camera);
+            return;
+        }
+
         const input = resolveInput(camera, { preferSub: true });
 
         const probe = await probeStream(this.cameraId, { preferSub: true })
@@ -117,18 +124,7 @@ export class StreamSession {
         this.process = child;
         this.setState('connecting');
 
-        const splitter = createFragmentSplitter(
-            (segment) => {
-                this.restartAttempts = 0;
-                this.setState('live');
-                this.broadcastInit(segment);
-            },
-            (fragment) => {
-                this.armStallTimer();
-                this.broadcastFragment(fragment);
-            }
-        );
-
+        const splitter = this.buildSplitter();
         child.stdout.on('data', (chunk) => splitter(chunk));
 
         child.stderr.on('data', (chunk) => {
@@ -147,6 +143,32 @@ export class StreamSession {
             this.recycle(`exit-${code}`);
         });
 
+        this.armStallTimer();
+    }
+
+    buildSplitter() {
+        return createFragmentSplitter(
+            (segment) => {
+                this.restartAttempts = 0;
+                this.setState('live');
+                this.broadcastInit(segment);
+            },
+            (fragment) => {
+                this.armStallTimer();
+                this.broadcastFragment(fragment);
+            }
+        );
+    }
+
+    startLocal(camera) {
+        const handle = attachLocalConsumer(camera, 'live');
+        this.localHandle = handle;
+        this.setState('connecting');
+
+        const splitter = this.buildSplitter();
+        handle.stream.on('data', (chunk) => splitter(chunk));
+
+        log.info('stream starting', { camera: this.cameraId, source: camera.deviceId, transcoded: true });
         this.armStallTimer();
     }
 
@@ -176,6 +198,10 @@ export class StreamSession {
         if (this.stallTimer) {
             clearTimeout(this.stallTimer);
             this.stallTimer = null;
+        }
+        if (this.localHandle) {
+            this.localHandle.stop();
+            this.localHandle = null;
         }
         if (!this.process) return;
 

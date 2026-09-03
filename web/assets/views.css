@@ -418,3 +418,10 @@
 .tab:hover { background: var(--surface-2); color: var(--foreground); }
 .tab--active { background: var(--surface-2); border-color: var(--rule); color: var(--foreground); }
 .tab .icon { width: 1em; height: 1em; }
+
+.auto-step { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--gap-2); padding: 0.55rem 0.7rem; border: 1px solid var(--rule-soft); border-radius: var(--radius-sm); background: var(--surface); }
+.auto-step__icon { display: grid; place-items: center; color: var(--muted); }
+.auto-step--ok .auto-step__icon { color: #047857; }
+.auto-step--warn .auto-step__icon { color: #b45309; }
+.auto-step--fail { border-color: #fecaca; }
+.auto-step--fail .auto-step__icon { color: #b91c1c; }

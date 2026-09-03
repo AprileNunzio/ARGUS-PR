@@ -23,6 +23,7 @@ import { installStreamHub } from './features/streaming/stream_hub.js';
 import { registerRecordingRoutes } from './features/recording/recording_routes.js';
 import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
 import { installRecordingHub } from './features/recording/recording_hub.js';
+import { initLocalCapture } from './features/cameras/local_capture.js';
 import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
@@ -37,6 +38,7 @@ import { createAccessRepository } from './features/access/access_repository.js';
 import { registerPeopleRoutes } from './features/people/people_routes.js';
 import { createPeopleRepository } from './features/people/people_repository.js';
 import { installVisionHub } from './features/vision/vision_hub.js';
+import { registerAnalyticsRoutes } from './features/vision/analytics_routes.js';
 import { listCameras } from './features/cameras/camera_repository.js';
 import { insertDetectionEvent } from './features/detections/detections_repository.js';
 import { readPackageVersion } from './platform/version.js';
@@ -61,6 +63,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerSchedulingRoutes(router);
     registerMotionRoutes(router);
     registerDetectionRoutes(router);
+    registerAnalyticsRoutes(router, { config });
     registerAccessRoutes({ router, accessRepository });
     registerPeopleRoutes({ router, peopleRepository, db, config });
 }
@@ -120,6 +123,7 @@ export async function bootstrap(overrides = {}) {
     await initMediaTools(config);
 
     startSessionJanitor();
+    initLocalCapture(config);
     installStreamHub();
     installRecordingHub(config);
     installMotionHub(config);

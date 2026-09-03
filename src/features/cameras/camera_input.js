@@ -4,12 +4,12 @@ import { authenticatedStreamUrl } from './camera_url.js';
 
 export const SOURCE_KINDS = Object.freeze(['rtsp', 'http', 'mjpeg', 'usb']);
 export const LOCAL_SOURCE_KINDS = Object.freeze(['usb']);
-export const INPUT_FORMATS = Object.freeze(['auto', 'mjpeg', 'h264', 'yuyv422', 'nv12']);
+export const INPUT_FORMATS = Object.freeze(['auto', 'mjpeg', 'h264', 'yuyv422', 'uyvy422', 'nv12', 'yuv420p', 'rgb24', 'bgr24', 'gray']);
 
 const BASE_ARGS = Object.freeze(['-hide_banner', '-loglevel', 'error']);
 const LOW_LATENCY_ARGS = Object.freeze(['-fflags', 'nobuffer', '-flags', 'low_delay']);
 const DEVICE_PATTERN = /^[A-Za-z0-9/][A-Za-z0-9 ._:@#()\/-]{0,199}$/;
-const RAW_FORMATS = Object.freeze(['yuyv422', 'nv12']);
+const RAW_FORMATS = Object.freeze(['yuyv422', 'uyvy422', 'nv12', 'yuv420p', 'rgb24', 'bgr24', 'gray']);
 
 export function isLocalKind(kind) {
     return LOCAL_SOURCE_KINDS.includes(kind);

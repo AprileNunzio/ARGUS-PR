@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import { getMediaTools } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { resolveInput } from '../cameras/camera_input.js';
+import { resolveInput, isLocalKind } from '../cameras/camera_input.js';
+import { attachLocalConsumer } from '../cameras/local_capture.js';
 import { buildRecordArgs } from '../streaming/ffmpeg_args.js';
 import { segmentPattern, listingFile, ensureSegmentDays } from './segment_paths.js';
 import { createSegmentWatcher } from './segment_watcher.js';
@@ -41,8 +42,14 @@ export class Recorder {
         if (!camera) throw notFound('Camera');
 
         const tools = getMediaTools();
-        const input = resolveInput(camera, { preferSub: false });
         const listingPath = listingFile(this.config, this.cameraId);
+
+        if (isLocalKind(camera.sourceKind)) {
+            this.startLocal(camera, listingPath);
+            return;
+        }
+
+        const input = resolveInput(camera, { preferSub: false });
 
         const args = buildRecordArgs(
             input,
@@ -64,13 +71,7 @@ export class Recorder {
         this.startedAt = Date.now();
         this.setState('recording');
 
-        this.watcher = createSegmentWatcher(this.config, this.cameraId, listingPath);
-        this.watcher.start();
-
-        this.dayTimer = setInterval(() => {
-            ensureSegmentDays(this.config, this.cameraId);
-        }, 300000);
-        this.dayTimer.unref();
+        this.startWatcher(listingPath);
 
         log.info('recording started', {
             camera: this.cameraId,
@@ -92,6 +93,34 @@ export class Recorder {
             if (this.stopped) return;
             log.warn('recording ended', { camera: this.cameraId, code });
             this.recycle(`exit-${code}`);
+        });
+    }
+
+    startWatcher(listingPath) {
+        this.watcher = createSegmentWatcher(this.config, this.cameraId, listingPath);
+        this.watcher.start();
+
+        this.dayTimer = setInterval(() => {
+            ensureSegmentDays(this.config, this.cameraId);
+        }, 300000);
+        this.dayTimer.unref();
+    }
+
+    startLocal(camera, listingPath) {
+        this.localHandle = attachLocalConsumer(camera, 'record', {
+            segmentSeconds: this.segmentSeconds,
+            pattern: segmentPattern(this.config, this.cameraId),
+            listingPath
+        });
+
+        this.startedAt = Date.now();
+        this.setState('recording');
+        this.startWatcher(listingPath);
+
+        log.info('recording started', {
+            camera: this.cameraId,
+            source: camera.deviceId,
+            segmentSeconds: this.segmentSeconds
         });
     }
 
@@ -118,6 +147,10 @@ export class Recorder {
         if (this.watcher) {
             this.watcher.stop();
             this.watcher = null;
+        }
+        if (this.localHandle) {
+            this.localHandle.stop();
+            this.localHandle = null;
         }
         if (!this.process) return;
 

@@ -5,7 +5,8 @@ import { existsSync } from 'node:fs';
 import { createLogger } from '../../kernel/logger.js';
 import { getMediaTools, mediaToolsStatus } from '../../platform/media_tools.js';
 import { getCameraSecrets } from '../cameras/camera_repository.js';
-import { resolveInput, buildCaptureArgs } from '../cameras/camera_input.js';
+import { resolveInput, buildCaptureArgs, isLocalKind } from '../cameras/camera_input.js';
+import { attachLocalConsumer } from '../cameras/local_capture.js';
 
 const log = createLogger('vision-process');
 
@@ -19,10 +20,11 @@ export function resolvePythonBin(dataDir) {
     return process.platform === 'win32' ? 'python' : 'python3';
 }
 
-export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, modelsDir, performanceSettings = {}, onDetections, onError }) {
+export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, modelsDir, performanceSettings = {}, workerProfile = null, onDetections, onError }) {
     const resolvedPython = pythonBin ?? resolvePythonBin(dataDir);
     let ffmpegChild = null;
     let workerChild = null;
+    let localHandle = null;
     let isTerminated = false;
     let restartTimer = null;
 
@@ -45,23 +47,29 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         }
 
         const binary = ffmpegPath && ffmpegPath.length > 0 ? ffmpegPath : getMediaTools().ffmpeg.path;
-        const input = resolveInput(secrets, { preferSub: true });
-        const ffmpegArgs = buildCaptureArgs(input);
+        const local = isLocalKind(secrets.sourceKind);
+        const input = local ? null : resolveInput(secrets, { preferSub: true });
+        const ffmpegArgs = local ? null : buildCaptureArgs(input);
 
-        if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
-            const backend = performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend;
-            ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
+        if (!local) {
+            if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
+                const backend = performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend;
+                ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
+            }
+
+            ffmpegArgs.push(
+                '-an',
+                '-vf', 'fps=5,scale=640:360',
+                '-f', 'rawvideo',
+                '-pix_fmt', 'bgr24',
+                'pipe:1'
+            );
         }
 
-        ffmpegArgs.push(
-            '-an',
-            '-vf', 'fps=5,scale=640:360',
-            '-f', 'rawvideo',
-            '-pix_fmt', 'bgr24',
-            'pipe:1'
-        );
-
         const workerArgs = [workerScript, '--models-dir', modelsDir];
+        if (workerProfile) {
+            workerArgs.push('--profile', JSON.stringify(workerProfile));
+        }
         if (performanceSettings.aiExecutionProvider) {
             workerArgs.push('--provider', performanceSettings.aiExecutionProvider);
         }
@@ -73,7 +81,9 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         }
 
         try {
-            ffmpegChild = spawn(binary, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+            if (local) localHandle = attachLocalConsumer(secrets, 'vision');
+            else ffmpegChild = spawn(binary, ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+
             workerChild = spawn(resolvedPython, workerArgs, {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
@@ -84,12 +94,16 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
             return;
         }
 
-        ffmpegChild.stdout.pipe(workerChild.stdin);
-
-
-        ffmpegChild.stderr.on('data', (d) => {
-            log.debug('ffmpeg vision stderr', { msg: d.toString().trim() });
-        });
+        if (local) {
+            localHandle.stream.on('data', (chunk) => {
+                if (workerChild?.stdin.writable) workerChild.stdin.write(chunk);
+            });
+        } else {
+            ffmpegChild.stdout.pipe(workerChild.stdin);
+            ffmpegChild.stderr.on('data', (d) => {
+                log.debug('ffmpeg vision stderr', { msg: d.toString().trim() });
+            });
+        }
 
         workerChild.stderr.on('data', (d) => {
             log.debug('worker vision stderr', { msg: d.toString().trim() });
@@ -118,11 +132,15 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
             scheduleRestart();
         };
 
-        ffmpegChild.on('exit', handleExit);
+        ffmpegChild?.on('exit', handleExit);
         workerChild.on('exit', handleExit);
     }
 
     function stopPipes() {
+        if (localHandle) {
+            localHandle.stop();
+            localHandle = null;
+        }
         if (ffmpegChild) {
             ffmpegChild.removeAllListeners('exit');
             try { ffmpegChild.kill('SIGKILL'); } catch {}

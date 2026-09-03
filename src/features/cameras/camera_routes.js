@@ -3,12 +3,47 @@ import { listCameras, getCamera, insertCamera, updateCamera, deleteCamera } from
 import { probeStream, probeSource } from './stream_probe.js';
 import { listLocalDevices } from './local_devices.js';
 import { readCameraInput } from './camera_payload.js';
+import { getCameraSecrets } from './camera_repository.js';
+import { runAutoconfigureStep, stepsFor } from './autoconfigure.js';
 import { Permission } from '../../security/rbac.js';
 import { Exposure, Zone } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
-import { notFound } from '../../kernel/errors.js';
-import { requireId } from '../../security/guards.js';
+import { notFound, validationError } from '../../kernel/errors.js';
+import { requireId, requireString, requireEnum, requireNumberRange } from '../../security/guards.js';
+import { INPUT_FORMATS } from './camera_input.js';
+
+const SIZE_PATTERN = /^\d{2,4}x\d{2,4}$/;
+
+function readSize(value) {
+    const candidate = requireString(value, 'Size', { max: 12 });
+    if (!SIZE_PATTERN.test(candidate)) throw validationError('Risoluzione non valida');
+    return candidate;
+}
+
+function readState(raw) {
+    if (raw === undefined || raw === null) return {};
+    if (typeof raw !== 'object') throw validationError('Stato di autoconfigurazione non valido');
+
+    const candidates = Array.isArray(raw.candidates)
+        ? raw.candidates
+            .slice(0, 16)
+            .filter((entry) => entry && INPUT_FORMATS.includes(entry.format))
+            .map((entry) => ({
+                format: entry.format,
+                size: readSize(entry.size),
+                fps: entry.fps === null || entry.fps === undefined ? null : Math.trunc(requireNumberRange(entry.fps, 'Fps', 1, 240))
+            }))
+        : [];
+
+    return {
+        candidates,
+        opened: raw.opened === true,
+        probed: raw.probed === true,
+        codec: typeof raw.codec === 'string' ? raw.codec.slice(0, 32) : null,
+        patch: raw.patch && typeof raw.patch === 'object' ? readCameraInput(raw.patch, { partial: true }) : {}
+    };
+}
 
 function publicView(camera) {
     return {
@@ -100,6 +135,25 @@ export function registerCameraRoutes(router) {
         const result = await probeSource(input, { preferSub: false });
         return { body: result };
     }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 15, windowMs: 60 * 1000 } });
+
+    router.post('/api/cameras/autoconfigure', async (ctx) => {
+        const camera = readCameraInput(ctx.body?.camera ?? {});
+        const steps = stepsFor(camera);
+        const step = requireEnum(ctx.body?.step ?? steps[0], 'Step', steps);
+        const outcome = await runAutoconfigureStep({ camera, step, state: readState(ctx.body?.state) });
+        return { body: { steps, ...outcome } };
+    }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 120, windowMs: 10 * 60 * 1000 } });
+
+    router.post('/api/cameras/:id/autoconfigure', async (ctx) => {
+        const id = requireId(ctx.params.id, 'Camera id');
+        const camera = getCameraSecrets(id);
+        if (!camera) throw notFound('Camera');
+
+        const steps = stepsFor(camera);
+        const step = requireEnum(ctx.body?.step ?? steps[0], 'Step', steps);
+        const outcome = await runAutoconfigureStep({ camera, step, state: readState(ctx.body?.state) });
+        return { body: { steps, ...outcome } };
+    }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 120, windowMs: 10 * 60 * 1000 } });
 
     router.post('/api/cameras/:id/probe', async (ctx) => {
         const id = requireId(ctx.params.id, 'Camera id');

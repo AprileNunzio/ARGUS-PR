@@ -16,7 +16,8 @@ const HWACCELS = Object.freeze([
 
 const INPUT_FORMATS = Object.freeze([
     ['', 'Automatico'], ['mjpeg', 'MJPEG compresso'], ['h264', 'H.264 compresso'],
-    ['yuyv422', 'YUYV 4:2:2 grezzo'], ['nv12', 'NV12 grezzo']
+    ['yuyv422', 'YUYV 4:2:2 grezzo'], ['uyvy422', 'UYVY 4:2:2 grezzo'], ['nv12', 'NV12 grezzo'],
+    ['yuv420p', 'YUV 4:2:0 grezzo'], ['rgb24', 'RGB grezzo'], ['bgr24', 'BGR grezzo'], ['gray', 'Scala di grigi']
 ]);
 
 const RESOLUTIONS = Object.freeze([

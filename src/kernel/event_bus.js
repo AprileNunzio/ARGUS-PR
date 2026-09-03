@@ -16,6 +16,7 @@ export const Topic = Object.freeze({
     SYSTEM_HEALTH: 'system.health',
     DEPENDENCY_PROGRESS: 'dependency.progress',
     DETECTION: 'detection.event',
+    ANALYTICS_UPDATED: 'analytics.updated',
     ACCESS: 'access.event',
     UPDATE: 'update.state',
     SETTINGS: 'settings.changed'

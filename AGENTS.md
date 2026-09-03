@@ -331,6 +331,37 @@ Divisione dei compiti:
 
 ---
 
+## 5m. Periferiche locali: una sola apertura, molti consumatori
+
+`src/features/cameras/local_capture.js`.
+
+**Il vincolo fisico**: DirectShow su Windows e v4l2 su Linux danno accesso **esclusivo** alla periferica. Un solo processo per volta. Con una telecamera IP quattro processi (diretta, registrazione, movimento, visione) aprono quattro connessioni RTSP e nessuno se ne accorge; con una USB il primo che arriva vince e gli altri ricevono `Error during demuxing: I/O error`. E' il guasto che rendeva inutilizzabili le webcam: l'analisi di movimento apriva la periferica all'avvio e non la lasciava piu'.
+
+**La soluzione**: per le sorgenti locali un unico processo ffmpeg per periferica, con piu' uscite simultanee, e i consumatori che si agganciano con `attachLocalConsumer(camera, ruolo)`:
+
+- `live` esce su **stdout** (fMP4 frammentato)
+- `motion` e `vision` escono su **named pipe** (`\.\pipergus-...`) su Windows e su **socket unix** (`unix://<dataDir>/run/...`) altrove: gli fd aggiuntivi non sono affidabili su Windows, questi lo sono
+- `record` scrive i segmenti direttamente su disco
+
+Il processo viene ricostruito quando cambia l'insieme dei consumatori (150 ms di debounce) e riavviato con backoff se cade. Quando l'ultimo consumatore si stacca, la periferica viene rilasciata.
+
+**Le sorgenti locali si registrano sempre codificate.** Una webcam consegna `rawvideo`/`yuyv422`: `-c copy` verso MP4 fallisce con `Could not find tag for codec rawvideo`. La scelta dell'encoder (GPU quando disponibile, `libx264` altrimenti) sta in `src/features/streaming/encoder.js`, condivisa fra anteprima, registrazione e broker.
+
+---
+
+## 5n. Autoconfigurazione guidata delle sorgenti
+
+`src/features/cameras/autoconfigure.js` + `capture_trial.js` + `web/features/cameras/camera_autoconfig.js`.
+
+Una sequenza di prove **reali**, un passo per chiamata HTTP (`POST /api/cameras/:id/autoconfigure` oppure `POST /api/cameras/autoconfigure` per una configurazione non ancora salvata), cosi' l'interfaccia mostra l'esito mentre procede invece di attendere in silenzio.
+
+- Periferiche locali: `presence` (e' collegata?) -> `capabilities` (formati dichiarati) -> `open` (arrivano fotogrammi?) -> `format` (prova i formati in ordine di qualita' finche' uno consegna) -> `preview` -> `record` -> `analysis`.
+- Sorgenti di rete: `reachability` (TCP) -> `probe` (ffprobe) -> `transport` (se TCP fallisce prova UDP) -> `preview` -> `record` -> `analysis`.
+
+Ogni passo restituisce `status` (`ok`, `warn`, `fail`, `skip`), una spiegazione in italiano e, quando ha scoperto qualcosa, un `patch` di configurazione che l'utente applica con un clic. Lo stato viaggia con il client ed e' **rivalidato a ogni chiamata** (`readState` in `camera_routes.js`): niente di cio' che torna dal browser entra negli argomenti di ffmpeg senza passare dai guardiani.
+
+---
+
 ## 5j. Accelerazione hardware totale e ottimizzazione prestazioni (GPU, RAM, CPU)
 
 `src/platform/hardware.js` + `src/features/settings/performance_tuning.js` + `web/features/system/performance_panel.js`.
@@ -478,6 +509,13 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | PUT | `/api/cameras/:id` | `camera.manage` |
 | DELETE | `/api/cameras/:id` | `camera.manage` |
 | GET | `/api/cameras/devices` | `camera.manage`, rate limit 20/min |
+| POST | `/api/cameras/autoconfigure` | `camera.manage`, rate limit 120/10min |
+| POST | `/api/cameras/:id/autoconfigure` | `camera.manage`, rate limit 120/10min |
+| GET | `/api/vision/engines` | `live.view` |
+| GET | `/api/vision/models` | `camera.manage` |
+| POST | `/api/vision/models/install` | `system.manage`, rate limit 6/10min |
+| GET | `/api/cameras/:id/analytics` | `camera.manage` |
+| PUT | `/api/cameras/:id/analytics` | `camera.manage` |
 | POST | `/api/cameras/probe` | `camera.manage`, rate limit 15/min |
 | POST | `/api/cameras/:id/probe` | `camera.manage` |
 | POST | `/api/discovery/onvif` | `camera.manage` |
