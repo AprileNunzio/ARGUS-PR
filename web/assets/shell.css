@@ -169,9 +169,11 @@
 .launchpad-card { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 22px; padding: 2rem 1.4rem 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02); transition: all .25s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden; width: 100%; }
 .launchpad-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09), 0 2px 8px rgba(15, 23, 42, 0.04); border-color: rgba(37, 99, 235, 0.3); }
 
-.launchpad-card__icon-wrap { width: 62px; height: 62px; border-radius: 18px; display: grid; place-items: center; transition: transform .25s ease; margin-bottom: 2px; }
-.launchpad-card:hover .launchpad-card__icon-wrap { transform: scale(1.1); }
-.launchpad-card__icon-wrap .icon { width: 32px; height: 32px; }
+.launchpad-card__icon-wrap { width: 68px; height: 68px; border-radius: 20px; display: grid; place-items: center; transition: transform .25s ease; margin-bottom: 2px; }
+.launchpad-card:hover .launchpad-card__icon-wrap { transform: scale(1.08); }
+.launchpad-card__icon-svg { width: 32px; height: 32px; }
+.launchpad-card__icon-img { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12)); transition: transform .25s ease; }
+.launchpad-card:hover .launchpad-card__icon-img { transform: scale(1.1); }
 
 .launchpad-card__icon-wrap--blue { background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(59, 130, 246, 0.06)); color: #2563eb; }
 .launchpad-card__icon-wrap--emerald { background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(16, 185, 129, 0.06)); color: #059669; }

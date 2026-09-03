@@ -8,15 +8,35 @@ function renderBadge(badge) {
     return el('span', { className: `badge badge--${tone}`, textContent: badge.text });
 }
 
-function launchpadCard({ iconName, title, desc, tagNode, color = 'blue', onClick }) {
+function renderCardIcon(pngName, fallbackSvg, color = 'blue') {
+    const wrap = el('div', { className: `launchpad-card__icon-wrap launchpad-card__icon-wrap--${color}` });
+    const fallbackNode = icon(fallbackSvg ?? 'apps');
+    fallbackNode.classList.add('launchpad-card__icon-svg');
+
+    if (pngName) {
+        const img = el('img', {
+            className: 'launchpad-card__icon-img',
+            src: `/assets/icons/${pngName}.png`,
+            alt: pngName
+        });
+        img.onerror = () => {
+            img.replaceWith(fallbackNode);
+        };
+        wrap.append(img);
+    } else {
+        wrap.append(fallbackNode);
+    }
+
+    return wrap;
+}
+
+function launchpadCard({ pngName, iconName, title, desc, tagNode, color = 'blue', onClick }) {
     const card = el('button', {
         type: 'button',
         className: `launchpad-card launchpad-card--${color} rise`,
         onclick: onClick
     }, [
-        el('div', { className: `launchpad-card__icon-wrap launchpad-card__icon-wrap--${color}` }, [
-            icon(iconName ?? 'apps')
-        ]),
+        renderCardIcon(pngName, iconName, color),
         el('h3', { className: 'launchpad-card__title', textContent: title }),
         el('p', { className: 'launchpad-card__desc', textContent: desc }),
         el('div', { className: 'launchpad-card__footer' }, [tagNode])
@@ -135,6 +155,7 @@ export async function renderDashboard({ session, api }) {
                     if (match) {
                         matchesCount++;
                         gridHost.append(launchpadCard({
+                            pngName: sub.png,
                             iconName: sub.icon,
                             title: sub.title,
                             desc: sub.desc,
@@ -160,6 +181,7 @@ export async function renderDashboard({ session, api }) {
                 for (const sub of area.subapps) {
                     if (sub.permission && !permissions.includes(sub.permission)) continue;
                     gridHost.append(launchpadCard({
+                        pngName: sub.png,
                         iconName: sub.icon,
                         title: sub.title,
                         desc: sub.desc,
@@ -203,6 +225,7 @@ export async function renderDashboard({ session, api }) {
             for (const sub of area.subapps) {
                 if (sub.permission && !permissions.includes(sub.permission)) continue;
                 gridHost.append(launchpadCard({
+                    pngName: sub.png,
                     iconName: sub.icon,
                     title: sub.title,
                     desc: sub.desc,
@@ -219,6 +242,7 @@ export async function renderDashboard({ session, api }) {
             if (availableSubs.length === 0) continue;
 
             gridHost.append(launchpadCard({
+                pngName: area.png,
                 iconName: area.icon,
                 title: area.title,
                 desc: area.desc,
