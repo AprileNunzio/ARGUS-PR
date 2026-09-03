@@ -48,6 +48,7 @@ export const MACRO_AREAS = [
         color: 'amber',
         getMetric: () => 'Zero-Trust',
         subapps: [
+            { id: 'automation', title: 'Automazioni', desc: 'Notifiche, email, webhook, MQTT e apertura varchi', icon: 'zap', png: 'app_shield', route: 'automation', badge: { text: 'Regole', tone: 'amber' }, permission: 'alarm.manage' },
             { id: 'shield', title: 'Firewall ARGUS-SHIELD', desc: 'Sorveglianza indirizzi IP e blocco attacchi', icon: 'shield', png: 'app_shield', route: 'settings', badge: { text: 'Shield', tone: 'amber' } },
             { id: 'mfa', title: 'Autenticazione MFA', desc: 'Protezione TOTP con codici di sicurezza', icon: 'lock', png: 'app_mfa', route: 'settings', badge: { text: 'TOTP', tone: 'red' } }
         ]
@@ -59,7 +60,7 @@ export const MACRO_AREAS = [
         icon: 'server',
         png: 'area_sistema',
         color: 'cyan',
-        getMetric: (info) => `v${info.version ?? '0.17.0'}`,
+        getMetric: (info) => `v${info.version ?? '0.18.0'}`,
         subapps: [
             { id: 'cameras', title: 'Telecamere', desc: 'Canali di rete e USB, parametri, orari e zone', icon: 'camera', png: 'app_cameras', route: 'cameras', badge: { text: 'Canali', tone: 'blue' }, permission: 'camera.manage' },
             { id: 'settings', title: 'Impostazioni', desc: 'Pannello schema-driven autogenerante', icon: 'settings', png: 'app_settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },

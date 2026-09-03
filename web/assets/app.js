@@ -12,6 +12,7 @@ import { renderSettings } from '/features/settings/settings.js';
 import { renderDetectionsView } from '/features/detections/detections_view.js';
 import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
+import { renderAutomation } from '/features/automation/automation.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 
 const ROUTES = {
@@ -22,6 +23,7 @@ const ROUTES = {
     detections: { label: 'Visione AI', icon: 'eye', render: renderDetectionsView },
     access: { label: 'Targhe & Accessi', icon: 'shield', render: renderAccessView },
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },
+    automation: { label: 'Automazioni', icon: 'zap', render: renderAutomation, permission: 'alarm.manage' },
     settings: { label: 'Impostazioni', icon: 'settings', render: renderSettings, permission: 'system.manage' },
     system: { label: 'Sistema', icon: 'server', render: renderSystem, permission: 'system.manage' }
 };

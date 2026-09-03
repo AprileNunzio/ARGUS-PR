@@ -2,14 +2,16 @@
 
 Quello che sta a valle del riconoscimento: le decisioni. Qui non c'è inferenza, c'è logica — e la logica va scritta pura e testata, perché decide se un cancello si apre.
 
-**Stato al 2026-09-03 (v0.12.0).** Non ricostruire ciò che esiste:
+**Stato al 2026-09-03 (v0.18.0).** Non ricostruire ciò che esiste: il motore vive in `src/features/automation/` ed è descritto in §5q di [AGENTS.md](../AGENTS.md).
 
 | Sezione | Stato |
 |---|---|
 | §1 Regole di accesso targhe | **fatta**, con test |
 | §4 Anagrafica persone | **fatta** |
 | §8 Diagnostica | **parziale**: esistono lo stallo del flusso e lo stato di riconnessione, mancano gli allarmi |
-| §2 Varchi, §3 Notifiche, §5 Ricerca forense, §6 Planimetria, §7 Preset RTSP, §9 PTZ | da costruire |
+| §2 Varchi | **fatta** (v0.18.0): relè ONVIF e comando HTTP, dietro regole con cooldown |
+| §3 Notifiche | **fatta** (v0.18.0): console, email SMTP nativa, Telegram, webhook firmato, MQTT |
+| §5 Ricerca forense, §6 Planimetria, §7 Preset RTSP, §9 PTZ | da costruire |
 
 Leggi il §0 prima di tutto: lega queste funzioni ai meccanismi introdotti nelle versioni 0.11.0 e 0.12.0.
 

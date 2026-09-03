@@ -39,6 +39,8 @@ import { registerPeopleRoutes } from './features/people/people_routes.js';
 import { createPeopleRepository } from './features/people/people_repository.js';
 import { installVisionHub } from './features/vision/vision_hub.js';
 import { registerAnalyticsRoutes } from './features/vision/analytics_routes.js';
+import { installAutomationHub } from './features/automation/automation_hub.js';
+import { registerAutomationRoutes } from './features/automation/automation_routes.js';
 import { listCameras } from './features/cameras/camera_repository.js';
 import { insertDetectionEvent } from './features/detections/detections_repository.js';
 import { readPackageVersion } from './platform/version.js';
@@ -47,7 +49,7 @@ import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
 
-function registerRoutes(router, { db, accessRepository, peopleRepository, config }) {
+function registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub }) {
     registerSetupRoutes(router);
     registerAuthRoutes(router);
     registerCameraRoutes(router);
@@ -64,6 +66,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerMotionRoutes(router);
     registerDetectionRoutes(router);
     registerAnalyticsRoutes(router, { config });
+    registerAutomationRoutes(router, { hub: automationHub });
     registerAccessRoutes({ router, accessRepository });
     registerPeopleRoutes({ router, peopleRepository, db, config });
 }
@@ -145,7 +148,9 @@ export async function bootstrap(overrides = {}) {
 
 
 
-    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository, config }));
+    const automationHub = installAutomationHub({ cameraRepository: { list: listCameras } });
+
+    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub }));
     attachEventSocket(server, config);
     await listen(server, config);
 

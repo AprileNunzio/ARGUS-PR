@@ -37,6 +37,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 |---|---|
 | **Sorgenti di ogni tipo** | Telecamere IP RTSP, flussi MJPEG e HTTP, e **periferiche USB collegate al server** (dshow su Windows, v4l2 su Linux, avfoundation su macOS), con enumerazione delle periferiche e dei loro formati |
 | **Console Telecamere** | Elenco a schede con filtro, wizard di aggiunta con verifica della sorgente prima del salvataggio, scheda per canale con Generale, Registrazione, Zone e Diagnostica |
+| **Automazioni** | Regole che legano un riconoscimento a un'azione: email, Telegram, webhook firmato, MQTT, comando HTTP e **apertura varchi dal relè ONVIF della telecamera**, con cooldown, limite giornaliero e fascia oraria |
 | **Analisi scegliibile per telecamera** | Persone, veicoli, animali, volti, riconoscimento facciale e targhe si accendono uno per uno su ogni canale, e per ognuno si sceglie l'algoritmo fra quelli disponibili, con soglia regolabile |
 | **Autoconfigurazione guidata** | Una sequenza di prove reali sulla sorgente — presenza, apertura, formato, anteprima, registrazione, analisi — che propone e applica la configurazione funzionante |
 | **Scoperta automatica** | Trova le telecamere ONVIF sulla rete locale via WS-Discovery, senza inserire indirizzi a mano |
@@ -502,7 +503,7 @@ Dettagli completi per chi contribuisce, umano o AI: **[AGENTS.md](AGENTS.md)**.
 | **F5** | Persone, biometria facciale, targhe ANPR, controllo accessi, installer autonomi | ✅ completata |
 | **F7.1** | Telecamere in Sistema, ingresso unico, sorgenti USB e MJPEG, console a schede | ✅ completata |
 | **F7.2** | Analisi per telecamera e per capacità, registro dei motori selezionabili | ✅ completata |
-| **F7.3** | Regole evento→azione: notifiche, email, webhook, MQTT, relè e varchi | 🔜 da fare |
+| **F7.3** | Regole evento→azione: notifiche, email, webhook, MQTT, relè e varchi | ✅ completata |
 | **F6** | Planimetria, preset, notifiche Telegram/MQTT, relè fisici | 🔜 in corso |
 
 Il motore di visione AI opera tramite worker Python dedicato alimentato da flussi rawvideo ffmpeg su pipe standard. Esegue YOLOX per rilevamento oggetti, YuNet per volti, SFace per biometria e OCR pesato per targhe ANPR, senza appesantire il processo Node.js.

@@ -360,6 +360,34 @@ Ogni origine e' verificata con lo stesso SHA-256: un mirror che servisse un file
 
 ---
 
+## 5q. Automazioni: dal riconoscimento all'azione (F7.3)
+
+`src/features/automation/`. Documento di riferimento: [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
+
+Una **regola** lega un evento a una o piu' azioni. Il motore ascolta `Topic.DETECTION`, `Topic.ACCESS` e `Topic.MOTION` e per ogni regola attiva valuta, con `rule_matcher.js` (**funzione pura, testata**): tipo di evento, telecamera, classe, confidenza minima, esito della targa (autorizzata, negata, sconosciuta), persona nota o ignota, fascia oraria settimanale, **cooldown** e **limite giornaliero**.
+
+I freni non sono un dettaglio: senza cooldown una persona ferma davanti alla telecamera genera una notifica ogni pochi secondi, e chi la riceve smette di leggerla.
+
+**Canali di consegna** (`channels/`), tutti senza aggiungere una sola dipendenza npm:
+
+| Canale | Implementazione |
+|---|---|
+| `console` | evento `Topic.ALARM` verso l'interfaccia |
+| `email` | client SMTP nativo su `node:net`/`node:tls`: EHLO, STARTTLS, AUTH LOGIN, DATA, con *dot-stuffing* e intestazioni codificate |
+| `telegram` | `fetch` verso l'API dei bot |
+| `webhook` | POST JSON con firma **HMAC-SHA256** in `x-argus-signature` |
+| `mqtt` | pacchetti MQTT 3.1.1 costruiti a mano (CONNECT, PUBLISH QoS 0, DISCONNECT) |
+| `gate` | comando HTTP a centraline e rele' (Shelly, ESP, domotica), con Basic auth |
+| `onvif_relay` | `SetRelayOutputState` SOAP con WS-Security UsernameToken digest: apre il varco dal rele' della telecamera |
+
+**I segreti dei canali non stanno nelle impostazioni**: vivono cifrati AES-256-GCM nella tabella `automation_channels` (stesso vault delle password telecamera) e non tornano mai al client, che vede solo `hasSecret`.
+
+**Ogni esecuzione lascia traccia** in `automation_runs` con esito e dettaglio per canale: un'automazione che non si puo' verificare non e' affidabile quando serve.
+
+Le rotte mutanti sono `Exposure.PRIVATE`: **da internet non si aprono varchi**, come impone §0.1 di AUTOMAZIONI.md. Il permesso richiesto e' `alarm.manage`, che solo l'amministratore possiede.
+
+---
+
 ## 5m. Periferiche locali: una sola apertura, molti consumatori
 
 `src/features/cameras/local_capture.js`.
@@ -545,6 +573,13 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/vision/models/install` | `system.manage`, rate limit 6/10min |
 | GET | `/api/cameras/:id/analytics` | `camera.manage` |
 | PUT | `/api/cameras/:id/analytics` | `camera.manage` |
+| GET | `/api/automation/catalog` | `alarm.manage` |
+| GET/POST | `/api/automation/rules` | `alarm.manage` |
+| PUT/DELETE | `/api/automation/rules/:id` | `alarm.manage` |
+| GET/POST | `/api/automation/channels` | `alarm.manage` |
+| PUT/DELETE | `/api/automation/channels/:id` | `alarm.manage` |
+| POST | `/api/automation/channels/:id/test` | `alarm.manage`, rate limit 10/10min |
+| GET | `/api/automation/runs` | `alarm.manage` |
 | POST | `/api/cameras/probe` | `camera.manage`, rate limit 15/min |
 | POST | `/api/cameras/:id/probe` | `camera.manage` |
 | POST | `/api/discovery/onvif` | `camera.manage` |
@@ -601,6 +636,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
+Aggiunte della versione 0.18.0: **motore di automazione** (migrazione 011) che trasforma rilevamenti, targhe e movimento in azioni, con regole filtrate per telecamera, classe, confidenza, esito targa, persona nota o ignota e fascia oraria, con cooldown e limite giornaliero; **canali di consegna nativi** email SMTP, Telegram, webhook firmato HMAC, MQTT 3.1.1, comando HTTP per cancelli e rele', **rele' ONVIF della telecamera** per l'apertura dei varchi, e avviso in console; **segreti dei canali cifrati nel vault**; **registro delle esecuzioni** con esito per canale; **pagina Automazioni** nella macro-area Sicurezza.
+
 Aggiunte della versione 0.17.0: **analisi configurabile per telecamera e per capacita'** (movimento, persone, veicoli, animali, volti, riconoscimento facciale, targhe) con **scelta dell'algoritmo per ogni funzione** fra i motori pronti (YOLOX-nano, YOLOX-tiny, YuNet, SFace, lettura targhe morfologica o CRNN) e i motori dichiarati ma non costruiti mostrati come tali, **worker Python che carica solo i modelli richiesti dal profilo**, **catalogo modelli multi-origine con mirror proprio e verifica SHA-256 a ogni passo**, **una sola apertura delle periferiche USB con quattro consumatori simultanei**, **registrazione codificata per le sorgenti grezze**, **autoconfigurazione guidata a passi con prove reali** su sorgenti locali e di rete.
 
 Aggiunte della versione 0.16.0: **app Telecamere spostata nella macro-area Sistema** e riscritta come console di configurazione (elenco a schede con filtro, wizard di aggiunta in due passi con verifica della sorgente prima del salvataggio, scheda per canale a tab Generale / Registrazione / Zone / Diagnostica), **sorgenti USB locali** (dshow, v4l2, avfoundation) con **enumerazione delle periferiche del server e dei loro formati**, **sorgenti MJPEG e HTTP con riconnessione automatica**, **descrittore d'ingresso unico** condiviso da diretta, registrazione, movimento, visione e probe, **profilo canale esteso** (risoluzione, cadenza, formato, audio, posizione, gruppo, ritenzione dedicata, accelerazione, note), **applicazione a caldo delle modifiche** via `Topic.CAMERA_UPDATED`, **audio di registrazione governato per canale**, correzione del percorso ffmpeg nel processo di visione (con ffmpeg installato in `vendor/` il worker non partiva).
@@ -618,7 +655,7 @@ Aggiunte della versione 0.11.0: **aggiornamento automatico a ogni avvio e ogni 6
 
 Aggiunte della versione 0.10.0: **TLS obbligatorio con PKI interna autogenerata e autorinnovante**, **redirect 308 dalla porta 80**, **classificazione delle zone di rete**, **separazione visione/gestione applicata dal codice**, **divieto di accesso amministrativo da internet**, **sessioni legate alla zona di emissione**, **riduzione dei dati telecamera verso internet**, **blocco progressivo per account**, **flusso eventi di sicurezza append-only**, **ARGUS-SHIELD con ruleset nftables, punteggio a decadimento e blocco automatico**, **CPU, RAM e GPU in diretta sulla barra della console**.
 
-**Non ancora implementato:** firma GPG dei tag verificata da `pre-start.sh` (l'autoaggiornamento si fida ancora del solo nome del tag), hash chain sui segmenti registrati e sull'audit log, cifratura del disco dati, relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.
+**Non ancora implementato:** firma GPG dei tag verificata da `pre-start.sh` (l'autoaggiornamento si fida ancora del solo nome del tag), hash chain sui segmenti registrati e sull'audit log, cifratura del disco dati, GPIO diretto su Linux per i varchi (esistono rele' ONVIF e comando HTTP), ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali, ponte eventi ONVIF per l'analitica di bordo.
 
 Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
 
@@ -643,7 +680,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FS2 | MFA TOTP (fatta), firma aggiornamenti, integrita archivio e audit | in corso |
 | F7.1 | Telecamere in Sistema, ingresso unico, sorgenti USB/MJPEG, console a tab | completata |
 | F7.2 | Analisi per telecamera e per capacita', registro dei motori selezionabili | completata |
-| F7.3 | Regole evento-azione: notifiche, email, webhook, MQTT, rele' e varchi | da fare |
+| F7.3 | Regole evento-azione: notifiche, email, webhook, MQTT, rele' e varchi | completata |
 | F6 | Planimetria, preset, notifiche Telegram/MQTT, relè, diagnostica, watchdog | da fare |
 
 

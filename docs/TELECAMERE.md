@@ -136,7 +136,7 @@ I modelli **non entrano nel repository**: si scaricano al primo uso con verifica
 
 ---
 
-## 3. Blocco progettato: eventi, notifiche e varchi (F7.3)
+## 3. Blocco costruito (v0.18.0): eventi, notifiche e varchi
 
 Il motore delle regole trasforma un rilevamento in un'azione:
 
@@ -149,7 +149,7 @@ azioni     notifica in console · email SMTP · Telegram · webhook · MQTT
            avvio registrazione · marcatura evento in archivio
 ```
 
-Vincolo di progetto: **nessuna dipendenza npm nuova**. SMTP, Telegram e MQTT sono protocolli, e `node:net`/`node:tls`/`fetch` bastano a parlarli. Ogni esecuzione finisce in una tabella `automation_runs` con esito: un'automazione che non lascia traccia è un'automazione di cui non ci si può fidare quando serve.
+Vincolo rispettato: **nessuna dipendenza npm nuova**. SMTP, Telegram e MQTT sono protocolli, e `node:net`/`node:tls`/`fetch` bastano a parlarli: il client SMTP e i pacchetti MQTT sono scritti qui e coperti da test, compresa una consegna vera contro un server SMTP locale. Ogni esecuzione finisce in una tabella `automation_runs` con esito: un'automazione che non lascia traccia è un'automazione di cui non ci si può fidare quando serve.
 
 Le azioni che aprono varchi sono irreversibili nel mondo fisico. Richiedono conferma esplicita alla creazione della regola, sono registrate in `audit_log` con l'attore, e non sono attivabili da una sessione proveniente da internet (§6c di AGENTS.md).
 
@@ -177,5 +177,6 @@ Restano fuori i modelli con licenza che ne vieta la ridistribuzione: quelli si p
 
 - Nessuna telecamera USB e stata provata *fino in fondo* su hardware reale: il guasto e stato riprodotto e corretto, ma la verifica finale dei quattro consumatori simultanei attende una macchina con la periferica libera.
 - L'enumerazione delle periferiche non e mai stata eseguita su Linux con un dispositivo v4l2 fisico.
-- Il blocco 3 non esiste: questo documento lo progetta, non lo descrive.
+- Le automazioni sono verificate su console e SMTP; Telegram, MQTT, webhook, comando HTTP e relè ONVIF sono costruiti e testati nelle parti pure, ma non ancora provati contro apparati reali.
+- Il GPIO diretto su Linux non esiste: per i varchi ci sono relè ONVIF e comando HTTP.
 - I motori marcati `planned` nel registro (NanoDet, SCRFD, MobileFaceNet, PaddleOCR, analitica di bordo ONVIF) sono voci di catalogo, non codice.

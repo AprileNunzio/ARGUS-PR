@@ -3,9 +3,9 @@
 Documento operativo di consegna per l'assistente AI che prosegue lo sviluppo di **ARGUS-PR**.
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero di sicurezza, i vincoli non negoziabili e le convenzioni architetturali.
 
-Stato alla consegna: **v0.17.0**, **201 test verdi** (191 NVR + 10 ARGUS-SHIELD).
+Stato alla consegna: **v0.18.0**, **213 test verdi** (203 NVR + 10 ARGUS-SHIELD).
 
-Ultimo blocco consegnato: **F7.2 — Analisi per telecamera**. Prima F7.1 aveva spostato l'app in Sistema e unificato l'ingresso video. L'app è stata spostata nella macro-area Sistema del Launchpad e riscritta come console di configurazione; è nato `src/features/cameras/camera_input.js`, l'unico punto del sistema che sa aprire una sorgente video (RTSP, HTTP, MJPEG, USB locale). Il progetto completo dei tre blocchi è in [docs/TELECAMERE.md](docs/TELECAMERE.md): il blocco 2 (analisi per telecamera con scelta del motore) e il blocco 3 (notifiche, email, varchi) sono progettati ma **non** costruiti.
+Ultimo blocco consegnato: **F7.3 — Automazioni**: regole evento-azione con email SMTP nativa, Telegram, webhook firmato, MQTT, comando HTTP e relè ONVIF per i varchi. Prima F7.1 aveva spostato l'app in Sistema e unificato l'ingresso video. L'app è stata spostata nella macro-area Sistema del Launchpad e riscritta come console di configurazione; è nato `src/features/cameras/camera_input.js`, l'unico punto del sistema che sa aprire una sorgente video (RTSP, HTTP, MJPEG, USB locale). Il progetto completo dei tre blocchi è in [docs/TELECAMERE.md](docs/TELECAMERE.md): il blocco 2 (analisi per telecamera con scelta del motore) e il blocco 3 (notifiche, email, varchi) sono progettati ma **non** costruiti.
 
 ---
 
