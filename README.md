@@ -54,7 +54,7 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Ingresso rilevamenti macchina** | API autenticata con chiavi crittografiche (solo hash SHA-256 nel DB) per flussi ONVIF esterni o modelli di inferenza |
 | **Archivio navigabile** | Linea temporale delle 24 ore: clicchi l'istante e parte la riproduzione da lì |
 | **Ritenzione automatica differenziata** | Per giorni, quota e spazio libero, con ritenzione estesa per segmenti contenenti eventi rilevati |
-| **Installatori autonomi** | Linux (`autoinstaller.sh`) e Windows (`deploy/windows/install.ps1`) non presidiati con venv Python e modelli ONNX |
+| **Installatori autonomi** | Linux (`autoinstaller.sh`) e Windows (Setup `.exe` con launcher desktop, icona e servizio) non presidiati con venv Python e modelli ONNX |
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
@@ -87,6 +87,8 @@ Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza
 
 Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.9.0-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
 
+Al termine trovi sul desktop e nel menu Start l'icona **ARGUS-PR**. E' un eseguibile vero (`ARGUS-PR.exe`), non un collegamento a una pagina web: all'avvio verifica il servizio `ArgusPR`, lo avvia se e' fermo, attende che risponda e apre la console in una finestra applicativa dedicata, senza barra degli indirizzi. Se il servizio non parte mostra un messaggio con il percorso del registro, invece di lasciare il browser su "connessione rifiutata".
+
 In alternativa, puoi eseguire da **PowerShell** (avviato come Amministratore):
 
 
@@ -94,7 +96,7 @@ In alternativa, puoi eseguire da **PowerShell** (avviato come Amministratore):
 irm https://raw.githubusercontent.com/AprileNunzio/ARGUS-PR/main/deploy/windows/install.ps1 | iex
 ```
 
-L'installatore configura autonomamente Node.js, FFmpeg, Python, virtualenv con modelli ONNX (SHA-256 verificato), crea il servizio Windows `ArgusPR` e imposta la regola firewall per la porta 8088.
+L'installatore configura autonomamente Node.js, FFmpeg, Python, virtualenv con modelli ONNX (SHA-256 verificato), crea il servizio Windows `ArgusPR` e imposta la regola firewall per la porta 8088. Prima di dichiarare il successo attende che la porta risponda davvero. Registro completo dell'installazione: `%ProgramData%\ARGUS-PR\install.log`.
 
 ### Windows — avvio rapido portatile (senza servizio)
 
@@ -428,6 +430,26 @@ Il motore di visione AI opera tramite worker Python dedicato alimentato da fluss
 
 ---
 ## Risoluzione dei problemi
+
+<details>
+<summary><b>Windows: "Connessione rifiutata" su localhost:8088</b></summary>
+
+Significa che il demone non e' in ascolto: l'installazione si e' fermata prima di creare il servizio. Verifica in quest'ordine:
+
+```powershell
+Get-Service ArgusPR
+Get-Content "$env:ProgramData\ARGUS-PR\install.log" -Tail 40
+Get-Content "$env:ProgramData\ARGUS-PR\service.log" -Tail 40
+```
+
+Se il servizio non esiste, rilancia la configurazione senza reinstallare tutto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:ProgramFiles\ARGUS-PR\deploy\windows\install.ps1"
+```
+
+La causa storica era una copia dei file su se stessi che interrompeva lo script prima di `npm install`: se in `%ProgramFiles%\ARGUS-PR` manca `node_modules`, sei in quel caso e basta rilanciare il comando qui sopra.
+</details>
 
 <details>
 <summary><b>ffmpeg non trovato</b></summary>

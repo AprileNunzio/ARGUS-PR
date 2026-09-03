@@ -13,7 +13,7 @@ Ultimo aggiornamento: 2026-09-02 · versione progetto: 0.9.0
 
 NVR (Network Video Recorder) self-hosted: un demone Node.js che acquisisce flussi RTSP da telecamere IP, li registra su disco, li rende riproducibili e li analizza. L'interfaccia e' una web app servita dallo stesso processo.
 
-**Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete.
+**Non e' un'applicazione desktop.** Gira headless su Linux server o come servizio Windows; si amministra dal browser di qualunque dispositivo in rete. Su Windows esiste un launcher desktop (`ARGUS-PR.exe`) che avvia il servizio e apre la console in finestra applicativa: e' un avviatore, non una riscrittura dell'interfaccia.
 
 Stato reale: **fondamenta, diretta, registrazione, archivio, riproduzione, console locale, installazione automatica Linux e autoaggiornamento funzionanti.** Vedi §9.
 
@@ -72,8 +72,13 @@ web/
                           system/ ospita la pagina Sistema e il pannello aggiornamenti
 autoinstaller.sh          installatore Linux non presidiato (entry point del wget)
 deploy/
-  systemd/ windows/ docker/
+  systemd/ docker/
   linux/                  install.sh, kiosk-session.sh, pre-start.sh
+  windows/                install.ps1, uninstall.ps1, installer.iss,
+                          build-installer.ps1, quick-start.bat,
+                          launcher/ArgusLauncher.cs
+web/assets/argus.ico      icona dell'installer, del launcher e dei collegamenti
+build/                    output di build del launcher, ignorato da git
 ```
 
 Regola di dipendenza: `features` → `security`/`storage`/`platform` → `kernel`. Mai al contrario. `kernel` non importa nulla del progetto tranne se stesso.
@@ -253,6 +258,18 @@ Divisione dei compiti:
 ---
 
 
+## 5k. Installazione Windows e launcher desktop
+
+`deploy/windows/` + `web/assets/argus.ico`.
+
+- `installer.iss` produce `dist/ARGUS-PR-v0.9.0-Setup.exe` con Inno Setup. I collegamenti puntano a `{app}\ARGUS-PR.exe`, **mai a un URL**: un collegamento Internet non ha icona propria e apre una scheda del browser che, se il servizio non e' ancora attivo, mostra "connessione rifiutata".
+- `launcher/ArgusLauncher.cs` e' il launcher: legge la porta da `ARGUS_PORT` o da `argus.env`, avvia il servizio `ArgusPR` (con elevazione via `sc.exe` se serve, altrimenti processo `node` staccato), attende la porta fino a 90 secondi e apre il browser in modalita' `--app`. Ogni fallimento diventa una finestra di dialogo con il percorso del registro.
+- `build-installer.ps1` e' l'unico entry point di build: compila il launcher con `csc.exe` del .NET Framework di sistema (nessuna dipendenza aggiuntiva), incorpora `argus.ico` e invoca `ISCC.exe`. L'eseguibile finisce in `build/`, ignorato da git.
+- `install.ps1` non deve mai copiare i file su se stessi: quando gira dentro `{app}` la sorgente coincide con la destinazione e la copia va saltata. Usa `robocopy` con esclusioni, controlla `$LASTEXITCODE` di ogni comando nativo, scrive un transcript in `%ProgramData%\ARGUS-PR\install.log` e termina con codice 1 se la porta non risponde entro 60 secondi. Se `nssm` manca, ripiega su un'attivita' pianificata SYSTEM all'avvio.
+- `uninstall.ps1` rimuove servizio, attivita' pianificata e regole firewall, ma **non** tocca `%ProgramData%\ARGUS-PR`: le registrazioni sopravvivono alla disinstallazione.
+
+---
+
 ## 6. Modello di sicurezza
 
 - Ruoli: `admin`, `operator`, `viewer` (`src/security/rbac.js`).
@@ -349,7 +366,7 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 
 ## 9. Stato reale: cosa esiste e cosa no
 
-**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
+**Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **Setup .exe Inno Setup con launcher desktop nativo, icona propria e verifica della porta prima di dichiarare il successo**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
 
 
 **Non ancora implementato:** relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.

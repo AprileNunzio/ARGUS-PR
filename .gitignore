@@ -16,3 +16,4 @@ vendor/ffmpeg/
 *.zip
 dist/
 
+build/

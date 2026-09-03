@@ -12,11 +12,14 @@ DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE
 OutputDir=..\..\dist
 OutputBaseFilename=ARGUS-PR-v0.9.0-Setup
+SetupIconFile=..\..\web\assets\argus.ico
+UninstallDisplayIcon={app}\ARGUS-PR.exe
+UninstallDisplayName=ARGUS-PR
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
@@ -27,6 +30,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "registerservice"; Description: "Installa e avvia ARGUS-PR come Servizio Windows automatico"; GroupDescription: "Configurazione Servizio:"
 
 [Files]
+Source: "..\..\build\ARGUS-PR.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\web\assets\argus.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\package.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\package-lock.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
@@ -39,16 +44,20 @@ Source: "..\..\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs
 Source: "..\..\vision\*"; DestDir: "{app}\vision"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\..\deploy\*"; DestDir: "{app}\deploy"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+Type: files; Name: "{autodesktop}\ARGUS-PR Web Console.url"
+Type: files; Name: "{group}\ARGUS-PR Web Console.url"
+Type: files; Name: "{commondesktop}\ARGUS-PR Web Console.url"
+
 [Icons]
-Name: "{group}\ARGUS-PR Web Console"; Filename: "http://localhost:8088"
+Name: "{group}\ARGUS-PR"; Filename: "{app}\ARGUS-PR.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ARGUS-PR.exe"; Comment: "Apre la console ARGUS-PR e avvia il servizio se necessario"
 Name: "{group}\Disinstalla ARGUS-PR"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\ARGUS-PR Web Console"; Filename: "http://localhost:8088"; Tasks: desktopicon
+Name: "{autodesktop}\ARGUS-PR"; Filename: "{app}\ARGUS-PR.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ARGUS-PR.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\deploy\windows\install.ps1"" -InstallPath ""{app}"""; StatusMsg: "Configurazione ambiente runtime, dipendenze AI e servizio di sistema..."; Flags: runhidden
-Filename: "http://localhost:8088"; Description: "{cm:LaunchProgram,ARGUS-PR Web Console}"; Flags: shellexec postinstall skipifsilent
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\deploy\windows\install.ps1"" -InstallPath ""{app}"""; StatusMsg: "Configurazione runtime, dipendenze AI e servizio di sistema (puo' richiedere alcuni minuti)..."; Tasks: registerservice
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\deploy\windows\install.ps1"" -InstallPath ""{app}"" -SkipService"; StatusMsg: "Configurazione runtime e dipendenze AI (puo' richiedere alcuni minuti)..."; Tasks: not registerservice
+Filename: "{app}\ARGUS-PR.exe"; Description: "{cm:LaunchProgram,ARGUS-PR}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "nssm.exe"; Parameters: "stop ArgusPR"; Flags: runhidden; RunOnceId: "StopArgusPR"
-Filename: "nssm.exe"; Parameters: "remove ArgusPR confirm"; Flags: runhidden; RunOnceId: "RemoveArgusPR"
-Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=""ARGUS-PR Web NVR"""; Flags: runhidden; RunOnceId: "RemoveFirewall"
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\deploy\windows\uninstall.ps1"""; Flags: runhidden; RunOnceId: "RemoveArgusService"
