@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Contesto operativo per assistenti AI che lavorano su questo repository.
-Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
+Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md); per **le difese di sicurezza ancora mancanti** leggi [docs/SICUREZZA.md](docs/SICUREZZA.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
 Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.12.0
 

@@ -68,6 +68,8 @@ Non rifare queste cose, sono complete e coperte da test.
 
 ## 3. Il lavoro che manca, in ordine di priorità
 
+> Le prime quattro voci hanno una guida operativa dedicata: **[docs/SICUREZZA.md](docs/SICUREZZA.md)**. Schema del database, contratto delle rotte, sequenze di autenticazione, vettori di prova e criteri di verifica stanno lì. Questa sezione dice **cosa e perché**; quel documento dice **come**. La 3.5 (F6) è invece ancora solo un elenco: quando toccherà a lei, va specificata prima di scrivere codice.
+
 ### 3.1 MFA TOTP — la cosa più importante
 
 **Perché per prima:** il sistema può essere esposto a internet (`ARGUS_PUBLIC_ACCESS`). Con la sola password, una credenziale rubata è un impianto perso. È l'unica difesa di livello base ancora assente.
@@ -106,7 +108,7 @@ Cosa manca:
 
 ### 3.4 Cifratura del disco dati
 
-Non è codice: è documentazione operativa. `master.key` e le chiavi della PKI stanno a `0600` sul disco. Chi si porta via il mini PC ha credenziali RTSP e registrazioni. Serve una guida a LUKS con sblocco automatico via TPM 2.0, in `docs/`.
+Non è codice: è documentazione operativa. `master.key` e le chiavi della PKI stanno a `0600` sul disco. Chi si porta via il mini PC ha credenziali RTSP e registrazioni. La configurazione LUKS con sblocco via TPM 2.0 è specificata in [docs/SICUREZZA.md](docs/SICUREZZA.md) §4: va trasformata nella guida `docs/INSTALLAZIONE-SICURA.md` e provata su hardware.
 
 ### 3.5 F6 — funzionalità non ancora costruite
 

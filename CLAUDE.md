@@ -4,6 +4,8 @@ Il contesto completo di questo progetto è in **[AGENTS.md](AGENTS.md)**. Leggil
 
 **Cosa devi fare** è in **[HANDOVER.md](HANDOVER.md)**: stato reale, lavoro pendente in ordine di priorità, trappole già pagate e cosa non è mai stato provato su hardware vero.
 
+**Come costruire le difese ancora mancanti** — MFA TOTP, firma delle release, catene di integrità, cifratura a riposo — è in **[docs/SICUREZZA.md](docs/SICUREZZA.md)**.
+
 La regola che sovrasta tutte le altre: questo è un sistema di videosorveglianza esposto a internet, quindi **la sicurezza viene prima di eleganza, prestazioni e comodità** (AGENTS.md §0).
 
 Promemoria dei vincoli che vengono violati più spesso:
