@@ -13,6 +13,7 @@ function subAppTile(subapp, permissions) {
         return null;
     }
 
+    const tone = subapp.badge?.tone ?? 'blue';
     const tile = el('button', {
         type: 'button',
         className: 'hub-tile',
@@ -25,9 +26,16 @@ function subAppTile(subapp, permissions) {
             }
         }
     }, [
-        el('div', { className: 'hub-tile__icon-wrap' }, [icon(subapp.icon ?? 'apps')]),
-        el('span', { className: 'hub-tile__title', textContent: subapp.title }),
-        renderBadge(subapp.badge)
+        el('div', { className: 'hub-tile__left' }, [
+            el('div', { className: `hub-tile__icon-wrap hub-tile__icon-wrap--${tone}` }, [
+                icon(subapp.icon ?? 'apps')
+            ]),
+            el('span', { className: 'hub-tile__title', textContent: subapp.title })
+        ]),
+        el('div', { className: 'hub-tile__right' }, [
+            renderBadge(subapp.badge),
+            el('span', { className: 'hub-tile__arrow' }, [icon('chevronRight')])
+        ])
     ]);
 
     tile.dataset.search = subapp.title.toLowerCase();
@@ -78,7 +86,7 @@ export async function renderDashboard({ session, api }) {
     const searchInput = el('input', {
         type: 'search',
         className: 'hub-search__input',
-        placeholder: 'Cerca funzione o modulo…'
+        placeholder: 'Cerca modulo o telecamera…'
     });
 
     const searchBox = el('div', { className: 'hub-search' }, [
@@ -88,8 +96,19 @@ export async function renderDashboard({ session, api }) {
 
     const header = el('div', { className: 'hub-hero' }, [
         el('div', { className: 'hub-hero__info' }, [
-            el('h1', { className: 'hub-hero__title', textContent: info.hostname }),
-            el('span', { className: 'hub-hero__meta', textContent: `${info.platform} · v${info.version} · Uptime ${formatDuration(info.uptimeSeconds)}` })
+            el('div', { className: 'hub-hero__headline' }, [
+                el('h1', { className: 'hub-hero__title', textContent: 'Centro di Controllo' }),
+                el('span', { className: 'hub-hero__status-pill' }, [
+                    el('span', { className: 'status-dot status-dot--live' }),
+                    'Sistema Operativo'
+                ])
+            ]),
+            el('div', { className: 'hub-hero__meta-row' }, [
+                el('span', { className: 'hub-hero__meta-chip', textContent: `Host: ${info.hostname}` }),
+                el('span', { className: 'hub-hero__meta-chip', textContent: `${info.cameraCount ?? 0} Canali Attivi` }),
+                el('span', { className: 'hub-hero__meta-chip', textContent: `v${info.version}` }),
+                el('span', { className: 'hub-hero__meta-chip', textContent: `Uptime ${formatDuration(info.uptimeSeconds)}` })
+            ])
         ]),
         searchBox
     ]);
