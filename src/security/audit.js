@@ -12,7 +12,9 @@ export const AuditAction = Object.freeze({
     DISCOVERY_RUN: 'discovery.run',
     ARCHIVE_VIEWED: 'archive.viewed',
     ARCHIVE_EXPORTED: 'archive.exported',
-    SETTINGS_CHANGED: 'settings.changed'
+    SETTINGS_CHANGED: 'settings.changed',
+    MFA_ENABLED: 'mfa.enabled',
+    MFA_DISABLED: 'mfa.disabled'
 });
 
 export function recordAudit(entry) {

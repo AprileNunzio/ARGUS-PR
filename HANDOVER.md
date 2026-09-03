@@ -4,7 +4,7 @@ Documento di consegna per l'assistente che prosegue il lavoro.
 
 Leggi **prima** [AGENTS.md](AGENTS.md): contiene la regola zero sulla sicurezza, i vincoli non negoziabili e le convenzioni. Questo file dice **cosa manca e in che ordine**.
 
-Stato alla consegna: **v0.12.0**, 150 test verdi (140 NVR + 10 ARGUS-SHIELD), tutto pubblicato su GitHub fino al tag v0.12.0.
+Stato alla consegna: **v0.13.0**, 164 test verdi (154 NVR + 10 ARGUS-SHIELD).
 
 ---
 
@@ -58,7 +58,7 @@ Non rifare queste cose, sono complete e coperte da test.
 
 **Analisi**: motion detection a modelli di sfondo con zone poligonali, pianificazione oraria 7×48, visione AI (persone, veicoli, animali), tracciamento IoU, biometria facciale YuNet + SFace conforme GDPR, ANPR con voto su fotogrammi multipli, regole di accesso.
 
-**Sicurezza (v0.11.0)**: TLS obbligatorio con PKI interna autogenerata e autorinnovante, redirect 308 dalla porta 80, zone di rete `local`/`lan`/`wan` con default negato per ogni rotta, divieto di accesso amministrativo da internet, sessioni legate alla zona di emissione, blocco progressivo per account, flusso eventi append-only, **ARGUS-SHIELD** (firewall nftables autonomo con punteggio a decadimento).
+**Sicurezza (v0.11.0 e v0.13.0)**: TLS obbligatorio con PKI interna autogenerata e autorinnovante, redirect 308 dalla porta 80, zone di rete `local`/`lan`/`wan` con default negato per ogni rotta, divieto di accesso amministrativo da internet, sessioni legate alla zona di emissione, blocco progressivo per account, flusso eventi append-only, **ARGUS-SHIELD** (firewall nftables autonomo con punteggio a decadimento), **MFA TOTP (v0.13.0)** con RFC 6238 nativo, seed cifrato AES-256-GCM nel vault, 10 codici di recupero monouso scrypt, protezione replay e obbligo per amministratori.
 
 **Gestione (v0.12.0)**: pannello Impostazioni completo, politica di riavvio (`ask` / `window` / `immediate`), finestra di manutenzione, impostazioni applicate a caldo.
 
@@ -70,22 +70,9 @@ Non rifare queste cose, sono complete e coperte da test.
 
 > Le prime quattro voci hanno una guida operativa dedicata: **[docs/SICUREZZA.md](docs/SICUREZZA.md)**. Schema del database, contratto delle rotte, sequenze di autenticazione, vettori di prova e criteri di verifica stanno lì. Questa sezione dice **cosa e perché**; quel documento dice **come**. La 3.5 ha invece la propria guida in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
 
-### 3.1 MFA TOTP — la cosa più importante
+### 3.1 MFA TOTP — completata (v0.13.0)
 
-**Perché per prima:** il sistema può essere esposto a internet (`ARGUS_PUBLIC_ACCESS`). Con la sola password, una credenziale rubata è un impianto perso. È l'unica difesa di livello base ancora assente.
-
-Cosa serve:
-
-- `src/security/totp.js` — RFC 6238 puro con `node:crypto`, nessuna dipendenza. Finestra ±1 intervallo da 30 s, cifre 6, algoritmo SHA-1 (è quello che le app supportano davvero).
-- Seed cifrato nel vault esistente (`encryptSecret`), **mai** in chiaro nel database né nei log.
-- Codici di recupero: 10, generati una volta, salvati come hash scrypt, consumati singolarmente.
-- Migrazione 008: colonne `totp_secret`, `totp_enabled`, tabella `recovery_codes`.
-- **Obbligatorio per il ruolo `admin`**, opzionale per `operator` e `viewer`. Un admin senza TOTP attivo deve essere costretto ad attivarlo al primo accesso, come già accade per il cambio password.
-- Il QR code va generato **lato client** in SVG dal solo `otpauth://` URI: non aggiungere una libreria per questo.
-- Flusso di arruolamento nella UI (`web/features/account/`), accanto al cambio password.
-- Il blocco per account (`lockout.js`) deve valere anche sui codici TOTP sbagliati.
-
-Test obbligatori: vettori RFC 6238, riuso dello stesso codice rifiutato, codice di recupero consumato una sola volta, admin da WAN comunque rifiutato (regola esistente, non indebolirla).
+Costruita e verificata in v0.13.0: `src/security/totp.js` puro senza dipendenze, seed nel vault AES-256-GCM, migrazione 008, codici di recupero monouso scrypt, flusso a 2 fasi con challenge, lockout integrato, blocco admin da WAN, obbligo configurabile con `security.mfaRequiredForAdmin`, QR client-side in SVG, suite con vettori RFC 6238 e test di integrazione.
 
 ### 3.2 Firma degli aggiornamenti
 

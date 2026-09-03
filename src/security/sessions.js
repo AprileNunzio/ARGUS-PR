@@ -38,7 +38,7 @@ export function resolveSession(token) {
 
     const row = getDatabase()
         .prepare(`SELECT s.id AS session_id, s.expires_at, s.revoked_at, s.zone,
-                         u.id, u.username, u.role, u.is_active, u.must_change_password
+                         u.id, u.username, u.role, u.is_active, u.must_change_password, u.totp_enabled
                   FROM sessions s
                   JOIN users u ON u.id = s.user_id
                   WHERE s.token_hash = ?`)
@@ -56,6 +56,7 @@ export function resolveSession(token) {
         role: row.role,
         issuedZone: row.zone ?? null,
         mustChangePassword: row.must_change_password === 1,
+        totpEnabled: row.totp_enabled === 1,
         permissions: permissionsFor(row.role)
     };
 }

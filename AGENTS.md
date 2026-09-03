@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md); per **le difese di sicurezza ancora mancanti** leggi [docs/SICUREZZA.md](docs/SICUREZZA.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.12.0
+Ultimo aggiornamento: 2026-09-03 · versione progetto: 0.13.0
 
 **Mappa della documentazione.** Ogni file ha un compito, e ognuno dichiara in testa cosa e' gia' costruito, cosi' nessuno ricostruisce quello che esiste.
 
@@ -94,9 +94,9 @@ bin/argus.js              CLI: serve | doctor | cert | reset-admin
 src/
   kernel/                 config, result, errors, logger, process_guard, event_bus
   platform/               paths, ffmpeg, media_tools, version, tls, x509, metrics, hardware
-  storage/                database, migrations/ (001_core, 002_exports)
+  storage/                database, migrations/ (001_core ... 008_mfa)
   security/               vault, password, sessions, rbac, guards, audit,
-                          net_zones, lockout, security_events
+                          net_zones, lockout, security_events, totp
   http/                   server, router, http_utils, static_files, rate_limit, websocket
   features/<nome>/        <nome>_service.js, <nome>_routes.js, <nome>_repository.js
   features/settings/      settings_schema.js dichiara OGNI impostazione modificabile
@@ -446,9 +446,14 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/setup/dependencies/ffmpeg` | anonimo, solo a setup aperto |
 | POST | `/api/system/dependencies/ffmpeg` | `system.manage` |
 | POST | `/api/auth/login` | anonimo, rate limit 8/5min |
+| POST | `/api/auth/mfa` | anonimo, rate limit 8/5min |
 | POST | `/api/auth/logout` | autenticato |
 | GET | `/api/auth/session` | autenticato |
 | POST | `/api/auth/password` | autenticato, rate limit 5/10min |
+| GET | `/api/account/mfa/status` | autenticato |
+| POST | `/api/account/mfa/setup` | autenticato, rate limit 10/10min |
+| POST | `/api/account/mfa/confirm` | autenticato, rate limit 10/10min |
+| POST | `/api/account/mfa/disable` | autenticato, rate limit 5/10min |
 | GET | `/api/cameras` | `live.view` |
 | GET | `/api/cameras/:id` | `live.view` |
 | POST | `/api/cameras` | `camera.manage` |
@@ -512,13 +517,15 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 **Funzionante e verificato:** kernel, config, logger strutturato, gestione errori globale, SQLite con migrazioni, vault AES-256-GCM, autenticazione scrypt con sessioni, RBAC, audit, server HTTP con Range e CSP, WebSocket autenticato, rilevamento ffmpeg, **setup guidato in 5 passi**, **cambio password imposto**, **installazione automatica di ffmpeg con verifica SHA-256**, CRUD telecamere, probe RTSP via ffprobe, discovery ONVIF WS-Discovery, interfaccia web responsive con setup/login/riepilogo/telecamere, **diretta video reale via fMP4 su WebSocket e Media Source Extensions**, **registrazione continua con segmentazione**, **indice append-only**, **ritenzione automatica**, **archivio con timeline e riproduzione**, **console locale loopback su `/wall`**, **autoinstaller Linux non presidiato**, **autoaggiornamento da GitHub con ripristino automatico**, **esportazione con catena di custodia verificata su segmenti reali**, **pianificazione oraria (griglia 7x48 con eccezioni calendario)**, **rilevamento movimento reale a modelli di sfondo su fotogrammi 160x90**, **rilevamento zone poligonali su point-in-polygon e maschere bitmask**, **guardia anti-abbagliamento cambi luce**, **isteresi e cooldown**, **processo ffmpeg su substream per analisi**, **ingresso rilevamenti macchina POST /api/detections con chiavi API ad hash SHA-256**, **ritenzione differenziata su eventi**, **editor web responsive per orari e zone**, **motore di visione AI con rilevamento persone, auto, camion, moto, animali**, **tracciamento IoU tra fotogrammi**, **riconoscimento biometrico volti YuNet + SFace con soglia 0.363 e conformità GDPR**, **lettura targhe ANPR con voto su fotogrammi multipli e sintassi europea**, **regole di accesso con blacklist prioritaria**, **installatore Windows autonomo install.ps1 con winget, nssm e firewall**, **Setup .exe Inno Setup con launcher desktop nativo, icona propria e verifica della porta prima di dichiarare il successo**, **rilevamento e profilazione hardware (CPU, RAM, GPU)**, **accelerazione hardware video GPU (CUDA, QSV, D3D11VA, VAAPI, VideoToolbox, AMF)**, **encoder transcodifica GPU (h264_nvenc, h264_qsv, etc.)**, **worker AI multithread con session options ONNX e provider prioritari**, **tuning RAM SQLite a caldo (cache_size fino a 2GB, mmap_size fino a 4GB)**, **pannello web di configurazione prestazioni con preset rapidi**.
 
 
+Aggiunte della versione 0.13.0: **autenticazione a due fattori MFA TOTP** (RFC 6238 nativo con `node:crypto`, Base32 senza dipendenze, seed cifrato AES-256-GCM nel vault, 10 codici di recupero monouso scrypt, login a due fasi con challenge in memoria a 32 byte con scadenza a 5 minuti, protezione anti-replay a 90 secondi, blocco progressivo per account esteso a MFA, divieto admin da WAN inalterato, obbligo configurabile per account amministratore con isolamento d arruolamento, rendering QR code SVG client-side senza librerie ne stili inline).
+
 Aggiunte della versione 0.12.0: **pannello Impostazioni completo nel browser** (aggiornamenti, accesso remoto, sicurezza account, console, ritenzione), **politica di riavvio con conferma esplicita o finestra di manutenzione**, **impostazioni applicate a caldo senza riavvio** (accesso remoto, reti fidate, durata sessione, soglie di blocco), **validazione tipizzata con audit di ogni modifica**.
 
 Aggiunte della versione 0.11.0: **aggiornamento automatico a ogni avvio e ogni 6 ore**, **quarantena delle versioni difettose**, **freno temporale contro i cicli di riavvio**, **verifica opzionale della firma GPG dei tag**.
 
 Aggiunte della versione 0.10.0: **TLS obbligatorio con PKI interna autogenerata e autorinnovante**, **redirect 308 dalla porta 80**, **classificazione delle zone di rete**, **separazione visione/gestione applicata dal codice**, **divieto di accesso amministrativo da internet**, **sessioni legate alla zona di emissione**, **riduzione dei dati telecamera verso internet**, **blocco progressivo per account**, **flusso eventi di sicurezza append-only**, **ARGUS-SHIELD con ruleset nftables, punteggio a decadimento e blocco automatico**, **CPU, RAM e GPU in diretta sulla barra della console**.
 
-**Non ancora implementato:** **MFA TOTP** (la difesa piu' importante ancora mancante ora che il sistema e' esposto), firma GPG dei tag verificata da `pre-start.sh` (l'autoaggiornamento si fida ancora del solo nome del tag), hash chain sui segmenti registrati e sull'audit log, cifratura del disco dati, relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.
+**Non ancora implementato:** firma GPG dei tag verificata da `pre-start.sh` (l'autoaggiornamento si fida ancora del solo nome del tag), hash chain sui segmenti registrati e sull'audit log, cifratura del disco dati, relè hardware di apertura varchi, notifiche push Telegram / MQTT, ricerca forense unificata per targa/volto su storico registrato, planimetria con barriere virtuali.
 
 Se un utente chiede una di queste, **non fingere che esista**: dichiara che va costruita.
 
@@ -540,7 +547,7 @@ Se un utente chiede una di queste, **non fingere che esista**: dichiara che va c
 | FS | TLS obbligatorio, zone di rete, blocco account, ARGUS-SHIELD | completata |
 | FU2 | Aggiornamento automatico a ogni avvio, quarantena, verifica firma | completata |
 | FC | Impostazioni complete dal browser, politica di riavvio, finestra di manutenzione | completata |
-| FS2 | MFA TOTP, firma degli aggiornamenti, integrita' archivio e audit | da fare |
+| FS2 | MFA TOTP (fatta), firma aggiornamenti, integrita archivio e audit | in corso |
 | F6 | Planimetria, preset, notifiche Telegram/MQTT, relè, diagnostica, watchdog | da fare |
 
 

@@ -2,6 +2,7 @@ import { api, ApiError, connectEvents } from './api.js';
 import { renderLogin } from '/features/login/login.js';
 import { renderSetup } from '/features/setup/setup.js';
 import { renderChangePassword } from '/features/account/change_password.js';
+import { renderMfaEnrollment } from '/features/account/mfa_enrollment.js';
 import { renderDashboard } from '/features/dashboard/dashboard.js';
 import { renderCameras } from '/features/cameras/cameras.js';
 import { renderLive } from '/features/live/live.js';
@@ -110,6 +111,14 @@ async function showPasswordChange(session) {
     }));
 }
 
+async function showMfaEnrollment(session) {
+    state.disconnect?.();
+    root.replaceChildren(renderMfaEnrollment({
+        session,
+        onComplete: async () => { await start(); }
+    }));
+}
+
 async function start() {
     const setup = await api.get('/api/setup/status');
 
@@ -131,6 +140,12 @@ async function start() {
     if (session.mustChangePassword) {
         state.session = session;
         await showPasswordChange(session);
+        return;
+    }
+
+    if (session.mustEnrollMfa) {
+        state.session = session;
+        await showMfaEnrollment(session);
         return;
     }
 

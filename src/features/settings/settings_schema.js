@@ -112,6 +112,14 @@ const definitions = [
         default: 12
     },
     {
+        key: 'security.mfaRequiredForAdmin',
+        group: 'security',
+        label: 'MFA obbligatoria per amministratori',
+        help: 'Impone l attivazione del secondo fattore TOTP per gli account amministratori prima dell uso del sistema.',
+        type: SettingType.BOOLEAN,
+        default: true
+    },
+    {
         key: 'security.lockoutSoftThreshold',
         group: 'security',
         label: 'Tentativi prima dell attesa progressiva',

@@ -22,7 +22,8 @@ export function createRouter() {
             anonymous: options.anonymous === true,
             rateLimit: options.rateLimit ?? null,
             exposure: options.exposure ?? Exposure.PRIVATE,
-            allowWhilePasswordPending: options.allowWhilePasswordPending === true
+            allowWhilePasswordPending: options.allowWhilePasswordPending === true,
+            allowWhileMfaPending: options.allowWhileMfaPending === true
         });
     }
 

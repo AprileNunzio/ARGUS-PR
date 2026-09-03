@@ -59,6 +59,10 @@ export function unauthenticated(message = 'Authentication required') {
     return new AppError(ErrorCode.UNAUTHENTICATED, message);
 }
 
+export function conflict(message = 'Resource conflict') {
+    return new AppError(ErrorCode.CONFLICT, message);
+}
+
 export function internal(message, cause) {
     return new AppError(ErrorCode.INTERNAL, message, { cause, exposable: false });
 }

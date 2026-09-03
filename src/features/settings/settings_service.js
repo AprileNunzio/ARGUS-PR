@@ -230,6 +230,11 @@ export function sessionTtlHoursFor(config) {
     return Number.isInteger(stored) && stored > 0 ? stored : config.sessionTtlHours;
 }
 
+export function mfaRequiredForAdmin() {
+    const stored = storedValue('security.mfaRequiredForAdmin');
+    return stored === null || stored === undefined ? true : stored === true;
+}
+
 export function lockoutThresholds() {
     return {
         softThreshold: readSetting('security.lockoutSoftThreshold'),

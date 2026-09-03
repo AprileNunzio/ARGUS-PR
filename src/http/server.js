@@ -7,10 +7,10 @@ import { onShutdown } from '../kernel/process_guard.js';
 import { projectRoot } from '../platform/paths.js';
 import { ensureTlsMaterial, secureContextOptions } from '../platform/tls.js';
 import { resolveSession } from '../security/sessions.js';
-import { can, Permission } from '../security/rbac.js';
+import { can, Permission, Role } from '../security/rbac.js';
 import { classify, allowsZone, Zone, Exposure, isTrustedZone } from '../security/net_zones.js';
 import { emitSecurityEvent, SecurityEvent } from '../security/security_events.js';
-import { remoteAccessEnabled, trustedNetworksFor } from '../features/settings/settings_service.js';
+import { remoteAccessEnabled, trustedNetworksFor, mfaRequiredForAdmin } from '../features/settings/settings_service.js';
 import { createRouter } from './router.js';
 import { serveFile } from './static_files.js';
 import { consume } from './rate_limit.js';
@@ -151,6 +151,10 @@ async function dispatch(router, req, res, config) {
     const session = authenticate(req);
     const actor = session?.actor ?? null;
 
+    if (actor) {
+        actor.mustEnrollMfa = actor.role === Role.ADMIN && !actor.totpEnabled && mfaRequiredForAdmin();
+    }
+
     enforceSessionZone(actor, zone, address);
     enforceZone(route, zone, actor, address, req.method, url.pathname);
     enforceRateLimit(route, address, zone);
@@ -159,6 +163,9 @@ async function dispatch(router, req, res, config) {
         if (!actor) throw unauthenticated();
         if (actor.mustChangePassword && !route.allowWhilePasswordPending) {
             throw new AppError(ErrorCode.FORBIDDEN, 'Change the initial password before using the system');
+        }
+        if (actor.mustEnrollMfa && !route.allowWhileMfaPending && !route.allowWhilePasswordPending) {
+            throw new AppError(ErrorCode.FORBIDDEN, 'MFA enrollment is required before using the system');
         }
         if (route.permission && !can(actor.role, route.permission)) {
             throw forbidden(`Missing permission: ${route.permission}`);

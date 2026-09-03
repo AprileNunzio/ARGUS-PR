@@ -240,3 +240,7 @@
     .setting__control input[type="text"] { width: 100%; }
     .daypicker { justify-content: flex-start; }
 }
+
+.qr-wrap { display: flex; justify-content: center; padding: var(--gap-3); background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.qr-wrap svg { display: block; max-width: 100%; height: auto; }
+
