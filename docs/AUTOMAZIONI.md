@@ -2,6 +2,73 @@
 
 Quello che sta a valle del riconoscimento: le decisioni. Qui non c'è inferenza, c'è logica — e la logica va scritta pura e testata, perché decide se un cancello si apre.
 
+**Stato al 2026-09-03 (v0.12.0).** Non ricostruire ciò che esiste:
+
+| Sezione | Stato |
+|---|---|
+| §1 Regole di accesso targhe | **fatta**, con test |
+| §4 Anagrafica persone | **fatta** |
+| §8 Diagnostica | **parziale**: esistono lo stallo del flusso e lo stato di riconnessione, mancano gli allarmi |
+| §2 Varchi, §3 Notifiche, §5 Ricerca forense, §6 Planimetria, §7 Preset RTSP, §9 PTZ | da costruire |
+
+Leggi il §0 prima di tutto: lega queste funzioni ai meccanismi introdotti nelle versioni 0.11.0 e 0.12.0.
+
+---
+
+## 0. Come queste funzioni si agganciano all'architettura attuale
+
+Questo capitolo è stato scritto prima delle versioni 0.11.0 e 0.12.0. Il resto del documento resta valido, ma **ogni funzione qui descritta va costruita dentro i meccanismi che nel frattempo esistono**. Se li ignori, ottieni codice che funziona in sviluppo e che in produzione è irraggiungibile o pericoloso.
+
+### 0.1 Le rotte nuove nascono chiuse
+
+Ogni rotta registrata senza `exposure` è `Exposure.PRIVATE`: raggiungibile solo da loopback e rete locale. **Per tutto quello che c'è in questo documento è la scelta giusta e non va cambiata.**
+
+Varchi, notifiche, planimetrie, barriere, preset, diagnostica: nessuna di queste funzioni deve essere raggiungibile da internet. Chi guarda da fuori vede le telecamere, non apre cancelli. Se ti viene la tentazione di marcare `Exposure.PUBLIC` una rotta per far funzionare qualcosa dall'app remota, fermati: stai aprendo un comando fisico a internet.
+
+L'unica eccezione plausibile — e va discussa con il proprietario prima, non decisa da te — è la **lettura** dello stato di un varco. L'apertura no, mai.
+
+### 0.2 Ogni interruttore va in `settings_schema.js`
+
+Dalla 0.12.0 le impostazioni non si inventano più caso per caso: si dichiarano in `src/features/settings/settings_schema.js` con tipo, limiti, aiuto e valore predefinito, e arrivano da sole nel pannello con validazione e audit.
+
+Voci da aggiungere, con i gruppi già esistenti o nuovi:
+
+| Chiave | Tipo | Predefinito | Nota |
+|---|---|---|---|
+| `gates.enabled` | boolean | `false` | interruttore generale dei varchi |
+| `gates.dryRun` | boolean | `true` | vedi §2, non invertirlo |
+| `gates.minConfidence` | integer 50–100 | `85` | percentuale, più alta di quella di registrazione |
+| `gates.cooldownSeconds` | integer 3–600 | `10` | intervallo minimo fra due aperture dello stesso varco |
+| `notifications.enabled` | boolean | `false` | |
+| `notifications.maxPerMinute` | integer 1–60 | `6` | oltre il quale si raggruppa |
+| `notifications.quietHoursStart` / `End` | time | `23:00` / `07:00` | silenzia il non urgente |
+| `diagnostics.freeSpaceWarnPercent` | integer 5–50 | `15` | allarme **prima** che la ritenzione cancelli |
+| `diagnostics.cameraOfflineMinutes` | integer 1–120 | `5` | |
+| `diagnostics.segmentShortfallPercent` | integer 10–90 | `50` | vedi §8, il controllo che conta davvero |
+
+I **segreti non vanno qui**: token Telegram, password MQTT e URL dei relè stanno cifrati nel vault (`encryptSecret`), non nella tabella `settings`, che è leggibile in chiaro da chiunque legga il database. Nel pannello si mostra solo se un segreto è impostato, mai il suo valore.
+
+### 0.3 Le due regole opposte sugli indirizzi di destinazione
+
+`src/security/net_zones.js` espone `classify()`, che dice se un indirizzo è `local`, `lan` o `wan`. Usalo per validare le destinazioni, con **due regole che vanno in direzioni opposte** e che è facile confondere:
+
+- **Un relè di varco deve essere in rete locale.** Se l'URL configurato risolve fuori dalla LAN, rifiuta: un comando di apertura non ha alcuna ragione di uscire su internet, e se ce l'ha è perché qualcuno ha configurato male o è stato indotto a farlo.
+- **Un webhook deve essere fuori dalla rete locale.** Se punta a `127.0.0.1`, a `192.168.x.x` o alla rete delle telecamere, rifiuta: altrimenti l'interfaccia diventa uno strumento per sondare la rete interna e per raggiungere i metadata dei provider cloud. È la classe di attacco SSRF, e qui si chiude in cinque righe.
+
+La risoluzione va fatta **al momento dell'uso**, non solo al salvataggio: un nome DNS che oggi punta fuori domani può puntare dentro. Risolvi con `dns.promises.lookup`, classifica l'indirizzo ottenuto, e solo dopo apri la connessione.
+
+### 0.4 Il traffico in uscita passa da ARGUS-SHIELD
+
+Il ruleset attuale ha `output policy accept`, quindi Telegram, MQTT e webhook funzionano senza fare niente. Ma se un giorno l'uscita verrà ristretta — ed è la direzione giusta per un apparato di sicurezza — queste funzioni sono le prime a rompersi.
+
+Quando aggiungi un canale di uscita, **documenta host e porta** in `shield/README.md`. Il giorno che si stringe l'uscita, quella lista è ciò che evita un'ora di diagnosi.
+
+### 0.5 Audit e ritenzione
+
+Ogni azione fisica o verso l'esterno va in `audit_log` con `recordAudit()`: apertura di un varco, invio di una notifica, spostamento di una telecamera PTZ. Le azioni nuove seguono la nomenclatura esistente: `gate.opened`, `gate.simulated`, `notification.sent`, `ptz.moved`.
+
+E ogni tabella nuova che cresce nel tempo — `system_metrics`, gli eventi delle barriere, le miniature su disco — **deve avere una politica di ritenzione fin dal primo giorno**. Un impianto che riempie il disco con le proprie metriche smette di registrare video, che è esattamente il fallimento che non deve accadere.
+
 ---
 
 ## 1. Regole di accesso targhe
@@ -264,3 +331,104 @@ Precarica come preset di sistema i pattern delle marche più diffuse (Hikvision,
 - Un controllo periodico che confronti i segmenti attesi con quelli presenti nell'indice: se una telecamera dovrebbe produrre 60 segmenti l'ora e ne produce 12, c'è un problema che nessun log segnalerebbe.
 
 Quest'ultimo è il controllo che distingue un NVR affidabile da uno che sembra funzionare finché non serve il filmato.
+
+---
+
+## 9. PTZ: brandeggio, preset di posizione, ronda
+
+Attenzione a non confondere: il §7 parla di **preset di URL RTSP**, cioè i modelli per marca che compilano l'indirizzo del flusso. Questa sezione parla di **preset di posizione PTZ**, cioè punti di vista memorizzati sulla telecamera. Sono due cose diverse con lo stesso nome, ed è la ragione per cui vale la pena dirlo.
+
+### 9.1 Il pezzo che manca: un client SOAP ONVIF
+
+Oggi il progetto parla ONVIF solo per la scoperta: `src/features/discovery/onvif_discovery.js` fa WS-Discovery, che è un messaggio UDP in multicast. Per muovere una telecamera serve altro: **SOAP su HTTP**, con autenticazione WS-Security.
+
+Un client minimale in `src/features/ptz/onvif_soap.js`, senza dipendenze, con quattro pezzi:
+
+**Autenticazione WS-Security `UsernameToken` con digest.** È la parte dove si sbaglia:
+
+```
+nonce    = 16 byte casuali
+created  = istante ISO 8601 in UTC
+digest   = base64( sha1( nonce_raw || created_utf8 || password_utf8 ) )
+```
+
+Il nonce viaggia in Base64 nell'intestazione, ma **nel calcolo entra grezzo**, non codificato. Invertire le due cose produce un `401` che sembra una password sbagliata e fa perdere ore.
+
+**Buste SOAP costruite a mano.** Sono quattro chiamate, non serve un generatore:
+
+| Operazione | Serve per |
+|---|---|
+| `GetCapabilities` | trovare l'indirizzo del servizio PTZ e di quello dei dispositivi |
+| `GetProfiles` (Media) | ottenere il `ProfileToken`, obbligatorio in ogni chiamata PTZ |
+| `GetPresets` / `GotoPreset` / `SetPreset` | i preset di posizione |
+| `ContinuousMove` + `Stop` | il brandeggio manuale |
+
+**Parsing della risposta senza un parser XML.** Le risposte che ci servono contengono pochi campi: estrai con espressioni regolari mirate su nomi di tag noti, e **non fidarti mai** del contenuto — è testo che arriva da un dispositivo di rete, quindi passa da `stripControlCharacters()` e da un limite di lunghezza prima di finire nel database o in una risposta HTTP.
+
+**Timeout brevi e nessun blocco.** Tre secondi, e l'esito non deve mai fermare registrazione o analisi. Una telecamera che non risponde al PTZ deve continuare a registrare.
+
+### 9.2 Modello dati
+
+```sql
+CREATE TABLE IF NOT EXISTS ptz_presets (
+    id TEXT PRIMARY KEY,
+    camera_id TEXT NOT NULL,
+    onvif_token TEXT NOT NULL,
+    name TEXT NOT NULL,
+    is_home INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ptz_patrols (
+    id TEXT PRIMARY KEY,
+    camera_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    stops_json TEXT NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ptz_presets_camera_token ON ptz_presets(camera_id, onvif_token);
+```
+
+**La posizione la memorizza la telecamera, non noi.** `onvif_token` è il riferimento che il dispositivo restituisce; noi teniamo solo il nome leggibile e il legame con la telecamera. Salvare le coordinate pan/tilt/zoom nel nostro database sembra più controllabile ed è invece una fonte di divergenza: la telecamera viene riavviata o riconfigurata e i nostri numeri non corrispondono più a niente.
+
+`stops_json` è un elenco di `{ presetId, dwellSeconds }`. Validalo con `requireNumberRange` e un tetto (dieci soste, `dwellSeconds` fra 5 e 600): un ciclo di ronda con soste da un secondo produce una telecamera che si muove in continuazione e non registra nulla di utile.
+
+### 9.3 Rotte
+
+Tutte `Exposure.PRIVATE`, permesso `Permission.CAMERA_MANAGE` per la scrittura e `Permission.LIVE_VIEW` per la lettura dell'elenco.
+
+```
+GET    /api/cameras/:id/ptz/presets      elenco
+POST   /api/cameras/:id/ptz/presets      crea dalla posizione corrente
+POST   /api/cameras/:id/ptz/goto         { presetId }
+POST   /api/cameras/:id/ptz/move         { pan, tilt, zoom } fra -1 e 1
+POST   /api/cameras/:id/ptz/stop
+DELETE /api/cameras/:id/ptz/presets/:presetId
+```
+
+`/ptz/move` va limitato in frequenza — dieci richieste al secondo bastano per un joystick — e **ogni movimento va in audit**. Sapere chi ha girato una telecamera, e quando, è esattamente il genere di domanda che nasce dopo un incidente.
+
+`ContinuousMove` senza uno `Stop` lascia la telecamera in rotazione perpetua: imposta sempre un `Timeout` nella busta SOAP (`PT1S` è ragionevole) **oltre** a chiamare `Stop`, così una richiesta persa non manda la telecamera a girare per sempre.
+
+### 9.4 Il legame con il resto
+
+Un preset PTZ diventa utile quando qualcosa lo richiama da solo:
+
+- **Barriera attraversata** (§6) → vai al preset che inquadra quella zona.
+- **Targa in blacklist** (§1) → vai al preset del varco e alza la priorità di registrazione.
+- **Pianificazione oraria** → ronda attiva di notte, posizione fissa di giorno.
+
+Qui c'è una trappola da prevedere: se una telecamera è in ronda e un evento la richiama, deve **sospendere** la ronda per un tempo definito e poi riprenderla. Senza questo, il preset di allarme dura fino alla sosta successiva e la telecamera si gira via nel momento peggiore.
+
+### 9.5 Come si dimostra che funziona
+
+- Il digest WS-Security calcolato su nonce e istante **noti** deve corrispondere a un valore atteso fissato nel test: è l'unico punto realmente delicato ed è una funzione pura.
+- La costruzione della busta SOAP con caratteri speciali nel nome del preset non produce XML rotto: verifica l'escape di `&`, `<`, `>`.
+- Il parsing di una risposta `GetPresets` di esempio estrae i token attesi; una risposta malformata non lancia, restituisce elenco vuoto.
+- Un `ContinuousMove` senza `Stop` non lascia stato pendente nel nostro processo.
+- Validazione della ronda: undici soste rifiutate, sosta da un secondo rifiutata.
+- **Su hardware vero non è mai stato provato**, e finché non lo è va dichiarato: le implementazioni ONVIF delle marche reali divergono, e questa è la funzione dove divergono di più.

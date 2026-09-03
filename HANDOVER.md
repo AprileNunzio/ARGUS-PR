@@ -68,7 +68,7 @@ Non rifare queste cose, sono complete e coperte da test.
 
 ## 3. Il lavoro che manca, in ordine di priorità
 
-> Le prime quattro voci hanno una guida operativa dedicata: **[docs/SICUREZZA.md](docs/SICUREZZA.md)**. Schema del database, contratto delle rotte, sequenze di autenticazione, vettori di prova e criteri di verifica stanno lì. Questa sezione dice **cosa e perché**; quel documento dice **come**. La 3.5 (F6) è invece ancora solo un elenco: quando toccherà a lei, va specificata prima di scrivere codice.
+> Le prime quattro voci hanno una guida operativa dedicata: **[docs/SICUREZZA.md](docs/SICUREZZA.md)**. Schema del database, contratto delle rotte, sequenze di autenticazione, vettori di prova e criteri di verifica stanno lì. Questa sezione dice **cosa e perché**; quel documento dice **come**. La 3.5 ha invece la propria guida in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md).
 
 ### 3.1 MFA TOTP — la cosa più importante
 
@@ -112,9 +112,13 @@ Non è codice: è documentazione operativa. `master.key` e le chiavi della PKI s
 
 ### 3.5 F6 — funzionalità non ancora costruite
 
-Planimetria con barriere virtuali, preset PTZ, notifiche Telegram e MQTT, relè hardware di apertura varchi, ricerca forense unificata per targa e volto sullo storico registrato, diagnostica e watchdog.
+Varchi con relè, notifiche (Telegram, webhook, MQTT), ricerca forense unificata, planimetria con barriere virtuali, preset RTSP per marca, brandeggio PTZ con preset di posizione e ronda, diagnostica e watchdog.
 
-Se il proprietario ne chiede una, **non fingere che esista**: dichiara che va costruita.
+**Sono tutte specificate in [docs/AUTOMAZIONI.md](docs/AUTOMAZIONI.md)**: modello dati, valutatori puri, protezioni, rotte e criteri di verifica. Il §0 di quel documento lega le funzioni ai meccanismi introdotti nelle 0.11.0 e 0.12.0 — esposizione delle rotte, impostazioni dichiarate nello schema, segreti nel vault, validazione delle destinazioni con le zone di rete. Leggilo prima di scrivere codice, altrimenti produci funzioni che in produzione sono irraggiungibili o pericolose.
+
+Regole di accesso e anagrafica persone di quel documento **sono già fatte**: non ricostruirle.
+
+Se il proprietario chiede una funzione non ancora costruita, **non fingere che esista**: dichiara che va costruita.
 
 ---
 
