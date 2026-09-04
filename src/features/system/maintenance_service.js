@@ -108,16 +108,26 @@ export async function powerAction(action) {
     }
 
     if (process.platform === 'linux') {
-        const result = await shell('systemctl', [action], 10000);
-        if (!result.ok) {
-            throw new AppError(
-                ErrorCode.FORBIDDEN,
-                `Il servizio non ha i permessi per eseguire ${action}. Installa la regola polkit argus-maintenance.rules oppure esegui il comando dal terminale.`,
-                { exposable: true }
-            );
+        const attempts = action === 'reboot'
+            ? [['systemctl', ['--no-block', 'reboot']], ['shutdown', ['-r', 'now']], ['/sbin/reboot', []]]
+            : [['systemctl', ['--no-block', 'poweroff']], ['shutdown', ['-h', 'now']], ['/sbin/poweroff', []]];
+
+        const failures = [];
+
+        for (const [command, args] of attempts) {
+            const result = await shell(command, args, 10000);
+            if (result.ok) {
+                log.warn('power action accepted', { action, command });
+                return { action, accepted: true, command };
+            }
+            failures.push(`${command}: ${String(result.error).slice(0, 120)}`);
         }
-        log.warn('power action accepted', { action });
-        return { action, accepted: true };
+
+        throw new AppError(
+            ErrorCode.FORBIDDEN,
+            `Nessun metodo di ${action} disponibile. Su alcune distribuzioni systemd-logind non risponde: installa la regola polkit argus-maintenance.rules oppure esegui shutdown dal terminale. Dettagli: ${failures.join(' | ')}`,
+            { exposable: true }
+        );
     }
 
     if (process.platform === 'win32') {
