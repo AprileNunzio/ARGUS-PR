@@ -128,6 +128,7 @@ case "$PHASE" in
             exit 0
         fi
 
+        chmod -R a+rX "${INSTALL_DIR}" 2>/dev/null || true
         chown -R "$SERVICE_USER":"$SERVICE_USER" "${INSTALL_DIR}/vendor" 2>/dev/null || true
         write_state '{"phase":"pending","attempts":1}'
         log "applicato ${TARGET}, in attesa della conferma di salute"
