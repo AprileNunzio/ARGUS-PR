@@ -58,7 +58,7 @@ function currentLocation() {
 async function mountRoute() {
     const { name, params } = currentLocation();
     state.route = name;
-    setActiveRoute(name, visibleRoutes());
+    setActiveRoute(name, visibleRoutes(), params);
 
     const outlet = document.getElementById('outlet');
     if (!outlet) return;

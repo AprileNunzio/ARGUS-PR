@@ -141,6 +141,17 @@ export async function renderUpdatesView({ api }) {
             actions: headerActions
         });
 
+        let releaseHint = 'Allineato all ultima release';
+        if (available) {
+            releaseHint = 'Nuova versione pronta per l installazione';
+        } else if (latest?.tag) {
+            const cleanCur = String(status.currentVersion ?? '').replace(/^v/, '');
+            const cleanLat = String(latest.tag ?? '').replace(/^v/, '');
+            if (cleanCur !== cleanLat) {
+                releaseHint = `Versione installata (v${cleanCur}) piu recente di GitHub (${latest.tag})`;
+            }
+        }
+
         const statusCards = el('div', { className: 'grid grid--stats rise rise-1' }, [
             el('div', { className: 'stat' }, [
                 el('span', { className: 'stat__icon' }, [icon('server', { className: 'icon--lg' })]),
@@ -155,7 +166,7 @@ export async function renderUpdatesView({ api }) {
                 el('div', { className: 'stat__body' }, [
                     el('span', { className: 'stat__value', textContent: latest ? latest.tag : 'Verifica…' }),
                     el('span', { className: 'stat__label', textContent: 'Ultima Release Disponibile' }),
-                    el('span', { className: 'stat__hint', textContent: available ? 'Aggiornamento pronto' : 'Allineato all ultima release' })
+                    el('span', { className: 'stat__hint', textContent: releaseHint })
                 ])
             ]),
             el('div', { className: 'stat' }, [

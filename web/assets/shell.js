@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 import { icon } from './icons.js';
-import { findRouteInfo } from '/features/dashboard/hub_registry.js';
+import { findRouteInfo, MACRO_AREAS } from '/features/dashboard/hub_registry.js';
 
 let linkDot = null;
 let linkLabel = null;
@@ -13,15 +13,37 @@ export function setLinkState(status) {
     linkLabel.textContent = online ? 'Live' : 'Offline';
 }
 
-export function setActiveRoute(name, routes) {
+export function setActiveRoute(name, routes, params = []) {
     if (!breadcrumbNode) return;
     breadcrumbNode.replaceChildren();
 
     if (name === 'dashboard') {
+        const areaParam = params[0] === 'area' ? params[1] : null;
+        if (!areaParam) {
+            breadcrumbNode.append(
+                el('span', { className: 'breadcrumb__current' }, [
+                    icon('grid'),
+                    el('span', { textContent: 'Cockpit Hub' })
+                ])
+            );
+            return;
+        }
+
+        const areaDef = MACRO_AREAS.find((a) => a.id === areaParam);
         breadcrumbNode.append(
-            el('span', { className: 'breadcrumb__current' }, [
+            el('button', {
+                type: 'button',
+                className: 'breadcrumb__link',
+                title: 'Torna all Hub centrale',
+                onclick: () => { location.hash = '#/dashboard'; }
+            }, [
                 icon('grid'),
-                el('span', { textContent: 'Cockpit Hub' })
+                el('span', { textContent: 'Hub' })
+            ]),
+            el('span', { className: 'breadcrumb__sep', textContent: '›' }),
+            el('span', { className: 'breadcrumb__current' }, [
+                icon(areaDef?.icon ?? 'folder'),
+                el('span', { textContent: areaDef?.title ?? areaParam })
             ])
         );
         return;
@@ -45,17 +67,46 @@ export function setActiveRoute(name, routes) {
 
     if (info?.area) {
         breadcrumbNode.append(
-            el('span', { className: 'breadcrumb__area', textContent: info.area.title }),
+            el('button', {
+                type: 'button',
+                className: 'breadcrumb__link',
+                title: `Vai alla categoria ${info.area.title}`,
+                onclick: () => { location.hash = `#/dashboard/area/${encodeURIComponent(info.area.id)}`; }
+            }, [
+                icon(info.area.icon ?? 'folder'),
+                el('span', { textContent: info.area.title })
+            ]),
             el('span', { className: 'breadcrumb__sep', textContent: '›' })
         );
     }
 
-    breadcrumbNode.append(
-        el('span', { className: 'breadcrumb__current' }, [
-            icon(routeDef?.icon ?? 'apps'),
-            el('span', { textContent: routeDef?.label ?? name })
-        ])
-    );
+    const hasSubParams = Array.isArray(params) && params.length > 0;
+
+    if (hasSubParams) {
+        breadcrumbNode.append(
+            el('button', {
+                type: 'button',
+                className: 'breadcrumb__link',
+                title: `Torna a ${routeDef?.label ?? name}`,
+                onclick: () => { location.hash = `#/${encodeURIComponent(name)}`; }
+            }, [
+                icon(routeDef?.icon ?? 'apps'),
+                el('span', { textContent: routeDef?.label ?? name })
+            ]),
+            el('span', { className: 'breadcrumb__sep', textContent: '›' }),
+            el('span', { className: 'breadcrumb__current' }, [
+                icon('chevronRight'),
+                el('span', { textContent: params.join(' / ') })
+            ])
+        );
+    } else {
+        breadcrumbNode.append(
+            el('span', { className: 'breadcrumb__current' }, [
+                icon(routeDef?.icon ?? 'apps'),
+                el('span', { textContent: routeDef?.label ?? name })
+            ])
+        );
+    }
 }
 
 export function renderShell({ session, routes, onNavigate, onLogout }) {

@@ -44,7 +44,7 @@ function launchpadCard({ pngName, iconName, title, desc, tagNode, color = 'blue'
     return card;
 }
 
-export async function renderDashboard({ session, api }) {
+export async function renderDashboard({ session, api, params = [] }) {
     const root = el('div', { className: 'view launchpad-view' });
     const permissions = session?.permissions ?? [];
 
@@ -56,7 +56,8 @@ export async function renderDashboard({ session, api }) {
         cameraCount: 0
     }));
 
-    let currentAreaId = null;
+    const initialArea = (params[0] === 'area' && params[1]) ? params[1] : null;
+    let currentAreaId = initialArea;
     let viewAllMode = false;
     let searchQuery = '';
 
@@ -124,6 +125,7 @@ export async function renderDashboard({ session, api }) {
         modeCategoryBtn.classList.toggle('seg__btn--on', !viewAllMode && !currentAreaId);
         modeAllBtn.classList.toggle('seg__btn--on', viewAllMode);
     };
+    updateModeBtns();
 
     const wallBtn = el('button', {
         type: 'button',

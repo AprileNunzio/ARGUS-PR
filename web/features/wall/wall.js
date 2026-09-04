@@ -93,6 +93,7 @@ function createStatusBar(onLayoutChange, onDisplaySelect) {
             el('span', { className: 'statusbar__mark' }, [icon('shield')]),
             el('span', { textContent: 'ARGUS-PR' })
         ]),
+        item('IP Server', endpoint),
         item('Griglia', layoutBar),
         item('Canali', channels),
         item('REC', recording),
@@ -326,7 +327,7 @@ async function boot() {
     });
 
     const safeMetrics = () => request('/api/console/status')
-        .then((status) => bar.metrics(status.metrics))
+        .then((status) => bar.update(status))
         .catch(() => {});
 
     await safeRefresh();
