@@ -13,6 +13,7 @@ import { renderDetectionsView } from '/features/detections/detections_view.js';
 import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
 import { renderAutomation } from '/features/automation/automation.js';
+import { renderUpdatesView } from '/features/updates/updates_view.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
 
@@ -26,7 +27,8 @@ const ROUTES = {
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },
     automation: { label: 'Automazioni', icon: 'zap', render: renderAutomation, permission: 'alarm.manage' },
     settings: { label: 'Impostazioni', icon: 'settings', render: renderSettings, permission: 'system.manage' },
-    system: { label: 'Sistema', icon: 'server', render: renderSystem, permission: 'system.manage' }
+    system: { label: 'Telemetria', icon: 'activity', render: renderSystem, permission: 'system.manage' },
+    updates: { label: 'Aggiornamenti', icon: 'download', render: renderUpdatesView, permission: 'system.manage' }
 };
 
 

@@ -1,6 +1,5 @@
 import { el, chip, formatBytes, formatDuration } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
-import { renderUpdatesPanel } from './updates_panel.js';
 import { renderPerformancePanel } from './performance_panel.js';
 
 function statCard(config, delay) {
@@ -25,14 +24,13 @@ function spec(key, value) {
 
 export async function renderSystem({ api }) {
     const outlet = el('div', { className: 'view' });
-    const updates = renderUpdatesPanel({ api });
     const performance = renderPerformancePanel({ api });
     const info = await api.get('/api/system/info');
     const disk = info.storage.mediaDisk;
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Sistema' }),
+            el('h1', { className: 'view__title', textContent: 'Telemetria e Risorse di Sistema' }),
             chip(`v${info.version}`, 'info')
         ]),
 
@@ -50,12 +48,10 @@ export async function renderSystem({ api }) {
         ]),
 
         performance.element,
-        updates.element,
-
 
         el('section', { className: 'panel rise rise-5' }, [
             el('div', { className: 'panel__head' }, [
-                el('span', { className: 'panel__title' }, [icon('server'), 'Installazione'])
+                el('span', { className: 'panel__title' }, [icon('server'), 'Dettagli Installazione e Runtime'])
             ]),
             el('div', { className: 'spec-grid' }, [
                 spec('Node.js', info.node),
@@ -68,6 +64,5 @@ export async function renderSystem({ api }) {
         ])
     );
 
-    await updates.refresh();
     return outlet;
 }

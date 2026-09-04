@@ -64,7 +64,8 @@ export const MACRO_AREAS = [
         subapps: [
             { id: 'cameras', title: 'Telecamere', desc: 'Canali di rete e USB, parametri, orari e zone', icon: 'camera', png: 'app_cameras', route: 'cameras', badge: { text: 'Canali', tone: 'blue' }, permission: 'camera.manage' },
             { id: 'settings', title: 'Impostazioni', desc: 'Pannello schema-driven autogenerante', icon: 'settings', png: 'app_settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
-            { id: 'system', title: 'Telemetria', desc: 'Monitoraggio CPU, RAM, storage e rete', icon: 'activity', png: 'app_telemetry', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' }
+            { id: 'system', title: 'Telemetria', desc: 'Monitoraggio CPU, RAM, storage e rete', icon: 'activity', png: 'app_telemetry', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' },
+            { id: 'updates', title: 'Aggiornamenti & Versioni', desc: 'Controllo release, auto-upgrade OTA e politiche di riavvio', icon: 'download', png: 'app_settings', route: 'updates', badge: { text: 'OTA', tone: 'green' }, permission: 'system.manage' }
         ]
     }
 ];
