@@ -24,24 +24,21 @@ restore_ownership() {
     chmod 0755 "$INSTALL_DIR/bin/argus.js" 2>/dev/null || true
 }
 
-sync_self() {
+adopt_release_script() {
     local source="${INSTALL_DIR}/deploy/linux/pre-start.sh"
 
-    [[ -n "${ARGUS_PRESTART_SYNCED:-}" ]] && return 0
     [[ -f "$source" ]] || return 0
     cmp -s "$source" "$0" && return 0
+    bash -n "$source" 2>/dev/null || { log "la procedura di avvio della nuova release non e valida, conservo quella corrente"; return 0; }
 
     if install -m 0755 "$source" "$0" 2>/dev/null; then
-        log "procedura di avvio allineata alla release installata, riparto"
-        ARGUS_PRESTART_SYNCED=1 exec "$0" "$@"
+        log "procedura di avvio allineata alla release appena installata"
+    else
+        log "impossibile aggiornare la procedura di avvio"
     fi
-
-    log "impossibile allineare la procedura di avvio, proseguo con quella corrente"
 }
 
 [[ -d "${INSTALL_DIR}/.git" ]] || { log "installazione non git, nessuna azione"; exit 0; }
-
-sync_self "$@"
 
 [[ -f "$STATE_FILE" ]] || exit 0
 
@@ -172,6 +169,7 @@ case "$PHASE" in
         fi
 
         restore_ownership
+        adopt_release_script
         write_state '{"phase":"pending","attempts":1}'
         log "applicato ${TARGET}, in attesa della conferma di salute"
         ;;
