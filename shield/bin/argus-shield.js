@@ -128,15 +128,19 @@ async function main() {
         await shield.restoreBans();
         const session = await shield.watch({ fromBeginning: flag('from-beginning') });
 
-        const stop = () => {
-            session.stop();
-            process.exit(0);
-        };
+        return new Promise((resolve) => {
+            const keepAlive = setInterval(() => {}, 60000);
+            const stop = () => {
+                clearInterval(keepAlive);
+                session.stop();
+                process.off('SIGINT', stop);
+                process.off('SIGTERM', stop);
+                resolve(0);
+            };
 
-        process.on('SIGINT', stop);
-        process.on('SIGTERM', stop);
-
-        return new Promise(() => {});
+            process.on('SIGINT', stop);
+            process.on('SIGTERM', stop);
+        });
     }
 
     log.error('comando sconosciuto', { command });
