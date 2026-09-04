@@ -175,5 +175,5 @@ export function registerCameraRoutes(router) {
 
     router.get('/api/cameras/brand-profiles', async () => ({
         body: { profiles: BRAND_PROFILES }
-    }), { permission: Permission.LIVE_VIEW, exposure: Exposure.PUBLIC });
+    }), { anonymous: true, exposure: Exposure.PUBLIC });
 }
