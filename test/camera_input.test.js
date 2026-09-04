@@ -156,6 +156,9 @@ test('la scelta dell encoder scarta quelli che l hardware non sa aprire', async 
     assert.equal(pickEncoder(['cuda'], 'h264_nvenc', ['libx264']), 'libx264');
     assert.equal(pickEncoder([], 'auto', ['libx264']), 'libx264');
 
-    assert.deepEqual(candidateEncoders(['cuda', 'qsv']), ['h264_nvenc', 'h264_qsv', 'libx264']);
-    assert.deepEqual(candidateEncoders([]), ['libx264']);
+    assert.deepEqual(candidateEncoders(['cuda', 'qsv']), ['h264_nvenc', 'h264_qsv', 'h264_v4l2m2m', 'libx264']);
+    assert.deepEqual(candidateEncoders([]), ['h264_v4l2m2m', 'libx264']);
+
+    assert.equal(pickEncoder([], 'auto', ['h264_v4l2m2m', 'libx264']), 'h264_v4l2m2m');
+    assert.equal(pickEncoder([], 'auto', ['libx264']), 'libx264');
 });

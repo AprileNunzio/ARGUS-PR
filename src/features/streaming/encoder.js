@@ -8,6 +8,8 @@ const GPU_ENCODERS = Object.freeze({
 
 const DECODE_ACCELERATORS = Object.freeze(['cuda', 'qsv', 'd3d11va', 'vaapi', 'videotoolbox']);
 
+export const MEM2MEM_ENCODER = 'h264_v4l2m2m';
+
 export function pickAccelerator(accelerators = [], preference = 'auto') {
     if (preference === 'none') return null;
     if (preference !== 'auto' && accelerators.includes(preference)) return preference;
@@ -24,6 +26,8 @@ export function pickEncoder(accelerators = [], preference = 'auto', usable = nul
         if (accelerators.includes(accelerator) && permitted(encoder)) return encoder;
     }
 
+    if (permitted(MEM2MEM_ENCODER)) return MEM2MEM_ENCODER;
+
     return 'libx264';
 }
 
@@ -35,6 +39,7 @@ export function encoderArgs(encoder, options = {}) {
     else if (encoder === 'h264_amf') args.push('-c:v', 'h264_amf', '-usage', 'lowlatency');
     else if (encoder === 'h264_vaapi') args.push('-c:v', 'h264_vaapi');
     else if (encoder === 'h264_videotoolbox') args.push('-c:v', 'h264_videotoolbox', '-realtime', '1');
+    else if (encoder === MEM2MEM_ENCODER) args.push('-c:v', MEM2MEM_ENCODER, '-num_output_buffers', '32', '-num_capture_buffers', '16');
     else args.push('-c:v', 'libx264', '-preset', options.preset ?? 'veryfast', '-tune', options.tune ?? 'zerolatency', '-profile:v', 'main');
 
     args.push('-pix_fmt', 'yuv420p', '-g', String(options.gop ?? 50));

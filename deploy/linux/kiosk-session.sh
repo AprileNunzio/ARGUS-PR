@@ -99,8 +99,18 @@ case "$(basename "$BROWSER")" in
                 --enable-gpu-rasterization
                 --enable-zero-copy
                 --use-gl=egl
-                --enable-features=VaapiVideoDecoder,CanvasOopRasterization,RawDraw
             )
+
+            VIDEO_FEATURES="CanvasOopRasterization"
+
+            if [[ -e /dev/video10 ]]; then
+                VIDEO_FEATURES="AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,${VIDEO_FEATURES}"
+                CHROME_ARGS+=(--enable-accelerated-video-decode)
+            elif [[ -e /dev/dri/renderD128 ]] && command -v vainfo >/dev/null 2>&1 && vainfo >/dev/null 2>&1; then
+                VIDEO_FEATURES="VaapiVideoDecoder,VaapiVideoDecodeLinuxGL,${VIDEO_FEATURES}"
+            fi
+
+            CHROME_ARGS+=(--enable-features="$VIDEO_FEATURES")
         else
             CHROME_ARGS+=(
                 --disable-gpu

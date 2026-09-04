@@ -137,6 +137,9 @@ shield/                   ARGUS-SHIELD: applicativo firewall autonomo, zero dipe
 autoinstaller.sh          installatore Linux non presidiato (entry point del wget)
 deploy/
   systemd/ docker/
+  linux/argus-codec.conf  carica bcm2835-codec: senza questo modulo il
+                          Raspberry Pi non espone /dev/video10 e sia Chromium
+                          sia ffmpeg decodificano l'H.264 via CPU
   linux/                  install.sh, kiosk-session.sh, pre-start.sh
   windows/                install.ps1, uninstall.ps1, installer.iss,
                           build-installer.ps1, quick-start.bat,

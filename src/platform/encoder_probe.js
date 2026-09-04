@@ -58,11 +58,14 @@ export async function detectUsableAccelerators(ffmpegPath, compiled = []) {
     return usable;
 }
 
+export const MEM2MEM_ENCODER = 'h264_v4l2m2m';
+
 export function candidateEncoders(accelerators = []) {
     const candidates = [];
     for (const [accelerator, encoder] of Object.entries(ACCELERATOR_ENCODERS)) {
         if (accelerators.includes(accelerator)) candidates.push(encoder);
     }
+    candidates.push(MEM2MEM_ENCODER);
     candidates.push(SOFTWARE_ENCODER);
     return candidates;
 }

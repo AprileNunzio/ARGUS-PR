@@ -8,6 +8,7 @@ Wants=network-online.target
 Type=simple
 User=argus
 Group=argus
+SupplementaryGroups=video render
 WorkingDirectory=/opt/argus-pr
 ExecStart=/usr/bin/node /opt/argus-pr/bin/argus.js serve
 Restart=always
