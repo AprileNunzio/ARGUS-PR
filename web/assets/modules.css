@@ -491,3 +491,116 @@
     .xrow__control, .roster__controls { width: 100%; }
     .xseg--compact { flex-wrap: wrap; }
 }
+
+.disk-picks { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+
+.disk-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease), transform var(--speed) var(--ease);
+}
+
+.disk-pick:hover { border-color: var(--accent); transform: translateY(-1px); }
+.disk-pick--on { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+
+.disk-pick__icon {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.disk-pick__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.disk-pick__title { font-size: 0.85rem; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disk-pick__path { font-family: var(--mono); font-size: 0.71rem; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disk-pick__meta { font-size: 0.71rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cam-picks { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+
+.cam-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.cam-pick:hover { border-color: var(--accent-line); }
+.cam-pick--on { border-color: var(--emerald); background: var(--emerald-soft); }
+
+.cam-pick__icon { color: var(--emerald); flex: 0 0 auto; }
+.cam-pick__body { display: flex; flex-direction: column; min-width: 0; }
+.cam-pick__name { font-size: 0.82rem; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cam-pick__meta { font-size: 0.7rem; color: var(--muted); }
+
+.bench { display: flex; flex-direction: column; gap: var(--gap-3); }
+.bench__grid { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+
+.bench__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.7rem 0.8rem;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+}
+
+.bench__value { font-family: var(--mono); font-size: 1.25rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.bench__label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 650; color: var(--muted); }
+
+.bundle-list { display: flex; flex-direction: column; gap: var(--gap-2); }
+
+.bundle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.bundle-row:hover { border-color: var(--violet); }
+.bundle-row--on { border-color: var(--violet); background: var(--violet-soft); }
+
+.bundle-row__icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--violet-soft);
+    color: var(--violet);
+}
+
+.bundle-row__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.bundle-row__name { font-size: 0.85rem; font-weight: 650; }
+.bundle-row__path { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bundle-row__meta { font-size: 0.71rem; color: var(--muted); }

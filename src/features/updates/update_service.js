@@ -80,6 +80,10 @@ export async function checkForUpdate({ force = false } = {}) {
     return result;
 }
 
+export function clearUpdateCache() {
+    cachedCheck = null;
+}
+
 export function watchdogSnapshot(config) {
     const state = readState(config);
     const settled = state.phase === Phase.IDLE || state.phase === Phase.HEALTHY;

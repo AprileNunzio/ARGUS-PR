@@ -97,15 +97,13 @@ case "$PHASE" in
 
         git -C "$INSTALL_DIR" remote set-url origin "$OFFICIAL_REMOTE"
 
-        if ! git -C "$INSTALL_DIR" fetch --tags --force --prune --quiet origin; then
-            log "fetch fallito, avvio la versione corrente"
-            write_state '{"phase":"failed","message":"Download da GitHub fallito"}'
-            exit 0
+        if ! git -C "$INSTALL_DIR" fetch --tags --force --quiet origin; then
+            log "fetch da GitHub non riuscito, verifico se il tag e gia presente in locale"
         fi
 
         if ! git -C "$INSTALL_DIR" rev-parse --verify --quiet "refs/tags/${TARGET}^{commit}" >/dev/null; then
-            log "tag ${TARGET} inesistente sul remoto"
-            write_state '{"phase":"failed","message":"Tag non trovato sul repository ufficiale"}'
+            log "tag ${TARGET} non disponibile ne da GitHub ne in locale"
+            write_state '{"phase":"failed","message":"Tag non trovato: repository irraggiungibile e nessun pacchetto offline importato"}'
             exit 0
         fi
 

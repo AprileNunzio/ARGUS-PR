@@ -17,6 +17,7 @@ import { registerCameraRoutes } from './features/cameras/camera_routes.js';
 import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.js';
 import { registerSystemRoutes } from './features/system/system_routes.js';
 import { registerTimeRoutes } from './features/system/time_routes.js';
+import { registerMaintenanceRoutes } from './features/system/maintenance_routes.js';
 import { registerSettingsRoutes } from './features/settings/settings_routes.js';
 import { seedFromConfig, readSetting } from './features/settings/settings_service.js';
 import { registerStreamRoutes } from './features/streaming/stream_routes.js';
@@ -60,6 +61,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerDiscoveryRoutes(router);
     registerSystemRoutes(router);
     registerTimeRoutes(router);
+    registerMaintenanceRoutes(router);
     registerSettingsRoutes(router);
     registerStreamRoutes(router);
     registerRecordingRoutes(router);

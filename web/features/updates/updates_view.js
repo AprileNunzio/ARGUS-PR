@@ -1,341 +1,267 @@
 import { el, chip, notice, confirmPanel, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { card, segmented, toggle, optionRow } from '/assets/ui.js';
 import { controlFor } from '/features/settings/controls.js';
+import { phaseBadge, versionState, watchdogState, statusTiles, releaseDetail } from './updates_panel.js';
+import { offlineUpdateCard } from './offline_card.js';
 
-const PHASE_LABELS = {
-    idle: ['In attesa di istruzioni', 'info'],
-    requested: ['Aggiornamento richiesto (riavvio in corso)', 'warn'],
-    pending: ['In fase di prova / stabilizzazione', 'warn'],
-    healthy: ['Sistema aggiornato e stabile', 'ok'],
-    'rolled-back': ['Ripristinato a versione precedente', 'bad'],
-    failed: ['Aggiornamento fallito', 'bad']
-};
+const RESTART_OPTIONS = [
+    { value: 'ask', label: 'Chiedi conferma', icon: 'info', hint: 'Il sistema segnala l aggiornamento e attende un comando esplicito' },
+    { value: 'window', label: 'Finestra oraria', icon: 'clock', hint: 'Riavvia da solo soltanto negli orari indicati' },
+    { value: 'immediate', label: 'Immediato', icon: 'zap', hint: 'Applica appena disponibile, interrompendo la registrazione per qualche secondo' }
+];
 
-function phaseBadge(phase) {
-    const [label, variant] = PHASE_LABELS[phase] ?? [phase, 'info'];
-    return chip(label, variant);
-}
-
-function releaseNotes(text) {
-    const lines = String(text ?? '')
-        .split('\n')
-        .map((l) => l.replace(/^#{1,6}\s*/, '').replace(/^[-*]\s*/, '').replace(/[`*_]/g, '').trim())
-        .filter((l) => l.length > 0 && !l.startsWith('```'))
-        .slice(0, 10);
-
-    if (lines.length === 0) return null;
-    return el('ul', { className: 'stack stack--tight' }, lines.map((line) => el('li', { className: 'section__hint', textContent: line })));
+function flatten(payload) {
+    const values = {};
+    for (const entry of payload?.settings ?? []) values[entry.key] = entry.value;
+    return values;
 }
 
 export async function renderUpdatesView({ api }) {
     const root = el('div', { className: 'view updates-view' });
+    const feedback = el('div', {});
+    const confirmHost = el('div', {});
 
-    let status = await api.get('/api/updates/status').catch((err) => ({ failure: err }));
-    let settingsValues = await api.get('/api/settings').catch(() => ({}));
+    let status = await api.get('/api/updates/status').catch((error) => ({ failure: error }));
+    let settings = flatten(await api.get('/api/settings').catch(() => null));
 
-    const confirmContainer = el('div', {});
-    const feedbackContainer = el('div', {});
-
-    const refreshData = async () => {
-        status = await api.get('/api/updates/status').catch((err) => ({ failure: err }));
-        settingsValues = await api.get('/api/settings').catch(() => ({}));
+    const refresh = async () => {
+        status = await api.get('/api/updates/status').catch((error) => ({ failure: error }));
+        settings = flatten(await api.get('/api/settings').catch(() => null));
         render();
+    };
+
+    const actionButton = (label, iconName, className, handler) => {
+        const button = el('button', { className, type: 'button' }, [icon(iconName), el('span', { textContent: label })]);
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            await handler(button);
+            button.disabled = false;
+        });
+        return button;
+    };
+
+    const headerActions = () => {
+        const check = actionButton('Verifica nuove versioni', 'refresh', 'btn', async () => {
+            const result = await api.post('/api/updates/check').catch((error) => ({ failure: error }));
+            feedback.replaceChildren(result.failure
+                ? notice('error', `Errore durante la verifica: ${result.failure.message}`)
+                : notice('ok', 'Controllo completato: stato allineato con GitHub.'));
+            await refresh();
+        });
+
+        const actions = [check];
+
+        if (status.phase === 'awaiting-approval' || status.phase === 'pending') {
+            actions.push(actionButton('Approva riavvio', 'check', 'btn btn--primary', async () => {
+                const result = await api.post('/api/updates/approve').catch((error) => ({ failure: error }));
+                feedback.replaceChildren(result.failure
+                    ? notice('error', result.failure.message)
+                    : notice('warn', 'Riavvio approvato. Ricarica la pagina fra 30-60 secondi.'));
+                await refresh();
+            }));
+        }
+
+        if (status.phase === 'requested' || status.phase === 'pending' || status.phase === 'awaiting-approval') {
+            actions.push(actionButton('Annulla aggiornamento', 'close', 'btn btn--danger', async () => {
+                const endpoint = status.phase === 'awaiting-approval' ? '/api/updates/postpone' : '/api/updates/cancel';
+                const result = await api.post(endpoint).catch((error) => ({ failure: error }));
+                feedback.replaceChildren(result.failure
+                    ? notice('error', result.failure.message)
+                    : notice('info', 'Aggiornamento annullato.'));
+                await refresh();
+            }));
+        }
+
+        return actions;
+    };
+
+    const installCard = (version) => {
+        const latest = status.lastCheck?.latest ?? null;
+        const canInstall = version.available && latest && status.supported && (status.phase === 'idle' || status.phase === 'healthy');
+
+        const installButton = canInstall
+            ? el('button', {
+                className: 'btn btn--primary',
+                type: 'button',
+                onclick: () => {
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: `Installare la versione ${latest.tag}?`,
+                        message: `Il servizio verra riavviato automaticamente. Se entro 90 secondi non si stabilizza, il watchdog ripristina la v${status.currentVersion}.`,
+                        confirmLabel: 'Installa e riavvia ora',
+                        onCancel: () => confirmHost.replaceChildren(),
+                        onConfirm: async () => {
+                            const result = await api.post('/api/updates/apply', { ref: latest.tag }).catch((error) => ({ failure: error }));
+                            confirmHost.replaceChildren();
+                            feedback.replaceChildren(result.failure
+                                ? notice('error', result.failure.message)
+                                : notice('warn', `Aggiornamento a ${latest.tag} avviato. Il servizio si sta riavviando: ricarica fra 30-60 secondi.`));
+                            await refresh();
+                        }
+                    }));
+                }
+            }, [icon('download'), el('span', { textContent: `Installa ${latest.tag} subito` })])
+            : null;
+
+        return card({
+            title: 'Stato della release',
+            subtitle: version.detail,
+            iconName: 'download',
+            tone: version.tone === 'ok' ? 'emerald' : (version.tone === 'warn' ? 'amber' : 'cyan'),
+            badge: phaseBadge(status.phase),
+            actions: installButton ? [installButton] : [],
+            body: [
+                version.tone === 'ok'
+                    ? notice('ok', `Sistema aggiornato alla release piu recente: v${status.currentVersion}.`)
+                    : (version.tone === 'warn' ? notice('warn', version.headline) : notice('info', version.headline)),
+                releaseDetail(status.lastCheck),
+                status.message ? el('p', { className: 'section__hint', textContent: `Ultimo esito: ${status.message}` }) : null
+            ]
+        });
+    };
+
+    const watchdogCard = (watchdog) => {
+        const resetButton = actionButton('Azzera stato watchdog', 'shield', 'btn', async () => {
+            const result = await api.post('/api/updates/watchdog/reset').catch((error) => ({ failure: error }));
+            feedback.replaceChildren(result.failure
+                ? notice('error', result.failure.message)
+                : notice('ok', 'Watchdog azzerato: quarantena svuotata e contatore dei tentativi riportato a zero.'));
+            await refresh();
+        });
+
+        return card({
+            title: 'Protezione watchdog e ripristino automatico',
+            subtitle: 'Sorveglia i primi 90 secondi dopo un aggiornamento e ripristina la versione precedente se il servizio non si stabilizza',
+            iconName: 'shield',
+            tone: watchdog.tone === 'ok' ? 'emerald' : (watchdog.tone === 'bad' ? 'red' : 'amber'),
+            badge: chip(watchdog.label, watchdog.tone === 'ok' ? 'ok' : (watchdog.tone === 'bad' ? 'bad' : 'warn')),
+            actions: watchdog.settled && !watchdog.quarantined ? [] : [resetButton],
+            body: [
+                optionRow({
+                    title: 'Tentativi di avvio consumati',
+                    hint: 'Il contatore torna a zero non appena il sistema resta stabile per la finestra di salute',
+                    iconName: 'activity',
+                    control: chip(`${watchdog.attempts}/${watchdog.maxAttempts}`, watchdog.attempts === 0 ? 'ok' : 'warn')
+                }),
+                optionRow({
+                    title: 'Versioni in quarantena',
+                    hint: 'Release escluse dall aggiornamento automatico dopo un ripristino',
+                    iconName: 'lock',
+                    control: watchdog.quarantined
+                        ? el('div', { className: 'row row--tight row--wrap' }, watchdog.quarantineList.map((tag) => chip(tag, 'bad')))
+                        : chip('Nessuna', 'ok')
+                }),
+                optionRow({
+                    title: 'Versione precedente registrata',
+                    hint: 'Punto di ripristino usato dal watchdog in caso di avvio fallito',
+                    iconName: 'archive',
+                    control: chip(status.previousVersion ? `v${status.previousVersion}` : 'Nessuna', 'info')
+                }),
+                el('p', { className: 'xcard__note' }, [
+                    icon('info'),
+                    el('span', { textContent: watchdog.hint })
+                ])
+            ]
+        });
+    };
+
+    const policyCard = () => {
+        const draft = { ...settings };
+        const message = el('span', { className: 'section__hint' });
+        const isWindow = () => (draft['updates.restartPolicy'] ?? 'ask') === 'window';
+
+        const daysRow = optionRow({
+            title: 'Giorni consentiti per la manutenzione',
+            hint: 'Giorni della settimana in cui e ammesso il riavvio per un aggiornamento',
+            iconName: 'timeline',
+            control: controlFor({ type: 'days', value: draft['updates.windowDays'] ?? [0, 1, 2, 3, 4, 5, 6] }, (value) => {
+                draft['updates.windowDays'] = value;
+            })
+        });
+
+        const hoursRow = optionRow({
+            title: 'Fascia oraria della finestra',
+            hint: 'Intervallo notturno o a basso traffico, ad esempio 03:00 - 05:00',
+            iconName: 'clock',
+            control: el('div', { className: 'row row--tight row--nowrap' }, [
+                controlFor({ type: 'time', value: draft['updates.windowStart'] ?? '03:00' }, (value) => { draft['updates.windowStart'] = value; }),
+                el('span', { textContent: '→' }),
+                controlFor({ type: 'time', value: draft['updates.windowEnd'] ?? '05:00' }, (value) => { draft['updates.windowEnd'] = value; })
+            ])
+        });
+
+        daysRow.hidden = !isWindow();
+        hoursRow.hidden = !isWindow();
+
+        const saveButton = actionButton('Salva politiche', 'check', 'btn btn--primary', async () => {
+            const result = await api.put('/api/settings', draft).catch((error) => ({ failure: error }));
+            message.textContent = result.failure ? `Errore: ${result.failure.message}` : 'Politiche salvate.';
+            if (!result.failure) await refresh();
+        });
+
+        return card({
+            title: 'Politiche di installazione e finestre di manutenzione',
+            subtitle: 'Decide quando ARGUS-PR puo cercare e applicare una nuova versione',
+            iconName: 'settings',
+            tone: 'blue',
+            body: [
+                optionRow({
+                    title: 'Cerca aggiornamenti automaticamente',
+                    hint: 'Controlla la presenza di nuove versioni su GitHub all avvio e ogni sei ore',
+                    iconName: 'refresh',
+                    control: toggle(draft['updates.autoCheck'] !== false, (value) => { draft['updates.autoCheck'] = value; })
+                }),
+                optionRow({
+                    title: 'Politica di riavvio',
+                    hint: 'Determina se il riavvio richiede una conferma, attende una finestra oraria o avviene subito',
+                    iconName: 'power',
+                    control: segmented(RESTART_OPTIONS, draft['updates.restartPolicy'] ?? 'ask', (value) => {
+                        draft['updates.restartPolicy'] = value;
+                        daysRow.hidden = value !== 'window';
+                        hoursRow.hidden = value !== 'window';
+                    }, { compact: true })
+                }),
+                daysRow,
+                hoursRow
+            ],
+            footer: [message, saveButton]
+        });
     };
 
     const render = () => {
         if (status.failure) {
             root.replaceChildren(
-                pageHead({ title: 'Aggiornamenti e Manutenzione', hint: 'Gestione ciclo di vita software e aggiornamenti OTA' }),
+                pageHead({ title: 'Aggiornamenti & Manutenzione', hint: 'Gestione del ciclo di vita del software e aggiornamenti OTA' }),
                 notice('error', `Impossibile caricare lo stato degli aggiornamenti: ${status.failure.message}`)
             );
             return;
         }
 
-        const latest = status.lastCheck?.latest ?? null;
-        const available = status.lastCheck?.updateAvailable === true;
-
-        const checkBtn = el('button', {
-            className: 'btn',
-            type: 'button',
-            onclick: async () => {
-                checkBtn.disabled = true;
-                checkBtn.textContent = 'Verifica in corso…';
-                try {
-                    await api.post('/api/updates/check');
-                    feedbackContainer.replaceChildren(notice('ok', 'Controllo completato con successo.'));
-                } catch (e) {
-                    feedbackContainer.replaceChildren(notice('error', `Errore durante la verifica: ${e.message}`));
-                }
-                await refreshData();
-            }
-        }, [icon('refresh'), el('span', { textContent: 'Verifica Nuove Versioni' })]);
-
-        const approveBtn = status.phase === 'pending'
-            ? el('button', {
-                className: 'btn btn--primary',
-                type: 'button',
-                onclick: async () => {
-                    approveBtn.disabled = true;
-                    try {
-                        await api.post('/api/updates/approve');
-                        feedbackContainer.replaceChildren(notice('ok', 'Riavvio approvato. Ricarica la pagina a riavvio avvenuto.'));
-                        await refreshData();
-                    } catch (e) {
-                        feedbackContainer.replaceChildren(notice('error', e.message));
-                        approveBtn.disabled = false;
-                    }
-                }
-            }, [icon('check'), el('span', { textContent: 'Approva Riavvio' })])
-            : null;
-
-        const cancelBtn = (status.phase === 'requested' || status.phase === 'pending')
-            ? el('button', {
-                className: 'btn btn--danger',
-                type: 'button',
-                onclick: async () => {
-                    cancelBtn.disabled = true;
-                    try {
-                        await api.post('/api/updates/cancel');
-                        feedbackContainer.replaceChildren(notice('info', 'Aggiornamento annullato.'));
-                        await refreshData();
-                    } catch (e) {
-                        feedbackContainer.replaceChildren(notice('error', e.message));
-                        cancelBtn.disabled = false;
-                    }
-                }
-            }, [icon('close'), el('span', { textContent: 'Annulla Aggiornamento' })])
-            : null;
-
-        const applyBtn = (available && latest && status.supported && status.phase === 'idle')
-            ? el('button', {
-                className: 'btn btn--primary',
-                type: 'button',
-                onclick: () => {
-                    confirmContainer.replaceChildren(confirmPanel({
-                        title: `Installare versione ${latest.tag}?`,
-                        message: `Il servizio verra riavviato automaticamente. In caso di anomalia entro 90 secondi, verra eseguito il ripristino automatico a ${status.currentVersion}.`,
-                        confirmLabel: 'Installa e Riavvia Ora',
-                        onCancel: () => confirmContainer.replaceChildren(),
-                        onConfirm: async () => {
-                            try {
-                                await api.post('/api/updates/apply', { ref: latest.tag });
-                                confirmContainer.replaceChildren();
-                                feedbackContainer.replaceChildren(
-                                    notice('warn', `Aggiornamento alla versione ${latest.tag} inviato! Il servizio si sta riavviando. Ricarica tra 30-60 secondi.`)
-                                );
-                                await refreshData();
-                            } catch (e) {
-                                confirmContainer.replaceChildren(notice('error', e.message));
-                            }
-                        }
-                    }));
-                }
-            }, [icon('download'), el('span', { textContent: `Installa ${latest.tag} Subito` })])
-            : null;
-
-        const headerActions = [checkBtn, approveBtn, cancelBtn, applyBtn].filter(Boolean);
-
-        const head = pageHead({
-            title: 'Aggiornamenti & Manutenzione',
-            hint: 'Gestione delle versioni, auto-upgrade OTA, watchdog di ripristino e finestre temporali',
-            actions: headerActions
-        });
-
-        let releaseHint = 'Allineato all ultima release';
-        if (available) {
-            releaseHint = 'Nuova versione pronta per l installazione';
-        } else if (latest?.tag) {
-            const cleanCur = String(status.currentVersion ?? '').replace(/^v/, '');
-            const cleanLat = String(latest.tag ?? '').replace(/^v/, '');
-            if (cleanCur !== cleanLat) {
-                releaseHint = `Versione installata (v${cleanCur}) piu recente di GitHub (${latest.tag})`;
-            }
-        }
-
-        const statusCards = el('div', { className: 'grid grid--stats rise rise-1' }, [
-            el('div', { className: 'stat' }, [
-                el('span', { className: 'stat__icon' }, [icon('server', { className: 'icon--lg' })]),
-                el('div', { className: 'stat__body' }, [
-                    el('span', { className: 'stat__value', textContent: `v${status.currentVersion}` }),
-                    el('span', { className: 'stat__label', textContent: 'Versione Installata' }),
-                    el('span', { className: 'stat__hint', textContent: status.supported ? 'Git / OTA Supportato' : 'Installazione Manuale' })
-                ])
-            ]),
-            el('div', { className: 'stat' }, [
-                el('span', { className: 'stat__icon' }, [icon('download', { className: 'icon--lg' })]),
-                el('div', { className: 'stat__body' }, [
-                    el('span', { className: 'stat__value', textContent: latest ? latest.tag : 'Verifica…' }),
-                    el('span', { className: 'stat__label', textContent: 'Ultima Release Disponibile' }),
-                    el('span', { className: 'stat__hint', textContent: releaseHint })
-                ])
-            ]),
-            el('div', { className: 'stat' }, [
-                el('span', { className: 'stat__icon' }, [icon('activity', { className: 'icon--lg' })]),
-                el('div', { className: 'stat__body' }, [
-                    el('span', { className: 'stat__value', textContent: status.phase.toUpperCase() }),
-                    el('span', { className: 'stat__label', textContent: 'Fase Attuale' }),
-                    el('span', { className: 'stat__hint', textContent: `Tentativi di avvio: ${status.attempts ?? 0}/3` })
-                ])
-            ]),
-            el('div', { className: 'stat' }, [
-                el('span', { className: 'stat__icon' }, [icon('shield', { className: 'icon--lg' })]),
-                el('div', { className: 'stat__body' }, [
-                    el('span', { className: 'stat__value', textContent: status.quarantine ? 'QUARANTENA' : 'ATTIVO' }),
-                    el('span', { className: 'stat__label', textContent: 'Protezione Watchdog' }),
-                    el('span', { className: 'stat__hint', textContent: status.quarantine ? `Bloccato: ${status.quarantine}` : 'Rollback automatico pronto' })
-                ])
-            ])
-        ]);
-
-        const releaseCard = el('section', { className: 'panel rise rise-2' }, [
-            el('div', { className: 'panel__head' }, [
-                el('span', { className: 'panel__title' }, [icon('info'), 'Dettagli Ultima Release']),
-                latest ? chip(latest.tag, available ? 'info' : 'ok') : chip('Non verificato', 'warn')
-            ]),
-            el('div', { className: 'panel__body stack' }, [
-                latest ? el('div', { className: 'stack stack--tight' }, [
-                    el('strong', { textContent: latest.name || latest.tag }),
-                    latest.publishedAt ? el('span', { className: 'section__hint', textContent: `Data pubblicazione: ${new Date(latest.publishedAt).toLocaleString()}` }) : null,
-                    releaseNotes(latest.notes),
-                    latest.url ? el('a', {
-                        className: 'section__hint',
-                        href: latest.url,
-                        target: '_blank',
-                        rel: 'noreferrer noopener',
-                        textContent: 'Visualizza rilascio e sorgenti completi su GitHub →'
-                    }) : null
-                ]) : el('div', { className: 'section__hint', textContent: 'Clicca su "Verifica Nuove Versioni" per consultare le note di rilascio ufficiali.' })
-            ])
-        ]);
-
-        const settingsCard = renderSettingsSection(api, settingsValues, () => refreshData());
+        const version = versionState(status);
+        const watchdog = watchdogState(status);
 
         root.replaceChildren(
-            head,
-            feedbackContainer,
-            confirmContainer,
-            statusCards,
-            releaseCard,
-            settingsCard
+            pageHead({
+                title: 'Aggiornamenti & Manutenzione',
+                hint: 'Versioni, auto-upgrade OTA da GitHub, watchdog di ripristino e finestre di manutenzione',
+                actions: headerActions()
+            }),
+            feedback,
+            confirmHost,
+            statusTiles(status, version, watchdog),
+            el('div', { className: 'xstack' }, [
+                installCard(version),
+                offlineUpdateCard({
+                    api,
+                    currentVersion: status.currentVersion,
+                    onApplied: () => { refresh(); }
+                }),
+                watchdogCard(watchdog),
+                policyCard()
+            ])
         );
     };
 
     render();
     return root;
-}
-
-function renderSettingsSection(api, values, onSaved) {
-    const panel = el('section', { className: 'panel rise rise-3' });
-    const localDraft = { ...values };
-    const saveFeedback = el('span', { className: 'section__hint' });
-
-    const saveBtn = el('button', {
-        className: 'btn btn--primary btn--sm',
-        type: 'button',
-        onclick: async () => {
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Salvataggio…';
-            try {
-                await api.put('/api/settings', localDraft);
-                saveFeedback.textContent = 'Politiche salvate con successo.';
-                setTimeout(() => {
-                    saveFeedback.textContent = '';
-                    onSaved();
-                }, 1000);
-            } catch (e) {
-                saveFeedback.textContent = `Errore: ${e.message}`;
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Salva Politiche';
-            }
-        }
-    }, [icon('check'), el('span', { textContent: 'Salva Politiche' })]);
-
-    const autoCheckRow = el('div', { className: 'settings-row' }, [
-        el('div', { className: 'settings-row__info' }, [
-            el('span', { className: 'settings-row__label', textContent: 'Cerca aggiornamenti automaticamente' }),
-            el('span', { className: 'section__hint', textContent: 'Controlla nuove versioni su GitHub periodicamente in background' })
-        ]),
-        el('div', { className: 'settings-row__control' }, [
-            controlFor({
-                type: 'boolean',
-                value: localDraft['updates.autoCheck'] ?? true
-            }, (val) => { localDraft['updates.autoCheck'] = val; })
-        ])
-    ]);
-
-    const policyRow = el('div', { className: 'settings-row' }, [
-        el('div', { className: 'settings-row__info' }, [
-            el('span', { className: 'settings-row__label', textContent: 'Modalita e politica di riavvio' }),
-            el('span', { className: 'section__hint', textContent: 'Conferma: richiede OK manuale. Finestra: riavvia solo negli orari programmati. Subito: aggiorna all istante.' })
-        ]),
-        el('div', { className: 'settings-row__control' }, [
-            controlFor({
-                type: 'enum',
-                value: localDraft['updates.restartPolicy'] ?? 'ask',
-                options: [
-                    { value: 'ask', label: 'Chiedi Conferma' },
-                    { value: 'window', label: 'Finestra Oraria' },
-                    { value: 'immediate', label: 'Immediato' }
-                ]
-            }, (val) => {
-                localDraft['updates.restartPolicy'] = val;
-                windowDaysRow.hidden = val !== 'window';
-                windowHoursRow.hidden = val !== 'window';
-            })
-        ])
-    ]);
-
-    const isWindow = (localDraft['updates.restartPolicy'] ?? 'ask') === 'window';
-
-    const windowDaysRow = el('div', { className: 'settings-row' }, [
-        el('div', { className: 'settings-row__info' }, [
-            el('span', { className: 'settings-row__label', textContent: 'Giorni consentiti per manutenzione' }),
-            el('span', { className: 'section__hint', textContent: 'Giorni della settimana in cui e ammesso il riavvio per upgrade' })
-        ]),
-        el('div', { className: 'settings-row__control' }, [
-            controlFor({
-                type: 'days',
-                value: localDraft['updates.windowDays'] ?? [0, 1, 2, 3, 4, 5, 6]
-            }, (val) => { localDraft['updates.windowDays'] = val; })
-        ])
-    ]);
-    windowDaysRow.hidden = !isWindow;
-
-    const windowHoursRow = el('div', { className: 'settings-row' }, [
-        el('div', { className: 'settings-row__info' }, [
-            el('span', { className: 'settings-row__label', textContent: 'Orario inizio e fine finestra' }),
-            el('span', { className: 'section__hint', textContent: 'Fascia notturna o a basso traffico (es. 03:00 - 05:00)' })
-        ]),
-        el('div', { className: 'settings-row__control row row--tight' }, [
-            controlFor({
-                type: 'time',
-                value: localDraft['updates.windowStart'] ?? '03:00'
-            }, (val) => { localDraft['updates.windowStart'] = val; }),
-            el('span', { textContent: '→' }),
-            controlFor({
-                type: 'time',
-                value: localDraft['updates.windowEnd'] ?? '05:00'
-            }, (val) => { localDraft['updates.windowEnd'] = val; })
-        ])
-    ]);
-    windowHoursRow.hidden = !isWindow;
-
-    panel.replaceChildren(
-        el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title' }, [icon('settings'), 'Politiche di Installazione e Finestre di Manutenzione']),
-            saveBtn
-        ]),
-        el('div', { className: 'panel__body stack' }, [
-            autoCheckRow,
-            policyRow,
-            windowDaysRow,
-            windowHoursRow
-        ]),
-        el('div', { className: 'panel__foot' }, [
-            saveFeedback,
-            saveBtn
-        ])
-    );
-
-    return panel;
 }

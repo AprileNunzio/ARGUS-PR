@@ -67,7 +67,9 @@ export const MACRO_AREAS = [
             { id: 'storage', title: 'Storage & Dischi', desc: 'Hard disk multipli, volumi RAID, quote e destinazioni NAS/SMB', icon: 'disk', png: 'app_settings', route: 'storage', badge: { text: 'Dischi', tone: 'amber' }, permission: 'system.manage' },
             { id: 'settings', title: 'Impostazioni', desc: 'Pannello schema-driven autogenerante', icon: 'settings', png: 'app_settings', route: 'settings', badge: { text: 'Config', tone: 'blue' }, permission: 'system.manage' },
             { id: 'system', title: 'Telemetria', desc: 'Monitoraggio CPU, RAM, storage e rete', icon: 'activity', png: 'app_telemetry', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' },
-            { id: 'updates', title: 'Aggiornamenti & Versioni', desc: 'Controllo release, auto-upgrade OTA e politiche di riavvio', icon: 'download', png: 'app_settings', route: 'updates', badge: { text: 'OTA', tone: 'green' }, permission: 'system.manage' }
+            { id: 'updates', title: 'Aggiornamenti & Versioni', desc: 'Controllo release, auto-upgrade OTA, installazione offline da USB e SMB', icon: 'download', png: 'app_settings', route: 'updates', badge: { text: 'OTA', tone: 'green' }, permission: 'system.manage' },
+            { id: 'maintenance', title: 'Gestione Macchina', desc: 'Riavvio servizi, spegnimento del server e pulizia delle cache', icon: 'power', png: 'app_settings', route: 'maintenance', badge: { text: 'Manutenzione', tone: 'amber' }, permission: 'system.manage' },
+            { id: 'datetime', title: 'Data, Ora & Sincronizzazione', desc: 'Formato 24h o AM/PM, fuso orario, ora legale e NTP', icon: 'clock', png: 'app_settings', route: 'datetime', badge: { text: 'NTP', tone: 'blue' }, permission: 'system.manage' }
         ]
     }
 ];

@@ -106,6 +106,10 @@ src/
   features/wall/          wall_config.js: regia del Muro Video (layout, riquadri,
                           qualita per canale, uscite video, orologio della statusbar)
   features/system/        time_service.js: fuso orario, ora legale, NTP e formato orario
+                          maintenance_service.js: riavvio servizi, alimentazione
+                          della macchina e pulizia delle cache
+  features/updates/       offline_update.js: import di pacchetti git bundle da
+                          USB, share SMB/NFS gia montate, FTP o HTTPS
   app.js                  composizione: avvio, registrazione rotte
 web/
   index.html
@@ -645,6 +649,14 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/updates/apply` | `system.manage`, rate limit 5/1h |
 | POST | `/api/updates/cancel` | `system.manage` |
 | POST | `/api/updates/watchdog/reset` | `system.manage`, rate limit 10/1h |
+| GET | `/api/updates/offline/scan` | `system.manage` |
+| POST | `/api/updates/offline/verify` | `system.manage`, rate limit 20/10min |
+| POST | `/api/updates/offline/download` | `system.manage`, rate limit 5/30min |
+| POST | `/api/updates/offline/apply` | `system.manage`, rate limit 5/1h |
+| GET | `/api/system/maintenance` | `system.manage` |
+| POST | `/api/system/maintenance/service/:id/restart` | `system.manage`, rate limit 10/10min |
+| POST | `/api/system/maintenance/power` | `system.manage`, rate limit 5/10min |
+| POST | `/api/system/maintenance/cache` | `system.manage`, rate limit 20/10min |
 | GET | `/api/wall/config` | `live.view` |
 | PUT | `/api/wall/config` | `system.manage`, rate limit 60/10min |
 | GET | `/api/system/time` | `live.view` |
