@@ -18,7 +18,7 @@ function sourceLabel(camera) {
     return camera.mainStreamUrl ?? 'nessun flusso configurato';
 }
 
-function cameraCard({ camera, recorder, canEdit }) {
+function cameraCard({ camera, recorder, canEdit, onToggleEnabled }) {
     const recording = recorder ? recorder.enabled : false;
 
     return el('article', { className: 'cam-card' }, [
@@ -38,11 +38,22 @@ function cameraCard({ camera, recorder, canEdit }) {
         el('span', { className: 'mono truncate cam-card__source', textContent: sourceLabel(camera) }),
         el('div', { className: 'row row--between' }, [
             camera.group ? chip(camera.group) : el('span', { className: 'section__hint', textContent: 'senza gruppo' }),
-            el('button', {
-                className: 'btn btn--sm btn--primary',
-                type: 'button',
-                onclick: () => go('cameras', camera.id)
-            }, [icon('settings'), el('span', { textContent: canEdit ? 'Configura' : 'Dettagli' })])
+            el('div', { className: 'row row--tight' }, [
+                canEdit ? el('button', {
+                    className: `btn btn--sm ${camera.enabled ? 'btn--ghost' : 'btn--primary'}`,
+                    type: 'button',
+                    title: camera.enabled ? 'Disabilita temporaneamente' : 'Abilita telecamera',
+                    onclick: async (e) => {
+                        e.stopPropagation();
+                        await onToggleEnabled(camera);
+                    }
+                }, [icon('power'), el('span', { textContent: camera.enabled ? 'Spegni' : 'Attiva' })]) : null,
+                el('button', {
+                    className: 'btn btn--sm btn--primary',
+                    type: 'button',
+                    onclick: () => go('cameras', camera.id)
+                }, [icon('settings'), el('span', { textContent: canEdit ? 'Configura' : 'Dettagli' })])
+            ])
         ])
     ]);
 }
@@ -56,6 +67,16 @@ async function renderList({ api, session }) {
 
     const grid = el('div', { className: 'cam-grid' });
     const search = el('input', { className: 'input', type: 'search', placeholder: 'Filtra per nome, gruppo o posizione' });
+
+    const onToggleEnabled = async (cam) => {
+        const nextState = !cam.enabled;
+        cam.enabled = nextState;
+        paint();
+        await api.put(`/api/cameras/${cam.id}`, { enabled: nextState }).catch((err) => {
+            cam.enabled = !nextState;
+            paint();
+        });
+    };
 
     const paint = () => {
         const needle = search.value.trim().toLowerCase();
@@ -73,7 +94,8 @@ async function renderList({ api, session }) {
             : visible.map((camera) => cameraCard({
                 camera,
                 recorder: recorders.find((entry) => entry.cameraId === camera.id),
-                canEdit
+                canEdit,
+                onToggleEnabled
             }))));
     };
 

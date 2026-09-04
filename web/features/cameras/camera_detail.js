@@ -9,6 +9,7 @@ import { renderZoneEditor } from '/features/motion/zone_editor.js';
 
 const TABS = Object.freeze([
     { id: 'general', label: 'Generale', glyph: 'settings' },
+    { id: 'schedule', label: 'Pianificazione', glyph: 'clock' },
     { id: 'recording', label: 'Registrazione', glyph: 'record' },
     { id: 'zones', label: 'Zone di movimento', glyph: 'crop' },
     { id: 'analytics', label: 'Analisi AI', glyph: 'sparkles' },
@@ -160,6 +161,14 @@ function diagnosticsTab({ api, camera }) {
 }
 
 function tabContent({ api, session, camera, recorder, tab }) {
+    if (tab === 'schedule') {
+        return renderScheduleEditor({
+            camera,
+            api,
+            onSaved: () => go('cameras', camera.id, 'schedule'),
+            onCancel: () => go('cameras', camera.id, 'general')
+        });
+    }
     if (tab === 'recording') return recordingTab({ api, camera, recorder });
     if (tab === 'zones') {
         return camera.sourceKind === 'usb' && !camera.deviceId

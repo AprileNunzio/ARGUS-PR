@@ -32,7 +32,9 @@ export function registerKioskRoutes(router) {
     }, { anonymous: true, rateLimit: { limit: 30, windowMs: 60000 }, exposure: Exposure.LOCAL });
 
     router.get('/api/console/status', async (ctx) => {
-        assertLocalConsole(ctx.address);
+        if (!ctx.actor) {
+            assertLocalConsole(ctx.address);
+        }
 
         const setupRequired = isSetupRequired();
         const cameras = setupRequired ? [] : listCameras();
@@ -51,5 +53,5 @@ export function registerKioskRoutes(router) {
                 metrics: liveMetrics()
             }
         };
-    }, { anonymous: true, exposure: Exposure.LOCAL });
+    }, { anonymous: true, exposure: Exposure.PRIVATE });
 }

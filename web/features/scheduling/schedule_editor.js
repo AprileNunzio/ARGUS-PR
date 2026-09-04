@@ -90,8 +90,24 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
                 cellsContainer.append(cell);
             }
 
+            const dayLabel = el('button', {
+                className: 'schedule-day-label btn btn--sm btn--ghost',
+                type: 'button',
+                title: 'Clicca per alternare tutto il giorno',
+                textContent: DAYS[day],
+                onclick: () => {
+                    const daySlots = maskArray.slice(day * SLOTS_PER_DAY, (day + 1) * SLOTS_PER_DAY);
+                    const allActive = daySlots.every((v) => v === 1);
+                    const nextVal = allActive ? 0 : 1;
+                    for (let s = 0; s < SLOTS_PER_DAY; s += 1) {
+                        maskArray[day * SLOTS_PER_DAY + s] = nextVal;
+                    }
+                    updateGridDisplay();
+                }
+            });
+
             const dayRow = el('div', { className: 'schedule-row' }, [
-                el('div', { className: 'schedule-day-label', textContent: DAYS[day] }),
+                dayLabel,
                 cellsContainer
             ]);
             table.append(dayRow);
@@ -101,7 +117,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Tutto attivo',
+                textContent: 'Tutto attivo (24/7)',
                 onclick: () => { maskArray.fill(1); updateGridDisplay(); }
             }),
             el('button', {
@@ -113,7 +129,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Feriali 08:00–18:00',
+                textContent: 'Ufficio (Lun-Ven 08-18)',
                 onclick: () => {
                     maskArray.fill(0);
                     for (let day = 1; day <= 5; day += 1) {
@@ -127,12 +143,25 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Notturno (20:00–06:00)',
+                textContent: 'Notturno (Tutti 20-06)',
                 onclick: () => {
                     maskArray.fill(0);
                     for (let day = 0; day < 7; day += 1) {
                         for (let slot = 0; slot < 12; slot += 1) maskArray[day * SLOTS_PER_DAY + slot] = 1;
                         for (let slot = 40; slot < 48; slot += 1) maskArray[day * SLOTS_PER_DAY + slot] = 1;
+                    }
+                    updateGridDisplay();
+                }
+            }),
+            el('button', {
+                className: 'btn btn--sm',
+                type: 'button',
+                textContent: 'Fine settimana (Sab-Dom 24h)',
+                onclick: () => {
+                    maskArray.fill(0);
+                    for (let s = 0; s < SLOTS_PER_DAY; s += 1) {
+                        maskArray[0 * SLOTS_PER_DAY + s] = 1;
+                        maskArray[6 * SLOTS_PER_DAY + s] = 1;
                     }
                     updateGridDisplay();
                 }

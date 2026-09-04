@@ -463,12 +463,36 @@ want_kiosk() {
 
 install_display_stack() {
     case "$PKG" in
-        apt-get) pkg_install xserver-xorg xserver-xorg-legacy xinit x11-xserver-utils matchbox-window-manager unclutter fonts-dejavu-core || true ;;
-        dnf|yum) pkg_install xorg-x11-server-Xorg xorg-x11-xinit xorg-x11-server-utils matchbox-window-manager unclutter dejavu-sans-fonts || true ;;
-        pacman) pkg_install xorg-server xorg-xinit xorg-xset xorg-xsetroot matchbox-window-manager unclutter ttf-dejavu || true ;;
-        zypper) pkg_install xorg-x11-server xinit xorg-x11-essentials matchbox-window-manager unclutter dejavu-fonts || true ;;
-        apk) pkg_install xorg-server xinit xset xsetroot matchbox-window-manager unclutter font-dejavu || true ;;
+        apt-get)
+            pkg_install xserver-xorg xserver-xorg-legacy xinit x11-xserver-utils matchbox-window-manager unclutter fonts-dejavu-core || true
+            pkg_try libgl1-mesa-dri mesa-va-drivers mesa-vulkan-drivers intel-media-va-driver va-driver-all libva-drm2 || true
+            ;;
+        dnf|yum)
+            pkg_install xorg-x11-server-Xorg xorg-x11-xinit xorg-x11-server-utils matchbox-window-manager unclutter dejavu-sans-fonts || true
+            pkg_try mesa-dri-drivers libva-intel-driver || true
+            ;;
+        pacman)
+            pkg_install xorg-server xorg-xinit xorg-xset xorg-xsetroot matchbox-window-manager unclutter ttf-dejavu || true
+            pkg_try mesa libva-mesa-driver intel-media-driver || true
+            ;;
+        zypper)
+            pkg_install xorg-x11-server xinit xorg-x11-essentials matchbox-window-manager unclutter dejavu-fonts || true
+            pkg_try Mesa-dri libva-intel-driver || true
+            ;;
+        apk)
+            pkg_install xorg-server xinit xset xsetroot matchbox-window-manager unclutter font-dejavu || true
+            pkg_try mesa-dri-gallium || true
+            ;;
     esac
+
+    for cfg in /boot/firmware/config.txt /boot/config.txt; do
+        if [[ -f "$cfg" ]] && grep -q "vc4-kms-v3d" "$cfg"; then
+            sed -i 's/^#\(dtoverlay=vc4-kms-v3d.*\)/\1/' "$cfg" || true
+            if grep -q "gpu_mem_1024=16" "$cfg"; then
+                sed -i 's/gpu_mem_1024=16/gpu_mem_1024=128/' "$cfg" || true
+            fi
+        fi
+    done
 }
 
 resolve_browser() {

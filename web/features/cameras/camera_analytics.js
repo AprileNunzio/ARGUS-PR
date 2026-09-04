@@ -13,14 +13,24 @@ function engineOption(engine) {
     return option;
 }
 
+const ICONS = Object.freeze({
+    motion: 'activity',
+    person: 'users',
+    vehicle: 'zap',
+    face: 'eye',
+    anpr: 'camera',
+    animal: 'sparkles'
+});
+
 function capabilityCard({ capability, entry, onChange }) {
     const engines = capability.engines ?? [];
     const ready = engines.filter((engine) => engine.status === 'ready');
+    const isEnabled = Boolean(entry.enabled);
 
-    const toggle = el('input', { type: 'checkbox', className: 'switch__input', checked: entry.enabled });
-    const toggleLabel = el('span', { className: 'switch__label', textContent: entry.enabled ? 'Attivo' : 'Disattivo' });
+    const toggle = el('input', { type: 'checkbox', className: 'switch__input', checked: isEnabled });
+    const toggleLabel = el('span', { className: 'switch__label', textContent: isEnabled ? 'Attivo' : 'Disattivo' });
 
-    const engineSelect = el('select', { className: 'select' }, engines.map(engineOption));
+    const engineSelect = el('select', { className: 'select select--full' }, engines.map(engineOption));
     engineSelect.value = entry.engineId;
 
     const threshold = el('input', {
@@ -37,6 +47,13 @@ function capabilityCard({ capability, entry, onChange }) {
     const description = engines.find((engine) => engine.id === entry.engineId)?.hint ?? '';
     const engineHint = el('span', { className: 'section__hint', textContent: description });
 
+    const cardIcon = ICONS[capability.id] || 'sparkles';
+    const avatar = el('div', { className: `cap-card__avatar${isEnabled ? ' cap-card__avatar--active' : ''}` }, [
+        icon(cardIcon, { className: 'icon--md' })
+    ]);
+
+    const card = el('article', { className: `cap-card${isEnabled ? ' cap-card--active' : ''}` });
+
     const emit = () => {
         onChange({
             capability: capability.id,
@@ -48,7 +65,15 @@ function capabilityCard({ capability, entry, onChange }) {
     };
 
     toggle.addEventListener('change', () => {
-        toggleLabel.textContent = toggle.checked ? 'Attivo' : 'Disattivo';
+        const active = toggle.checked;
+        toggleLabel.textContent = active ? 'Attivo' : 'Disattivo';
+        if (active) {
+            card.classList.add('cap-card--active');
+            avatar.classList.add('cap-card__avatar--active');
+        } else {
+            card.classList.remove('cap-card--active');
+            avatar.classList.remove('cap-card__avatar--active');
+        }
         emit();
     });
 
@@ -62,35 +87,44 @@ function capabilityCard({ capability, entry, onChange }) {
     });
     threshold.addEventListener('change', emit);
 
-    return el('article', { className: 'cap-card' }, [
-        el('div', { className: 'row row--between' }, [
-            el('div', { className: 'stack stack--tight' }, [
-                el('div', { className: 'row row--tight' }, [
-                    el('strong', { textContent: capability.label }),
-                    capability.sensitive ? chip('dato biometrico', 'warn') : null,
-                    entry.blockedBy ? chip(`richiede ${entry.blockedBy}`, 'bad') : null
-                ]),
-                el('span', { className: 'section__hint', textContent: capability.hint })
-            ]),
-            el('label', { className: 'switch' }, [
-                toggle,
-                el('span', { className: 'switch__track' }, [el('span', { className: 'switch__thumb' })]),
-                toggleLabel
+    const lead = el('div', { className: 'cap-card__lead' }, [
+        avatar,
+        el('div', { className: 'cap-card__info' }, [
+            el('span', { className: 'cap-card__title', textContent: capability.label }),
+            el('div', { className: 'cap-card__badge-row' }, [
+                capability.sensitive ? chip('dato biometrico', 'warn') : null,
+                entry.blockedBy ? chip(`richiede ${entry.blockedBy}`, 'bad') : null
             ])
-        ]),
-        el('div', { className: 'form-grid' }, [
-            el('div', { className: 'field' }, [
-                el('label', { textContent: 'Algoritmo' }),
-                engineSelect
-            ]),
-            el('div', { className: 'field' }, [
-                el('label', { textContent: 'Confidenza minima' }),
-                el('div', { className: 'slider-wrap' }, [threshold, thresholdBadge])
-            ])
-        ]),
-        engineHint,
-        ready.length === 0 ? notice('warn', 'Nessun motore pronto per questa capacita.') : null
+        ])
     ]);
+
+    const header = el('div', { className: 'cap-card__header' }, [
+        lead,
+        el('label', { className: 'switch' }, [
+            toggle,
+            el('span', { className: 'switch__track' }, [el('span', { className: 'switch__thumb' })]),
+            toggleLabel
+        ])
+    ]);
+
+    const controls = el('div', { className: 'cap-card__controls' }, [
+        el('div', { className: 'field' }, [
+            el('label', { textContent: 'Modello & Algoritmo' }),
+            engineSelect
+        ]),
+        el('div', { className: 'field' }, [
+            el('label', { textContent: 'Confidenza minima rilevamento' }),
+            el('div', { className: 'slider-wrap' }, [threshold, thresholdBadge])
+        ])
+    ]);
+
+    const footer = el('div', { className: 'cap-card__footer' }, [
+        engineHint,
+        ready.length === 0 ? chip('Modello non pronto', 'bad') : chip('Pronto all uso', 'good')
+    ]);
+
+    card.replaceChildren(header, controls, footer);
+    return card;
 }
 
 export function renderCameraAnalytics({ api, camera, session }) {

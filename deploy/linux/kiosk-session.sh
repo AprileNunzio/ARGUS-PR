@@ -62,6 +62,11 @@ RES="$(xrandr 2>/dev/null | awk '/\*/ {print $1; exit}')"
 RES_W="${RES%x*}"
 RES_H="${RES#*x}"
 
+HAS_DRI="no"
+if [[ -e /dev/dri/renderD128 || -e /dev/dri/card0 ]]; then
+    HAS_DRI="yes"
+fi
+
 case "$(basename "$BROWSER")" in
     firefox|firefox-esr)
         if [[ "$CA_TRUSTED" == "yes" && ! -f "${PROFILE}/cert9.db" ]]; then
@@ -87,6 +92,21 @@ case "$(basename "$BROWSER")" in
             --start-maximized
             --window-position=0,0
         )
+
+        if [[ "$HAS_DRI" == "yes" ]]; then
+            CHROME_ARGS+=(
+                --ignore-gpu-blocklist
+                --enable-gpu-rasterization
+                --enable-zero-copy
+                --use-gl=egl
+                --enable-features=VaapiVideoDecoder,CanvasOopRasterization,RawDraw
+            )
+        else
+            CHROME_ARGS+=(
+                --disable-gpu
+                --disable-software-rasterizer
+            )
+        fi
 
         if [[ -n "${RES_W:-}" && -n "${RES_H:-}" ]]; then
             CHROME_ARGS+=(--window-size="${RES_W},${RES_H}")

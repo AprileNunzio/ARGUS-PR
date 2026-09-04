@@ -196,12 +196,17 @@ async function boot() {
             if (current?.username) {
                 authenticated = true;
             } else {
-                await request('/api/console/session', {
+                const sessionRes = await request('/api/console/session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: '{}'
-                });
-                authenticated = true;
+                }).catch(() => null);
+                if (sessionRes) {
+                    authenticated = true;
+                } else {
+                    grid.message(`Accesso richiesto.\nEffettua prima il login su ${bar.webUrl} per visualizzare il Muro Video.`);
+                    return;
+                }
             }
         }
 

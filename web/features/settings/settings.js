@@ -1,10 +1,8 @@
 import { el, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { controlFor, isVisible } from './controls.js';
-import { renderUpdatesPanel } from '/features/system/updates_panel.js';
 
 const GROUP_META = {
-    updates: { subtitle: 'Canale di rilascio, politica di riavvio e installazione aggiornamenti', icon: 'download', color: 'blue' },
     remote: { subtitle: 'Esposizione su internet, reti fidate LAN e proxy', icon: 'globe', color: 'cyan' },
     security: { subtitle: 'MFA TOTP, blocco account anti-bruteforce e durata sessioni', icon: 'shield', color: 'amber' },
     kiosk: { subtitle: 'Console HDMI loopback, flussi secondari e visualizzatore', icon: 'tv', color: 'emerald' },
@@ -91,8 +89,8 @@ export async function renderSettings({ api }) {
 
     if (!payload) return root;
 
-    const groups = payload.groups ?? [];
-    const settings = payload.settings ?? [];
+    const groups = (payload.groups ?? []).filter((g) => g.id !== 'updates');
+    const settings = (payload.settings ?? []).filter((s) => s.group !== 'updates');
     const values = Object.fromEntries(settings.map((entry) => [entry.key, entry.value]));
     const draft = {};
 
@@ -247,15 +245,9 @@ export async function renderSettings({ api }) {
                 tabs
             ]);
 
-            const subCardsContainer = el('div', { className: 'settings-subcards-grid' });
-
-            if (activeGroup.id === 'updates') {
-                const updatesHost = renderUpdatesPanel({ api });
-                subCardsContainer.append(updatesHost);
-            }
-
             const entries = settings.filter((s) => s.group === activeGroup.id);
             const sectionsDef = activeGroup.sections ?? [{ id: 'default', label: 'Parametri', icon: 'sliders' }];
+            const subCardsContainer = el('div', { className: 'settings-subcards-grid' });
 
             for (const sec of sectionsDef) {
                 const matching = entries.filter((e) => (e.section ?? 'default') === sec.id);

@@ -426,7 +426,18 @@
 .auto-step--fail { border-color: #fecaca; }
 .auto-step--fail .auto-step__icon { color: #b91c1c; }
 
-.cap-card { display: flex; flex-direction: column; gap: var(--gap-2); padding: var(--gap-3); border: 1px solid var(--rule); border-radius: var(--radius-md); background: var(--surface); }
+.cap-card { display: flex; flex-direction: column; gap: var(--gap-3); padding: 1.25rem 1.4rem; border: 1px solid var(--rule); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03); transition: all .2s cubic-bezier(0.16, 1, 0.3, 1); }
+.cap-card:hover { border-color: var(--accent-line); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06); }
+.cap-card--active { border-color: rgba(99, 102, 241, 0.35); background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(238, 242, 255, 0.4)); }
+.cap-card__header { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-3); flex-wrap: wrap; }
+.cap-card__lead { display: flex; align-items: center; gap: 12px; }
+.cap-card__avatar { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--surface-2); color: var(--accent); border: 1px solid var(--rule-soft); }
+.cap-card__avatar--active { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+.cap-card__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cap-card__title { font-size: 1rem; font-weight: 750; color: var(--foreground); }
+.cap-card__badge-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.cap-card__controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap-3); padding-top: var(--gap-2); border-top: 1px solid var(--rule-soft); }
+.cap-card__footer { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-2); font-size: 0.78rem; color: var(--muted); }
 
 .confirm-panel { border-color: #fecaca; background: #fff5f5; }
 .page-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; }
