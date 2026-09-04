@@ -40,6 +40,8 @@ export function createStatusBar(onLayoutChange) {
     const displayInfo = el('span', { className: 'statusbar__value', textContent: '--' });
     const version = el('span', { className: 'statusbar__value', textContent: '--' });
     const clockTime = el('span', { className: 'statusbar__clock', textContent: '--:--:--' });
+    const linkDot = el('span', { className: 'statusbar__link-dot' });
+    const linkLabel = el('span', { className: 'statusbar__value', textContent: 'attesa' });
     const clockDate = el('span', { className: 'statusbar__date' });
 
     let activeLayout = 'auto';
@@ -75,6 +77,11 @@ export function createStatusBar(onLayoutChange) {
             el('span', { textContent: 'ARGUS-PR' })
         ]),
         item('IP Server', endpoint),
+        el('span', { className: 'statusbar__item', title: 'Sincronizzazione live della configurazione' }, [
+            el('span', { className: 'statusbar__label', textContent: 'Sync' }),
+            linkDot,
+            linkLabel
+        ]),
         item('Griglia', layoutBar),
         item('Canali', channels),
         item('REC', recording),
@@ -116,6 +123,11 @@ export function createStatusBar(onLayoutChange) {
             clockSettings = { ...DEFAULT_CLOCK, ...(clock ?? {}) };
             timeZone = zone ?? null;
             tick();
+        },
+        setLink(state) {
+            const online = state === 'online';
+            linkDot.className = online ? 'statusbar__link-dot statusbar__link-dot--on' : 'statusbar__link-dot statusbar__link-dot--off';
+            linkLabel.textContent = online ? 'live' : 'offline';
         },
         setLayout(layoutId) {
             activeLayout = layoutId;

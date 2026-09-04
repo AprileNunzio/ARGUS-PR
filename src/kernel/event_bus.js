@@ -19,7 +19,9 @@ export const Topic = Object.freeze({
     ANALYTICS_UPDATED: 'analytics.updated',
     ACCESS: 'access.event',
     UPDATE: 'update.state',
-    SETTINGS: 'settings.changed'
+    SETTINGS: 'settings.changed',
+    WALL_CONFIG: 'wall.config',
+    TIME_CONFIG: 'time.config'
 });
 
 

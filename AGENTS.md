@@ -108,7 +108,10 @@ src/
                           periferiche di acquisizione; camera_payload.js valida
   features/settings/      settings_schema.js dichiara OGNI impostazione modificabile
   features/wall/          wall_config.js: regia del Muro Video (layout, riquadri,
-                          qualita per canale, uscite video, orologio della statusbar)
+                          qualita per canale, uscite video, orologio della statusbar).
+                          Ogni salvataggio pubblica wall.config sul bus eventi e
+                          l'overview espone una revisione: HDMI e Muro web applicano
+                          la stessa configurazione entro un istante, senza polling
   features/system/        time_service.js: fuso orario, ora legale, NTP e formato orario
                           maintenance_service.js: riavvio servizi, alimentazione
                           della macchina e pulizia delle cache

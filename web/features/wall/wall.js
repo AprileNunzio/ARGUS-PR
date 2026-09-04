@@ -1,9 +1,10 @@
 import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
 import { createStatusBar, presetById } from './wall_statusbar.js';
+import { connectWallEvents } from './wall_live.js';
 
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
-const CONFIG_INTERVAL_MS = 15000;
+const CONFIG_INTERVAL_MS = 30000;
 
 function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
@@ -187,18 +188,23 @@ async function boot() {
 
     let authenticated = false;
     let plan = [];
+    let revision = null;
 
     const applyConfig = async () => {
         const payload = await request('/api/wall/config').catch(() => null);
         if (!payload) return;
 
         plan = payload.plan ?? [];
-        bar.setClock(payload.config.clock, payload.timezone ?? null);
-        bar.setLayout(payload.config.layout);
-        grid.setLayout(presetById(payload.config.layout));
 
-        const enabledOutputs = (payload.config.outputs ?? []).filter((output) => output.enabled).map((output) => output.id);
-        bar.setOutputs(enabledOutputs);
+        if (payload.revision !== revision) {
+            revision = payload.revision;
+            bar.setClock(payload.config.clock, payload.timezone ?? null);
+            bar.setLayout(payload.config.layout);
+            grid.setLayout(presetById(payload.config.layout));
+
+            const enabledOutputs = (payload.config.outputs ?? []).filter((output) => output.enabled).map((output) => output.id);
+            bar.setOutputs(enabledOutputs);
+        }
 
         if (plan.length > 0) grid.render(plan);
     };
@@ -257,6 +263,9 @@ async function boot() {
     };
 
     await safeRefresh();
+
+    connectWallEvents(() => safeConfig(), (state) => bar.setLink(state));
+
     setInterval(safeRefresh, STATUS_INTERVAL_MS);
     setInterval(safeMetrics, METRICS_INTERVAL_MS);
     setInterval(safeConfig, CONFIG_INTERVAL_MS);

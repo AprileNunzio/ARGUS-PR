@@ -42,6 +42,30 @@ export async function renderWallSettings({ api }) {
     let dirty = false;
     let clockTimer = null;
 
+    const reload = async () => {
+        const fresh = await api.get('/api/wall/config').catch(() => null);
+        if (!fresh || fresh.revision === payload.revision) return;
+
+        if (dirty) {
+            feedback.replaceChildren(notice('warn', 'La configurazione del muro e stata modificata altrove. Salva per sovrascriverla oppure ricarica la pagina per vedere la versione aggiornata.'));
+            return;
+        }
+
+        payload = fresh;
+        draft = clonePayload(fresh.config);
+        feedback.replaceChildren(notice('info', 'Configurazione aggiornata da un altro operatore.'));
+        render();
+    };
+
+    const onRemoteEvent = (event) => {
+        const topic = event.detail?.topic;
+        if (topic === 'wall.config' || topic === 'time.config' || topic === 'camera.updated' || topic === 'camera.created' || topic === 'camera.deleted') {
+            reload();
+        }
+    };
+
+    window.addEventListener('argus:event', onRemoteEvent);
+
     const markDirty = () => {
         dirty = true;
         render();
@@ -56,7 +80,7 @@ export async function renderWallSettings({ api }) {
         payload = result;
         draft = clonePayload(result.config);
         dirty = false;
-        feedback.replaceChildren(notice('ok', 'Regia salvata. Il Muro Video applica la nuova configurazione entro 15 secondi.'));
+        feedback.replaceChildren(notice('ok', 'Regia salvata e applicata immediatamente al Muro Video su HDMI e su web.'));
         render();
     };
 
@@ -292,6 +316,7 @@ export async function renderWallSettings({ api }) {
 
     root.addEventListener('argus:teardown', () => {
         if (clockTimer) clearInterval(clockTimer);
+        window.removeEventListener('argus:event', onRemoteEvent);
     });
 
     render();

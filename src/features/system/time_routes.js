@@ -1,6 +1,7 @@
 import { Permission } from '../../security/rbac.js';
 import { Exposure } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
+import { publish, Topic } from '../../kernel/event_bus.js';
 import { timeOverview, saveTimeConfig, synchroniseNow } from './time_service.js';
 
 export function registerTimeRoutes(router) {
@@ -24,6 +25,8 @@ export function registerTimeRoutes(router) {
                 appliedToSystem: outcome.system.applied
             }
         });
+
+        publish(Topic.TIME_CONFIG, { timezone: outcome.config.timezone, format: outcome.config.format });
 
         return { body: { ...(await timeOverview()), system: outcome.system } };
     }, {
