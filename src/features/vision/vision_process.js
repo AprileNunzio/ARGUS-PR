@@ -38,7 +38,9 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         lastDetectionAt: null,
         lastError: null,
         inferenceMs: null,
-        provider: null
+        provider: null,
+        droppedFrames: 0,
+        analysisFps: 0
     };
 
     const framesWindow = [];
@@ -75,9 +77,15 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
 
             if (backend) ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
 
+            const analysisFps = Number(performanceSettings.analysisFps) > 0
+                ? Math.max(1, Math.min(15, Math.round(performanceSettings.analysisFps)))
+                : 2;
+
+            stats.analysisFps = analysisFps;
+
             ffmpegArgs.push(
                 '-an',
-                '-vf', 'fps=5,scale=640:360',
+                '-vf', `fps=${analysisFps},scale=640:360`,
                 '-f', 'rawvideo',
                 '-pix_fmt', 'bgr24',
                 'pipe:1'
@@ -146,6 +154,7 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
                 stats.lastFrameAt = now;
                 if (Number.isFinite(parsed.ms)) stats.inferenceMs = Math.round(parsed.ms);
                 if (typeof parsed.provider === 'string') stats.provider = parsed.provider;
+                if (Number.isFinite(parsed.dropped)) stats.droppedFrames = parsed.dropped;
 
                 framesWindow.push(now);
                 while (framesWindow.length > 0 && now - framesWindow[0] > 10000) framesWindow.shift();
@@ -216,6 +225,7 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
             return {
                 ...stats,
                 framesPerSecond: Math.round((recent.length / 10) * 10) / 10,
+                saturated: stats.inferenceMs !== null && stats.analysisFps > 0 && stats.inferenceMs > 1000 / stats.analysisFps,
                 uptimeSeconds: stats.startedAt ? Math.round((now - stats.startedAt) / 1000) : 0,
                 stale: stats.lastFrameAt !== null && now - stats.lastFrameAt > 15000
             };

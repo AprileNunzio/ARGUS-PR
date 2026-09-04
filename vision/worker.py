@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import select
 import sys
 import time
 
@@ -30,6 +31,41 @@ DEFAULT_PROFILE = {
 
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 360
+
+
+MAX_SKIP_PER_CYCLE = 12
+CAN_POLL = os.name == 'posix'
+
+
+def read_exact(fd, size):
+    buffer = bytearray()
+    while len(buffer) < size:
+        try:
+            chunk = os.read(fd, size - len(buffer))
+        except OSError:
+            return None
+        if not chunk:
+            return None
+        buffer.extend(chunk)
+    return bytes(buffer)
+
+
+def latest_frame(fd, current, size):
+    if not CAN_POLL:
+        return current, 0
+
+    skipped = 0
+    while skipped < MAX_SKIP_PER_CYCLE:
+        ready, _, _ = select.select([fd], [], [], 0)
+        if not ready:
+            break
+        newer = read_exact(fd, size)
+        if newer is None:
+            return None, skipped
+        current = newer
+        skipped += 1
+
+    return current, skipped
 
 
 def parse_profile(raw):
@@ -89,25 +125,40 @@ def main():
     provider = getattr(engine, 'provider', None) or (ort.get_available_providers() or ['CPUExecutionProvider'])[0]
 
     frame_bytes = FRAME_WIDTH * FRAME_HEIGHT * 3
+    source = sys.stdin.fileno()
     seq = 0
+    dropped = 0
 
     while True:
-        raw = sys.stdin.buffer.read(frame_bytes)
-        if len(raw) < frame_bytes:
+        raw = read_exact(source, frame_bytes)
+        if raw is None:
             break
+
+        raw, skipped = latest_frame(source, raw, frame_bytes)
+        if raw is None:
+            break
+
+        dropped += skipped
         seq += 1
+
         frame = np.frombuffer(raw, dtype=np.uint8).reshape((FRAME_HEIGHT, FRAME_WIDTH, 3))
         started = time.perf_counter()
         detections = engine.process_frame(frame)
         elapsed = (time.perf_counter() - started) * 1000.0
-        sys.stdout.write(json.dumps({
-            't': int(time.time() * 1000),
-            'seq': seq,
-            'ms': round(elapsed, 1),
-            'provider': provider,
-            'dets': detections
-        }) + '\n')
-        sys.stdout.flush()
+
+        try:
+            sys.stdout.write(json.dumps({
+                't': int(time.time() * 1000),
+                'seq': seq,
+                'ms': round(elapsed, 1),
+                'skipped': skipped,
+                'dropped': dropped,
+                'provider': provider,
+                'dets': detections
+            }) + '\n')
+            sys.stdout.flush()
+        except (BrokenPipeError, ValueError):
+            break
 
 
 if __name__ == '__main__':

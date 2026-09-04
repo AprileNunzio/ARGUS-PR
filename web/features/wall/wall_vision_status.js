@@ -68,6 +68,10 @@ function cameraRow(entry) {
                 el('span', { className: 'spec__v', textContent: String(entry.detections ?? 0) })
             ]),
             el('div', { className: 'spec' }, [
+                el('span', { className: 'spec__k', textContent: 'Fotogrammi scartati' }),
+                el('span', { className: 'spec__v', textContent: String(entry.droppedFrames ?? 0) })
+            ]),
+            el('div', { className: 'spec' }, [
                 el('span', { className: 'spec__k', textContent: 'Riavvii del worker' }),
                 el('span', { className: 'spec__v', textContent: String(entry.restarts ?? 0) })
             ]),
@@ -80,6 +84,12 @@ function cameraRow(entry) {
             el('span', { className: 'xrow__hint', textContent: 'Classi analizzate:' }),
             ...(entry.classes ?? []).map((className) => chip(CLASS_LABELS[className] ?? className, 'info'))
         ]),
+        entry.saturated
+            ? el('p', { className: 'xcard__note' }, [
+                icon('warning'),
+                el('span', { textContent: `L inferenza impiega ${entry.inferenceMs} ms ma il canale analizza ${entry.analysisFps} fotogrammi al secondo: il motore scarta i fotogrammi arretrati per restare in tempo reale. Abbassa la frequenza di analisi in Impostazioni, Prestazioni.` })
+            ])
+            : null,
         entry.lastError
             ? el('p', { className: 'vision-row__error' }, [icon('warning'), el('span', { textContent: entry.lastError })])
             : null

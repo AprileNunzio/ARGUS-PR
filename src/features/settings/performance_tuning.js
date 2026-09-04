@@ -18,8 +18,17 @@ export const DEFAULT_PERFORMANCE_SETTINGS = Object.freeze({
     sqliteCacheSizeMb: 128,
     sqliteMmapSizeMb: 512,
     streamRingBufferKb: 4096,
+    analysisFps: 0,
     performancePreset: 'max_performance'
 });
+
+export function suggestedAnalysisFps(profile = getHardwareProfile()) {
+    const cores = profile.cpu.logicalCores || 1;
+    if (cores <= 2) return 1;
+    if (cores <= 4) return 2;
+    if (cores <= 8) return 4;
+    return 5;
+}
 
 export function getPresetSettings(presetName, profile = getHardwareProfile()) {
     const totalMemMb = Math.floor(profile.memory.totalBytes / (1024 * 1024));
@@ -37,6 +46,7 @@ export function getPresetSettings(presetName, profile = getHardwareProfile()) {
                 sqliteCacheSizeMb: Math.min(1024, Math.max(256, Math.floor(totalMemMb * 0.08))),
                 sqliteMmapSizeMb: Math.min(4096, Math.max(1024, Math.floor(totalMemMb * 0.15))),
                 streamRingBufferKb: 8192,
+                analysisFps: suggestedAnalysisFps(profile),
                 performancePreset: PERFORMANCE_PRESETS.MAX_PERFORMANCE
             };
         case PERFORMANCE_PRESETS.BALANCED:
@@ -50,6 +60,7 @@ export function getPresetSettings(presetName, profile = getHardwareProfile()) {
                 sqliteCacheSizeMb: 128,
                 sqliteMmapSizeMb: 512,
                 streamRingBufferKb: 4096,
+                analysisFps: Math.max(1, suggestedAnalysisFps(profile) - 1),
                 performancePreset: PERFORMANCE_PRESETS.BALANCED
             };
         case PERFORMANCE_PRESETS.POWER_SAVING:
@@ -63,6 +74,7 @@ export function getPresetSettings(presetName, profile = getHardwareProfile()) {
                 sqliteCacheSizeMb: 32,
                 sqliteMmapSizeMb: 64,
                 streamRingBufferKb: 2048,
+                analysisFps: 1,
                 performancePreset: PERFORMANCE_PRESETS.POWER_SAVING
             };
         default:
@@ -98,6 +110,11 @@ export function sanitizePerformanceSettings(input, profile = getHardwareProfile(
     const sqliteMmapSizeMb = Math.max(0, Math.min(8192, Number(base.sqliteMmapSizeMb) || 512));
     const streamRingBufferKb = Math.max(1024, Math.min(32768, Number(base.streamRingBufferKb) || 4096));
 
+    const requestedFps = Number(base.analysisFps) || 0;
+    const analysisFps = requestedFps > 0
+        ? Math.max(1, Math.min(15, Math.round(requestedFps)))
+        : suggestedAnalysisFps(profile);
+
     const validPresets = Object.values(PERFORMANCE_PRESETS);
     const performancePreset = validPresets.includes(base.performancePreset) ? base.performancePreset : PERFORMANCE_PRESETS.CUSTOM;
 
@@ -111,6 +128,7 @@ export function sanitizePerformanceSettings(input, profile = getHardwareProfile(
         sqliteCacheSizeMb,
         sqliteMmapSizeMb,
         streamRingBufferKb,
+        analysisFps,
         performancePreset
     };
 }
