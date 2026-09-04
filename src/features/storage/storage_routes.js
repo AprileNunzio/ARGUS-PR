@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { Permission } from '../../security/rbac.js';
-import { requireId, requireString, requireBool, optionalString, optionalNumber } from '../../security/guards.js';
+import { requireId, requireString, requireBool, optionalString } from '../../security/guards.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
 import { validationError, notFound } from '../../kernel/errors.js';
 import {
@@ -43,8 +43,8 @@ export function registerStorageRoutes(router) {
             kind: kind || 'local',
             path: test.path,
             isDefault: isDefault === true,
-            maxBytes: optionalNumber(maxBytes, 'Quota massima (byte)') || 0,
-            minFreeBytes: optionalNumber(minFreeBytes, 'Spazio libero minimo (byte)') || 5368709120,
+            maxBytes: Number(maxBytes) || 0,
+            minFreeBytes: Number(minFreeBytes) || 5368709120,
             networkHost: optionalString(networkHost, 'Host di rete', { max: 255 }),
             networkShare: optionalString(networkShare, 'Share di rete', { max: 255 }),
             networkProto: optionalString(networkProto, 'Protocollo', { max: 16 }),
