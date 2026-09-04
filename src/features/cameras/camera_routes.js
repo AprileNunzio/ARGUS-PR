@@ -67,6 +67,10 @@ export function registerCameraRoutes(router) {
         return { body: result };
     }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
 
+    router.get('/api/cameras/brand-profiles', async () => ({
+        body: { profiles: BRAND_PROFILES }
+    }), { anonymous: true, exposure: Exposure.PUBLIC });
+
     router.get('/api/cameras/:id', async (ctx) => {
         const camera = getCamera(requireId(ctx.params.id, 'Camera id'));
         if (!camera) throw notFound('Camera');
@@ -172,8 +176,4 @@ export function registerCameraRoutes(router) {
         const result = await autodiscoverStreams({ host, port, username, password });
         return { body: result };
     }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
-
-    router.get('/api/cameras/brand-profiles', async () => ({
-        body: { profiles: BRAND_PROFILES }
-    }), { anonymous: true, exposure: Exposure.PUBLIC });
 }
