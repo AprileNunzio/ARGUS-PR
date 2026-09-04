@@ -1,6 +1,7 @@
 import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
 import { createStatusBar, presetById } from './wall_statusbar.js';
 import { connectWallEvents } from './wall_live.js';
+import { createBootScreen } from './wall_boot.js';
 
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
@@ -183,12 +184,46 @@ async function boot() {
     const root = document.getElementById('console');
     const grid = createGrid();
     const bar = createStatusBar((preset) => grid.setLayout(preset));
+    const boot = createBootScreen();
 
-    root.replaceChildren(grid.element, bar.element);
+    root.replaceChildren(grid.element, bar.element, boot.element);
 
     let authenticated = false;
     let plan = [];
     let revision = null;
+    let serverVersion = null;
+    let reloading = false;
+
+    const reloadForNewVersion = (version) => {
+        if (reloading) return;
+        reloading = true;
+        boot.show('ready', { currentVersion: version });
+        setTimeout(() => location.reload(), 1800);
+    };
+
+    const trackVersion = (status) => {
+        const phase = status.update?.phase ?? 'idle';
+
+        if (serverVersion === null) {
+            serverVersion = status.version;
+        } else if (status.version !== serverVersion) {
+            reloadForNewVersion(status.version);
+            return true;
+        }
+
+        if (phase === 'requested' || phase === 'pending') {
+            boot.show(phase, {
+                currentVersion: status.version,
+                targetRef: status.update.targetRef,
+                attempts: status.update.attempts,
+                maxAttempts: status.update.maxAttempts
+            });
+            return true;
+        }
+
+        boot.hide();
+        return false;
+    };
 
     const applyConfig = async () => {
         const payload = await request('/api/wall/config').catch(() => null);
@@ -212,6 +247,8 @@ async function boot() {
     const refresh = async () => {
         const status = await request('/api/console/status');
         bar.update(status);
+
+        if (trackVersion(status)) return;
 
         if (status.setupRequired) {
             authenticated = false;
@@ -249,13 +286,24 @@ async function boot() {
     };
 
     const safeRefresh = () => refresh().catch((error) => {
-        if (error.status === 401) authenticated = false;
-        grid.message(`Console non disponibile: ${error.message}`);
+        if (error.status === 401) {
+            authenticated = false;
+            boot.hide();
+            grid.message(`Accesso richiesto.
+Effettua il login su ${bar.webUrl} per visualizzare il Muro Video.`);
+            return;
+        }
+
+        bar.setLink('offline');
+        boot.show('reconnecting', { currentVersion: serverVersion });
     });
 
     const safeMetrics = () => request('/api/console/status')
-        .then((status) => bar.update(status))
-        .catch(() => {});
+        .then((status) => {
+            bar.update(status);
+            trackVersion(status);
+        })
+        .catch(() => boot.show('reconnecting', { currentVersion: serverVersion }));
 
     const safeConfig = () => {
         if (!authenticated) return;

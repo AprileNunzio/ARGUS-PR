@@ -207,3 +207,91 @@
 .statusbar__link-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; flex: 0 0 auto; }
 .statusbar__link-dot--on { background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, .22); }
 .statusbar__link-dot--off { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, .22); }
+
+.boot-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(1200px 800px at 50% 30%, #16233a, #070b12 70%);
+    color: #e8eef7;
+    font-family: var(--sans, system-ui, sans-serif);
+}
+
+.boot-screen__glow {
+    position: absolute;
+    width: 140vmax;
+    height: 140vmax;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(14, 165, 233, 0), rgba(14, 165, 233, .18), rgba(124, 92, 240, .16), rgba(14, 165, 233, 0));
+    animation: boot-spin 18s linear infinite;
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+.boot-screen__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: clamp(1.5rem, 4vh, 3rem);
+    text-align: center;
+    max-width: min(560px, 88vw);
+}
+
+.boot-screen__mark { position: relative; display: grid; place-items: center; width: 108px; height: 108px; margin-bottom: 0.4rem; }
+
+.boot-screen__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(148, 178, 214, .16);
+    border-top-color: #38bdf8;
+    border-right-color: #7c5cf0;
+    animation: boot-spin 1.15s cubic-bezier(.5, .1, .4, .9) infinite;
+}
+
+.boot-screen__logo {
+    width: 68px;
+    height: 68px;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0ea5e9, #7c5cf0);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 12px 40px -12px rgba(56, 189, 248, .8);
+}
+
+.boot-screen__brand { font-family: var(--mono, monospace); font-size: 0.72rem; letter-spacing: 0.34em; text-transform: uppercase; color: #7f9dc0; }
+.boot-screen__title { margin: 0.2rem 0 0; font-size: clamp(1.4rem, 1rem + 1.6vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; }
+.boot-screen__detail { margin: 0; font-size: clamp(0.85rem, 0.75rem + 0.3vw, 1rem); color: #9fb4cd; line-height: 1.5; }
+
+.boot-screen__bar { width: min(420px, 76vw); height: 5px; margin-top: 1rem; border-radius: 999px; background: rgba(148, 178, 214, .16); overflow: hidden; }
+.boot-screen__bar-fill { display: block; height: 100%; width: 8%; border-radius: 999px; background: linear-gradient(90deg, #38bdf8, #7c5cf0); transition: width .8s cubic-bezier(.22, 1, .36, 1); }
+
+.boot-screen__steps { display: flex; gap: clamp(1rem, 4vw, 2.4rem); margin-top: 0.9rem; }
+.boot-screen__step { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; opacity: .38; transition: opacity .3s ease; }
+.boot-screen__step-dot { width: 9px; height: 9px; border-radius: 50%; background: #7f9dc0; }
+.boot-screen__step-label { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: #9fb4cd; }
+.boot-screen__step--done { opacity: .8; }
+.boot-screen__step--done .boot-screen__step-dot { background: #10b981; }
+.boot-screen__step--active { opacity: 1; }
+.boot-screen__step--active .boot-screen__step-dot { background: #38bdf8; animation: boot-pulse 1.3s ease-in-out infinite; }
+
+.boot-screen__versions { margin: 1rem 0 0; font-family: var(--mono, monospace); font-size: 0.74rem; color: #64809f; }
+.boot-screen__warning { margin: 0.35rem 0 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; color: #fbbf24; text-transform: uppercase; }
+.boot-screen--warn .boot-screen__logo { background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 12px 40px -12px rgba(239, 68, 68, .7); }
+.boot-screen--warn .boot-screen__ring { border-top-color: #f59e0b; border-right-color: #ef4444; animation-duration: 2.4s; }
+
+@keyframes boot-spin { to { transform: rotate(360deg); } }
+@keyframes boot-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.6); opacity: .5; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .boot-screen__glow, .boot-screen__ring, .boot-screen__step-dot { animation: none !important; }
+}

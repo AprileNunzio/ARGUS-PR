@@ -7,6 +7,7 @@ import { readPackageVersion } from '../../platform/version.js';
 import { isSetupRequired } from '../setup/setup_service.js';
 import { Exposure } from '../../security/net_zones.js';
 import { liveMetrics } from '../../platform/metrics.js';
+import { readState } from '../updates/update_state.js';
 
 export function registerKioskRoutes(router) {
     router.post('/api/console/session', async (ctx) => {
@@ -37,6 +38,7 @@ export function registerKioskRoutes(router) {
         }
 
         const setupRequired = isSetupRequired();
+        const update = readState(ctx.config);
         const cameras = setupRequired ? [] : listCameras();
         const recorders = setupRequired ? [] : recordingStates();
 
@@ -51,6 +53,14 @@ export function registerKioskRoutes(router) {
                 enabled: cameras.filter((camera) => camera.enabled).length,
                 recording: recorders.filter((item) => item.state === 'recording').length,
                 uptimeSeconds: Math.round(process.uptime()),
+                update: {
+                    phase: update.phase,
+                    targetRef: update.targetRef,
+                    previousVersion: update.previousVersion,
+                    attempts: update.attempts,
+                    maxAttempts: 3,
+                    message: update.message
+                },
                 metrics: liveMetrics()
             }
         };

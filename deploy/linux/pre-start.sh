@@ -11,10 +11,39 @@ OFFICIAL_REMOTE="https://github.com/AprileNunzio/ARGUS-PR.git"
 NODE_BIN="${ARGUS_NODE_BIN:-$(command -v node || echo /usr/local/bin/node)}"
 NPM_BIN="${ARGUS_NPM_BIN:-$(command -v npm || echo /usr/local/bin/npm)}"
 
+export HOME="${HOME:-/root}"
+
 log() { printf 'argus-pre-start: %s\n' "$*"; }
 
-[[ -f "$STATE_FILE" ]] || exit 0
+git_repo() { git -C "$INSTALL_DIR" -c safe.directory="$INSTALL_DIR" "$@"; }
+
+restore_ownership() {
+    chown -R "$SERVICE_USER":"$SERVICE_USER" "$INSTALL_DIR" 2>/dev/null || true
+    find "$INSTALL_DIR" -type d -exec chmod 0755 {} + 2>/dev/null || true
+    find "$INSTALL_DIR" -type f -exec chmod a+r {} + 2>/dev/null || true
+    chmod 0755 "$INSTALL_DIR/bin/argus.js" 2>/dev/null || true
+}
+
+sync_self() {
+    local source="${INSTALL_DIR}/deploy/linux/pre-start.sh"
+
+    [[ -n "${ARGUS_PRESTART_SYNCED:-}" ]] && return 0
+    [[ -f "$source" ]] || return 0
+    cmp -s "$source" "$0" && return 0
+
+    if install -m 0755 "$source" "$0" 2>/dev/null; then
+        log "procedura di avvio allineata alla release installata, riparto"
+        ARGUS_PRESTART_SYNCED=1 exec "$0" "$@"
+    fi
+
+    log "impossibile allineare la procedura di avvio, proseguo con quella corrente"
+}
+
 [[ -d "${INSTALL_DIR}/.git" ]] || { log "installazione non git, nessuna azione"; exit 0; }
+
+sync_self "$@"
+
+[[ -f "$STATE_FILE" ]] || exit 0
 
 state_field() {
     "$NODE_BIN" -e '
@@ -79,6 +108,23 @@ verify_signature() {
     return 0
 }
 
+rollback_to_previous() {
+    local reason="$1"
+
+    if [[ -n "$PREVIOUS" ]] && git_repo checkout --quiet --force "$PREVIOUS"; then
+        install_dependencies
+        restore_ownership
+        write_state "{\"phase\":\"rolled-back\",\"message\":\"${reason}\"}"
+        log "ripristinata la versione precedente"
+        return 0
+    fi
+
+    restore_ownership
+    write_state '{"phase":"failed","message":"Ripristino automatico non riuscito"}'
+    log "ripristino non riuscito"
+    return 1
+}
+
 PHASE="$(state_field phase)"
 TARGET="$(state_field targetRef)"
 PREVIOUS="$(state_field previousRef)"
@@ -114,20 +160,18 @@ case "$PHASE" in
 
         if ! git_repo -c advice.detachedHead=false checkout --quiet --force "$TARGET"; then
             log "checkout fallito"
+            restore_ownership
             write_state '{"phase":"failed","message":"Checkout fallito"}'
             exit 0
         fi
 
         if ! install_dependencies; then
             log "npm install fallito, ripristino ${PREVIOUS}"
-            [[ -n "$PREVIOUS" ]] && git_repo checkout --quiet --force "$PREVIOUS"
-            install_dependencies
-            write_state '{"phase":"rolled-back","message":"Installazione dipendenze fallita"}'
+            rollback_to_previous "Installazione dipendenze fallita"
             exit 0
         fi
 
-        chown -R "$SERVICE_USER":"$SERVICE_USER" "${INSTALL_DIR}" 2>/dev/null || true
-        chmod -R a+rX "${INSTALL_DIR}" 2>/dev/null || true
+        restore_ownership
         write_state '{"phase":"pending","attempts":1}'
         log "applicato ${TARGET}, in attesa della conferma di salute"
         ;;
@@ -136,18 +180,15 @@ case "$PHASE" in
         NEXT=$((ATTEMPTS + 1))
         if (( NEXT > MAX_ATTEMPTS )); then
             log "la nuova versione non si stabilizza, ripristino ${PREVIOUS}"
-            if [[ -n "$PREVIOUS" ]] && git_repo checkout --quiet --force "$PREVIOUS"; then
-                install_dependencies
-                write_state '{"phase":"rolled-back","message":"Ripristino automatico: la nuova versione non si e avviata"}'
-            else
-                write_state '{"phase":"failed","message":"Ripristino automatico non riuscito"}'
-            fi
+            rollback_to_previous "Ripristino automatico: la nuova versione non si e avviata"
         else
+            restore_ownership
             write_state "{\"phase\":\"pending\",\"attempts\":${NEXT}}"
         fi
         ;;
 
     *)
+        restore_ownership
         exit 0
         ;;
 esac

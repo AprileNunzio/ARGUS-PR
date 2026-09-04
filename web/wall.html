@@ -5,20 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google" content="notranslate">
 <title>ARGUS-PR — Console</title>
-<link rel="stylesheet" href="/assets/tokens.css?v=0.23.1">
-<link rel="stylesheet" href="/assets/base.css?v=0.23.1">
-<link rel="stylesheet" href="/assets/components.css?v=0.23.1">
-<link rel="stylesheet" href="/assets/wall.css?v=0.23.1">
-<link rel="stylesheet" href="/assets/modules.css?v=0.23.1">
+<link rel="stylesheet" href="/assets/tokens.css?v=0.23.2">
+<link rel="stylesheet" href="/assets/base.css?v=0.23.2">
+<link rel="stylesheet" href="/assets/components.css?v=0.23.2">
+<link rel="stylesheet" href="/assets/wall.css?v=0.23.2">
+<link rel="stylesheet" href="/assets/modules.css?v=0.23.2">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 </head>
 <body class="wall-body">
 <div id="console" class="console">
-    <div class="console__boot">
-        <span class="boot__spinner" aria-hidden="true"></span>
-        <span>Avvio console…</span>
+    <div class="boot-screen">
+        <div class="boot-screen__glow"></div>
+        <div class="boot-screen__panel">
+            <div class="boot-screen__mark">
+                <span class="boot-screen__ring"></span>
+                <span class="boot-screen__logo">A</span>
+            </div>
+            <span class="boot-screen__brand">ARGUS-PR</span>
+            <h1 class="boot-screen__title">Avvio del muro video</h1>
+            <p class="boot-screen__detail">Connessione al registratore in corso</p>
+            <div class="boot-screen__bar"><span class="boot-screen__bar-fill"></span></div>
+            <div class="boot-screen__steps">
+                <span class="boot-screen__step boot-screen__step--active">
+                    <span class="boot-screen__step-dot"></span>
+                    <span class="boot-screen__step-label">Preparazione</span>
+                </span>
+                <span class="boot-screen__step">
+                    <span class="boot-screen__step-dot"></span>
+                    <span class="boot-screen__step-label">Installazione</span>
+                </span>
+                <span class="boot-screen__step">
+                    <span class="boot-screen__step-dot"></span>
+                    <span class="boot-screen__step-label">Avvio</span>
+                </span>
+            </div>
+        </div>
     </div>
 </div>
-<script type="module" src="/features/wall/wall.js?v=0.23.1"></script>
+<script type="module" src="/features/wall/wall.js?v=0.23.2"></script>
 </body>
 </html>
