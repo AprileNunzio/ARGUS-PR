@@ -25,6 +25,18 @@ function mimeFor(target) {
     return MIME[path.extname(target).toLowerCase()] ?? 'application/octet-stream';
 }
 
+function deliver(source, res) {
+    const close = () => {
+        if (!source.destroyed) source.destroy();
+    };
+
+    source.on('error', close);
+    res.on('close', close);
+    res.on('error', close);
+
+    source.pipe(res);
+}
+
 function parseRange(header, size) {
     if (typeof header !== 'string' || !header.startsWith('bytes=')) return null;
 
@@ -92,7 +104,7 @@ export function serveFile(req, res, root, relativePath, options = {}) {
             res.end();
             return true;
         }
-        fs.createReadStream(absolute, { start: range.start, end: range.end }).pipe(res);
+        deliver(fs.createReadStream(absolute, { start: range.start, end: range.end }), res);
         return true;
     }
 
@@ -108,6 +120,6 @@ export function serveFile(req, res, root, relativePath, options = {}) {
         res.end();
         return true;
     }
-    fs.createReadStream(absolute).pipe(res);
+    deliver(fs.createReadStream(absolute), res);
     return true;
 }

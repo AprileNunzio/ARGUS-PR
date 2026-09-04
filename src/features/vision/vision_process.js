@@ -126,12 +126,30 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         stats.startedAt = Date.now();
         stats.lastError = null;
 
+        const ignoreBrokenPipe = (label) => (error) => {
+            if (error?.code === 'EPIPE' || error?.code === 'ERR_STREAM_DESTROYED') {
+                log.debug('vision pipe closed', { camera: camera.id, label });
+                return;
+            }
+            stats.lastError = `${label}: ${error?.message ?? 'errore di flusso'}`.slice(0, 200);
+            log.warn('vision pipe error', { camera: camera.id, label, message: error?.message });
+        };
+
+        workerChild.stdin.on('error', ignoreBrokenPipe('worker-stdin'));
+        workerChild.stdout.on('error', ignoreBrokenPipe('worker-stdout'));
+
         if (local) {
+            localHandle.stream.on('error', ignoreBrokenPipe('capture'));
             localHandle.stream.on('data', (chunk) => {
-                if (workerChild?.stdin.writable) workerChild.stdin.write(chunk);
+                if (!workerChild || workerChild.stdin.destroyed || !workerChild.stdin.writable) return;
+                workerChild.stdin.write(chunk, (error) => {
+                    if (error) ignoreBrokenPipe('worker-stdin')(error);
+                });
             });
         } else {
-            ffmpegChild.stdout.pipe(workerChild.stdin);
+            ffmpegChild.stdout.on('error', ignoreBrokenPipe('ffmpeg-stdout'));
+            ffmpegChild.stdin?.on('error', ignoreBrokenPipe('ffmpeg-stdin'));
+            ffmpegChild.stdout.pipe(workerChild.stdin, { end: false });
             ffmpegChild.stderr.on('data', (d) => {
                 log.debug('ffmpeg vision stderr', { msg: d.toString().trim() });
             });
