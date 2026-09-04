@@ -463,11 +463,11 @@ want_kiosk() {
 
 install_display_stack() {
     case "$PKG" in
-        apt-get) pkg_install xserver-xorg xserver-xorg-legacy xinit x11-xserver-utils fonts-dejavu-core || true ;;
-        dnf|yum) pkg_install xorg-x11-server-Xorg xorg-x11-xinit xorg-x11-server-utils dejavu-sans-fonts || true ;;
-        pacman) pkg_install xorg-server xorg-xinit xorg-xset xorg-xsetroot ttf-dejavu || true ;;
-        zypper) pkg_install xorg-x11-server xinit xorg-x11-essentials dejavu-fonts || true ;;
-        apk) pkg_install xorg-server xinit xset xsetroot font-dejavu || true ;;
+        apt-get) pkg_install xserver-xorg xserver-xorg-legacy xinit x11-xserver-utils matchbox-window-manager unclutter fonts-dejavu-core || true ;;
+        dnf|yum) pkg_install xorg-x11-server-Xorg xorg-x11-xinit xorg-x11-server-utils matchbox-window-manager unclutter dejavu-sans-fonts || true ;;
+        pacman) pkg_install xorg-server xorg-xinit xorg-xset xorg-xsetroot matchbox-window-manager unclutter ttf-dejavu || true ;;
+        zypper) pkg_install xorg-x11-server xinit xorg-x11-essentials matchbox-window-manager unclutter dejavu-fonts || true ;;
+        apk) pkg_install xorg-server xinit xset xsetroot matchbox-window-manager unclutter font-dejavu || true ;;
     esac
 }
 

@@ -1,6 +1,21 @@
-.wall-body { background: #04070c; overflow: hidden; }
+.wall-body {
+    background: #04070c;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+}
 
-.console { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+.console {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    min-width: 100%;
+    min-height: 100%;
+    overflow: hidden;
+}
 .console__boot { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: #8496ab; font-family: var(--mono); }
 
 .console__grid {
@@ -9,6 +24,9 @@
     gap: 2px;
     padding: 2px;
     min-height: 0;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
     background: #04070c;
 }
 
@@ -17,6 +35,7 @@
     background: #05070c;
     overflow: hidden;
     min-height: 0;
+    min-width: 0;
     border-radius: 4px;
 }
 
@@ -48,14 +67,15 @@
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    gap: 1.2rem;
-    padding: 0.55rem 1.1rem;
+    gap: clamp(0.4rem, 1vw, 1.2rem);
+    padding: clamp(0.3rem, 0.8vh, 0.55rem) clamp(0.5rem, 1.5vw, 1.1rem);
     background: linear-gradient(180deg, #0b1119, #060a11);
     border-top: 1px solid #1b2634;
     color: #c3cedd;
     font-family: var(--mono);
-    font-size: 0.82rem;
+    font-size: clamp(0.68rem, 0.75vw, 0.82rem);
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .statusbar__brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }

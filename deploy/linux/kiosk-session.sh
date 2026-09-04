@@ -16,6 +16,8 @@ xset s off || true
 xset -dpms || true
 xset s noblank || true
 command -v xsetroot >/dev/null 2>&1 && xsetroot -solid black || true
+command -v unclutter >/dev/null 2>&1 && unclutter -idle 2 -root &
+command -v matchbox-window-manager >/dev/null 2>&1 && matchbox-window-manager -use_titlebar no &
 
 trust_authority() {
     [[ -n "$CA_FILE" && -r "$CA_FILE" ]] || return 1
@@ -56,12 +58,16 @@ wait_for_service || true
 
 mkdir -p "$PROFILE"
 
+RES="$(xrandr 2>/dev/null | awk '/\*/ {print $1; exit}')"
+RES_W="${RES%x*}"
+RES_H="${RES#*x}"
+
 case "$(basename "$BROWSER")" in
     firefox|firefox-esr)
         if [[ "$CA_TRUSTED" == "yes" && ! -f "${PROFILE}/cert9.db" ]]; then
             cp "${NSS_DB}/cert9.db" "${NSS_DB}/key4.db" "${NSS_DB}/pkcs11.txt" "$PROFILE/" 2>/dev/null || true
         fi
-        exec "$BROWSER" --kiosk --profile "$PROFILE" "$WALL_URL"
+        exec "$BROWSER" --kiosk --start-maximized --profile "$PROFILE" "$WALL_URL"
         ;;
     *)
         CHROME_ARGS=(
@@ -77,7 +83,13 @@ case "$(basename "$BROWSER")" in
             --check-for-update-interval=31536000
             --password-store=basic
             --start-fullscreen
+            --start-maximized
+            --window-position=0,0
         )
+
+        if [[ -n "${RES_W:-}" && -n "${RES_H:-}" ]]; then
+            CHROME_ARGS+=(--window-size="${RES_W},${RES_H}")
+        fi
 
         if [[ "$CA_TRUSTED" != "yes" ]]; then
             CHROME_ARGS+=(--ignore-certificate-errors)

@@ -19,7 +19,14 @@ function el(tag, props = {}, children = []) {
 
 function gridShape(count) {
     if (count <= 1) return { columns: 1, rows: 1 };
-    if (count === 2) return { columns: 2, rows: 1 };
+    const width = window.innerWidth || 1920;
+    const height = window.innerHeight || 1080;
+    const isPortrait = height > width;
+    if (count === 2) return isPortrait ? { columns: 1, rows: 2 } : { columns: 2, rows: 1 };
+    if (isPortrait) {
+        const rows = Math.ceil(Math.sqrt(count));
+        return { rows, columns: Math.ceil(count / rows) };
+    }
     const columns = Math.ceil(Math.sqrt(count));
     return { columns, rows: Math.ceil(count / columns) };
 }
@@ -101,11 +108,21 @@ function createGrid() {
     const element = el('div', { className: 'console__grid' });
     let players = [];
     let signature = null;
+    let cameraCount = 0;
 
     const teardown = () => {
         for (const player of players) player.destroy();
         players = [];
     };
+
+    const updateShape = () => {
+        if (!cameraCount) return;
+        const shape = gridShape(cameraCount);
+        element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
+        element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
+    };
+
+    window.addEventListener('resize', updateShape);
 
     const single = (node) => {
         element.style.setProperty('grid-template-columns', '1fr');
@@ -117,18 +134,18 @@ function createGrid() {
         element,
         message(text) {
             signature = null;
+            cameraCount = 0;
             teardown();
             single(el('div', { className: 'console__empty', textContent: text }));
         },
         render(cameras) {
+            cameraCount = cameras.length;
             const next = cameras.map((camera) => `${camera.id}:${camera.name}`).join('|');
             if (next === signature) return;
             signature = next;
             teardown();
 
-            const shape = gridShape(cameras.length);
-            element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
-            element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
+            updateShape();
 
             element.replaceChildren(...cameras.map((camera) => {
                 const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
