@@ -5,6 +5,7 @@ import { listLocalDevices } from './local_devices.js';
 import { readCameraInput } from './camera_payload.js';
 import { getCameraSecrets } from './camera_repository.js';
 import { runAutoconfigureStep, stepsFor } from './autoconfigure.js';
+import { autodiscoverStreams } from './stream_discovery.js';
 import { Permission } from '../../security/rbac.js';
 import { Exposure, Zone } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
@@ -158,6 +159,16 @@ export function registerCameraRoutes(router) {
     router.post('/api/cameras/:id/probe', async (ctx) => {
         const id = requireId(ctx.params.id, 'Camera id');
         const result = await probeStream(id);
+        return { body: result };
+    }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
+
+    router.post('/api/cameras/autodiscover-stream', async (ctx) => {
+        const host = requireString(ctx.body?.host ?? ctx.body?.ip, 'Host');
+        const port = ctx.body?.port ? Number.parseInt(ctx.body.port, 10) : 554;
+        const username = typeof ctx.body?.username === 'string' ? ctx.body.username.trim() : null;
+        const password = typeof ctx.body?.password === 'string' ? ctx.body.password : null;
+
+        const result = await autodiscoverStreams({ host, port, username, password });
         return { body: result };
     }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
 }

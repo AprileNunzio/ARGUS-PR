@@ -160,7 +160,8 @@ function captureSection(camera) {
     return { node, resolution, fps, format };
 }
 
-function networkSection(camera) {
+function networkSection({ api, camera, manufacturer, model }) {
+    const ipInput = textInput('', { mono: true, placeholder: '192.168.1.64' });
     const main = textInput(camera?.mainStreamUrl ?? '', { mono: true, placeholder: 'rtsp://192.168.1.64:554/Streaming/Channels/101' });
     const sub = textInput(camera?.subStreamUrl ?? '', { mono: true, placeholder: 'facoltativo, usato per analisi e anteprima' });
     const transport = selectFrom([['tcp', 'TCP (consigliato)'], ['udp', 'UDP']], camera?.transport ?? 'tcp');
@@ -171,12 +172,72 @@ function networkSection(camera) {
         placeholder: camera?.hasPassword ? 'invariata' : ''
     });
 
+    if (camera?.mainStreamUrl) {
+        try {
+            const parsed = new URL(camera.mainStreamUrl);
+            ipInput.value = parsed.hostname;
+        } catch {
+            ipInput.value = '';
+        }
+    }
+
+    const autoStatus = el('div', { className: 'section__hint', textContent: 'Inserisci l IP della telecamera, utente e password per rilevare automaticamente tutti i flussi.' });
+    const autoButton = el('button', { className: 'btn btn--sm btn--primary', type: 'button' }, [
+        icon('sparkles'),
+        el('span', { textContent: 'Riconosci flussi in automatico' })
+    ]);
+
+    autoButton.addEventListener('click', async () => {
+        const rawHost = ipInput.value.trim().replace(/^https?:\/\//i, '').replace(/^rtsp:\/\//i, '').split('/')[0].split(':')[0];
+        if (!rawHost) {
+            autoStatus.textContent = 'Inserisci prima l indirizzo IP o hostname della telecamera.';
+            return;
+        }
+
+        autoButton.disabled = true;
+        autoStatus.textContent = 'Scansione porte e canali in corso per individuare il flusso migliore…';
+
+        const outcome = await api.post('/api/cameras/autodiscover-stream', {
+            host: rawHost,
+            username: username.value.trim() || null,
+            password: password.value || null
+        }).then((v) => ({ v })).catch((e) => ({ e }));
+
+        autoButton.disabled = false;
+
+        if (outcome.e) {
+            autoStatus.textContent = `Errore di connessione: ${outcome.e.message}`;
+            return;
+        }
+
+        const res = outcome.v;
+        if (!res.reachable) {
+            autoStatus.textContent = res.error ?? 'Telecamera non raggiungibile.';
+            return;
+        }
+
+        if (res.mainStreamUrl) {
+            main.value = res.mainStreamUrl;
+            if (res.subStreamUrl) sub.value = res.subStreamUrl;
+            if (res.vendor && !manufacturer.value) manufacturer.value = res.vendor;
+            autoStatus.textContent = `Riconosciuto con successo: ${res.vendor} (${res.mainResolution ?? 'HD'} · ${res.codec ?? 'H.264'})`;
+        } else {
+            autoStatus.textContent = res.error ?? 'Nessun flusso video trovato.';
+        }
+    });
+
     const node = el('div', { className: 'form-grid' }, [
-        el('div', { className: 'span-all' }, [field('URL flusso principale', main)]),
-        el('div', { className: 'span-all' }, [field('URL flusso secondario', sub)]),
-        field('Trasporto RTSP', transport),
+        el('div', { className: 'span-all row row--between' }, [
+            el('span', { className: 'panel__title', textContent: 'Riconoscimento automatico da IP' }),
+            autoButton
+        ]),
+        el('div', { className: 'span-all' }, [field('Indirizzo IP telecamera', ipInput)]),
         field('Utente', username),
-        field('Password', password)
+        field('Password', password),
+        el('div', { className: 'span-all' }, [autoStatus]),
+        el('div', { className: 'span-all' }, [field('URL flusso principale (rilevato)', main)]),
+        el('div', { className: 'span-all' }, [field('URL flusso secondario (rilevato)', sub)]),
+        field('Trasporto RTSP', transport)
     ]);
 
     return { node, main, sub, transport, username, password };
@@ -199,7 +260,7 @@ export function createCameraForm({ api, camera = null, kind }) {
     const enabled = switchInput(camera ? camera.enabled : true);
     const audio = switchInput(camera ? camera.audioEnabled : true);
 
-    const network = local ? null : networkSection(camera);
+    const network = local ? null : networkSection({ api, camera, manufacturer, model });
     const device = local ? deviceSection({ api, camera }) : null;
     const capture = local ? captureSection(camera) : null;
 
