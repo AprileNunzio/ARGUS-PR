@@ -34,6 +34,7 @@ export class StreamSession {
         this.state = 'idle';
         this.lastError = null;
         this.stopped = false;
+        this.startPromise = null;
     }
 
     addViewer(viewer) {
@@ -43,7 +44,11 @@ export class StreamSession {
             this.idleTimer = null;
         }
         if (this.initSegment) viewer.sendInit(this.initSegment);
-        if (!this.process && !this.restartTimer) this.start();
+        if (!this.process && !this.restartTimer) {
+            this.start().catch((error) => {
+                log.error('stream start failed', { camera: this.cameraId, message: error.message });
+            });
+        }
     }
 
     removeViewer(viewer) {
@@ -82,7 +87,19 @@ export class StreamSession {
         this.stallTimer.unref();
     }
 
-    async start() {
+    start() {
+        if (this.stopped || this.process) return Promise.resolve();
+
+        if (!this.startPromise) {
+            this.startPromise = this.launch().finally(() => {
+                this.startPromise = null;
+            });
+        }
+
+        return this.startPromise;
+    }
+
+    async launch() {
         if (this.stopped || this.process) return;
 
         const camera = getCameraSecrets(this.cameraId);

@@ -1,5 +1,5 @@
 import { discoverFfmpeg, listHardwareAccelerators, detectRtspTimeoutOption } from './ffmpeg.js';
-import { detectUsableEncoders } from './encoder_probe.js';
+import { detectUsableEncoders, detectUsableAccelerators } from './encoder_probe.js';
 import { installationSupported, installFfmpeg } from './dependencies/ffmpeg_installer.js';
 import { isFail } from '../kernel/result.js';
 import { internal } from '../kernel/errors.js';
@@ -24,7 +24,8 @@ export async function initMediaTools(config) {
         return tools;
     }
 
-    const accelerators = await listHardwareAccelerators(found.value.ffmpeg.path);
+    const compiled = await listHardwareAccelerators(found.value.ffmpeg.path);
+    const accelerators = await detectUsableAccelerators(found.value.ffmpeg.path, compiled);
     const encoders = await detectUsableEncoders(found.value.ffmpeg.path, accelerators);
     const rtspTimeoutOption = await detectRtspTimeoutOption(found.value.ffmpeg.path);
 
@@ -33,6 +34,7 @@ export async function initMediaTools(config) {
         reason: null,
         ffmpeg: found.value.ffmpeg,
         ffprobe: found.value.ffprobe,
+        compiledAccelerators: compiled,
         accelerators,
         encoders,
         rtspTimeoutOption
@@ -41,6 +43,7 @@ export async function initMediaTools(config) {
     log.info('media tools ready', {
         ffmpeg: tools.ffmpeg.version,
         path: tools.ffmpeg.path,
+        compiledAccelerators: compiled,
         accelerators,
         encoders,
         rtspTimeoutOption

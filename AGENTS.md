@@ -94,6 +94,10 @@ bin/argus.js              CLI: serve | doctor | cert | reset-admin
 src/
   kernel/                 config, result, errors, logger, process_guard, event_bus
   platform/               paths, ffmpeg, media_tools, version, tls, x509, metrics, hardware
+                          encoder_probe.js verifica sul campo acceleratori ed encoder:
+                          ffmpeg -hwaccels elenca cio' che e' compilato, non cio'
+                          che l'hardware possiede, quindi ogni metodo viene provato
+                          con -init_hw_device prima di essere usato
   storage/                database, migrations/ (001_core ... 013_storage_policies)
   security/               vault, password, sessions, rbac, guards, audit,
                           net_zones, lockout, security_events, totp

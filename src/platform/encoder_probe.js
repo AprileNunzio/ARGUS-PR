@@ -14,6 +14,50 @@ export const ACCELERATOR_ENCODERS = Object.freeze({
     videotoolbox: 'h264_videotoolbox'
 });
 
+export const DECODE_ACCELERATORS = Object.freeze(['cuda', 'qsv', 'd3d11va', 'dxva2', 'vaapi', 'videotoolbox', 'vulkan']);
+
+function deviceArgs(accelerator) {
+    return [
+        '-hide_banner',
+        '-loglevel', 'error',
+        '-nostdin',
+        '-init_hw_device', accelerator,
+        '-f', 'lavfi',
+        '-i', 'color=black:s=64x64:d=0.1',
+        '-f', 'null',
+        '-'
+    ];
+}
+
+function runDeviceProbe(ffmpegPath, accelerator) {
+    return new Promise((resolve) => {
+        execFile(ffmpegPath, deviceArgs(accelerator), {
+            timeout: PROBE_TIMEOUT_MS,
+            windowsHide: true,
+            maxBuffer: 1024 * 128,
+            shell: false
+        }, (error, stdout, stderr) => {
+            const text = String(stderr ?? '');
+            const failed = Boolean(error) || /Cannot|Failed|not found|No such|Unknown|not support|Function not implemented|Invalid/i.test(text);
+            resolve({ accelerator, usable: !failed, detail: failed ? text.split(/\r?\n/)[0]?.slice(0, 160) ?? null : null });
+        });
+    });
+}
+
+export async function detectUsableAccelerators(ffmpegPath, compiled = []) {
+    const candidates = compiled.filter((entry) => DECODE_ACCELERATORS.includes(entry));
+    const usable = [];
+
+    for (const accelerator of candidates) {
+        const outcome = await runDeviceProbe(ffmpegPath, accelerator);
+        if (outcome.usable) usable.push(accelerator);
+        else log.warn('accelerator advertised but not usable on this machine', { accelerator, detail: outcome.detail });
+    }
+
+    log.info('accelerators verified', { compiled: candidates, usable });
+    return usable;
+}
+
 export function candidateEncoders(accelerators = []) {
     const candidates = [];
     for (const [accelerator, encoder] of Object.entries(ACCELERATOR_ENCODERS)) {
