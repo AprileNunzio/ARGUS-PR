@@ -23,7 +23,8 @@ const COLUMNS = Object.freeze({
     group: 'camera_group',
     retentionDays: 'retention_days',
     hwaccel: 'hwaccel',
-    notes: 'notes'
+    notes: 'notes',
+    storagePoolId: 'storage_pool_id'
 });
 
 const BOOLEAN_COLUMNS = Object.freeze({ enabled: 'enabled', audioEnabled: 'audio_enabled' });
@@ -81,7 +82,8 @@ export function getCameraSecrets(id) {
         captureFps: row.capture_fps,
         audioEnabled: row.audio_enabled === 1,
         hwaccel: row.hwaccel,
-        retentionDays: row.retention_days
+        retentionDays: row.retention_days,
+        storagePoolId: row.storage_pool_id
     };
 }
 

@@ -9,6 +9,7 @@ import { renderLive } from '/features/live/live.js';
 import { renderArchive } from '/features/archive/archive.js';
 import { renderSystem } from '/features/system/system.js';
 import { renderSettings } from '/features/settings/settings.js';
+import { renderStorageView } from '/features/storage/storage_view.js';
 import { renderDetectionsView } from '/features/detections/detections_view.js';
 import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
@@ -27,6 +28,7 @@ const ROUTES = {
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },
     automation: { label: 'Automazioni', icon: 'zap', render: renderAutomation, permission: 'alarm.manage' },
     settings: { label: 'Impostazioni', icon: 'settings', render: renderSettings, permission: 'system.manage' },
+    storage: { label: 'Storage & Dischi', icon: 'disk', render: renderStorageView, permission: 'system.manage' },
     system: { label: 'Telemetria', icon: 'activity', render: renderSystem, permission: 'system.manage' },
     updates: { label: 'Aggiornamenti', icon: 'download', render: renderUpdatesView, permission: 'system.manage' }
 };

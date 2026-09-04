@@ -299,6 +299,19 @@ export function createCameraForm({ api, camera = null, kind }) {
     const model = textInput(camera?.model ?? '');
     const retention = numberInput(camera?.retentionDays ?? null, 1, 3650, 'come impostazione globale');
     const hwaccel = selectFrom(HWACCELS, camera?.hwaccel ?? '');
+    const storagePoolSelect = el('select', { className: 'select' }, [
+        el('option', { value: '', textContent: 'Storage Principale Predefinito' })
+    ]);
+    if (api) {
+        api.get('/api/storage/pools').then((res) => {
+            const pools = res?.pools || [];
+            storagePoolSelect.replaceChildren(
+                el('option', { value: '', textContent: 'Storage Principale Predefinito' }),
+                ...pools.map((p) => el('option', { value: p.id, textContent: `${p.name} (${p.path})` }))
+            );
+            if (camera?.storagePoolId) storagePoolSelect.value = camera.storagePoolId;
+        }).catch(() => {});
+    }
     const notes = el('textarea', { className: 'textarea', rows: '2', placeholder: 'Note operative, posizione fisica, contatti' });
     notes.value = camera?.notes ?? '';
 
@@ -320,6 +333,7 @@ export function createCameraForm({ api, camera = null, kind }) {
         el('div', { className: 'form-grid' }, [
             field('Produttore', manufacturer),
             field('Modello', model),
+            field('Destinazione Registrazioni', storagePoolSelect),
             field('Ritenzione dedicata (giorni)', retention),
             field('Accelerazione hardware', hwaccel),
             field('Canale attivo', enabled.control),
@@ -340,7 +354,8 @@ export function createCameraForm({ api, camera = null, kind }) {
             model: textOrNull(model),
             notes: textOrNull(notes),
             retentionDays: numberOrNull(retention),
-            hwaccel: hwaccel.value.length > 0 ? hwaccel.value : null
+            hwaccel: hwaccel.value.length > 0 ? hwaccel.value : null,
+            storagePoolId: storagePoolSelect.value.length > 0 ? storagePoolSelect.value : null
         };
 
         if (local) {

@@ -22,6 +22,7 @@ import { registerStreamRoutes } from './features/streaming/stream_routes.js';
 import { installStreamHub } from './features/streaming/stream_hub.js';
 import { registerRecordingRoutes } from './features/recording/recording_routes.js';
 import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
+import { registerStorageRoutes } from './features/storage/storage_routes.js';
 import { installRecordingHub } from './features/recording/recording_hub.js';
 import { initLocalCapture } from './features/cameras/local_capture.js';
 import { setRtspTimeoutOption } from './features/cameras/camera_input.js';
@@ -60,6 +61,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerStreamRoutes(router);
     registerRecordingRoutes(router);
     registerPlaybackRoutes(router);
+    registerStorageRoutes(router);
     registerKioskRoutes(router);
     registerExportRoutes(router);
     registerUpdateRoutes(router);

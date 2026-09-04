@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 import { getDatabase } from '../../storage/database.js';
 import { hashPassword, generatePassword } from '../../security/password.js';
 import { issueSession } from '../../security/sessions.js';
@@ -58,4 +60,48 @@ export function localAddresses() {
         }
     }
     return found;
+}
+
+export function detectDisplays() {
+    const displays = [];
+    const drmPath = '/sys/class/drm';
+
+    if (fs.existsSync(drmPath)) {
+        try {
+            const entries = fs.readdirSync(drmPath);
+            for (const entry of entries) {
+                if (entry.startsWith('card') && entry.includes('-')) {
+                    const statusFile = path.join(drmPath, entry, 'status');
+                    let status = 'disconnected';
+                    if (fs.existsSync(statusFile)) {
+                        status = fs.readFileSync(statusFile, 'utf8').trim();
+                    }
+                    const parts = entry.split('-');
+                    const portType = parts.slice(1, -1).join('-') || parts[1] || 'Display';
+                    const portIndex = parts[parts.length - 1];
+                    displays.push({
+                        id: entry,
+                        label: `${portType} ${portIndex}`.trim(),
+                        connector: portType,
+                        connected: status === 'connected',
+                        status
+                    });
+                }
+            }
+        } catch {
+            // fallback
+        }
+    }
+
+    if (displays.length === 0) {
+        displays.push({
+            id: 'default-display',
+            label: process.platform === 'win32' ? 'Schermo Principale (Windows DShow/DXGI)' : 'Schermo Principale (Console)',
+            connector: 'HDMI/DP',
+            connected: true,
+            status: 'connected'
+        });
+    }
+
+    return displays;
 }

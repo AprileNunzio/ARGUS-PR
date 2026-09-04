@@ -1,4 +1,4 @@
-import { issueConsoleSession, localAddresses, assertLocalConsole } from './kiosk_service.js';
+import { issueConsoleSession, localAddresses, assertLocalConsole, detectDisplays } from './kiosk_service.js';
 import { buildCookie } from '../../http/http_utils.js';
 import { SESSION_COOKIE } from '../../http/server.js';
 import { listCameras } from '../cameras/camera_repository.js';
@@ -46,6 +46,7 @@ export function registerKioskRoutes(router) {
                 setupRequired,
                 port: ctx.config.port,
                 addresses: localAddresses(),
+                displays: detectDisplays(),
                 cameras: cameras.length,
                 enabled: cameras.filter((camera) => camera.enabled).length,
                 recording: recorders.filter((item) => item.state === 'recording').length,
@@ -54,4 +55,8 @@ export function registerKioskRoutes(router) {
             }
         };
     }, { anonymous: true, exposure: Exposure.PRIVATE });
+
+    router.get('/api/console/displays', async () => ({
+        body: { displays: detectDisplays() }
+    }), { exposure: Exposure.PRIVATE });
 }

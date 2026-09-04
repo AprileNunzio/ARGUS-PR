@@ -2,6 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { resolveInside, ensureDir } from '../../platform/paths.js';
 import { validationError } from '../../kernel/errors.js';
+import { getCamera } from '../cameras/camera_repository.js';
+import { getStoragePool } from '../storage/storage_repository.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const SEGMENT_PATTERN = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.mp4$/;
@@ -23,6 +25,15 @@ export function indexRoot(config) {
 
 export function cameraSegmentDir(config, cameraId) {
     assertCameraId(cameraId);
+    try {
+        const camera = getCamera(cameraId);
+        if (camera?.storagePoolId) {
+            const pool = getStoragePool(camera.storagePoolId);
+            if (pool && pool.path) {
+                return path.join(pool.path, 'segments', cameraId);
+            }
+        }
+    } catch {}
     return path.join(segmentsRoot(config), cameraId);
 }
 

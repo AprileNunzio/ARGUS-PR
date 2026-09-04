@@ -70,6 +70,7 @@ export function readCameraInput(body, options = {}) {
         captureWidth: body.captureWidth === undefined ? undefined : optionalInteger(body.captureWidth, 'Capture width', 16, 7680),
         captureHeight: body.captureHeight === undefined ? undefined : optionalInteger(body.captureHeight, 'Capture height', 16, 4320),
         captureFps: body.captureFps === undefined ? undefined : optionalInteger(body.captureFps, 'Capture frame rate', 1, 240),
+        storagePoolId: body.storagePoolId === undefined ? undefined : (body.storagePoolId === null || body.storagePoolId === '' ? null : optionalString(body.storagePoolId, 'Storage pool', { max: 64 })),
         ...(local ? readLocalFields(body, partial) : readNetworkFields(body, partial))
     };
 

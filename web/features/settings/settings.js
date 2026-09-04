@@ -3,10 +3,10 @@ import { icon } from '/assets/icons.js';
 import { controlFor, isVisible } from './controls.js';
 
 const GROUP_META = {
-    remote: { subtitle: 'Esposizione su internet, reti fidate LAN e proxy', icon: 'globe', color: 'cyan' },
+    access: { subtitle: 'Esposizione su internet, reti fidate LAN e proxy', icon: 'globe', color: 'cyan' },
     security: { subtitle: 'MFA TOTP, blocco account anti-bruteforce e durata sessioni', icon: 'shield', color: 'amber' },
-    kiosk: { subtitle: 'Console HDMI loopback, flussi secondari e visualizzatore', icon: 'tv', color: 'emerald' },
-    storage: { subtitle: 'Spazio minimo su disco, quote e ritenzione automatica', icon: 'hard-drive', color: 'rose' },
+    console: { subtitle: 'Console HDMI/Muro Video, layout griglie e uscite display', icon: 'monitor', color: 'rose' },
+    retention: { subtitle: 'Spazio minimo su disco, quote e ritenzione automatica', icon: 'clock', color: 'emerald' },
     vision: { subtitle: 'Sensibilita modelli AI, tracciamento e soglie di inferenza', icon: 'eye', color: 'purple' }
 };
 

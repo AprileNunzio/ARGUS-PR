@@ -4,11 +4,22 @@ import { icon } from '/assets/icons.js';
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
 
+const LAYOUT_PRESETS = [
+    { id: 'auto', label: 'Auto' },
+    { id: '1', label: '1', cols: 1, rows: 1 },
+    { id: '4', label: '4', cols: 2, rows: 2 },
+    { id: '9', label: '9', cols: 3, rows: 3 },
+    { id: '16', label: '16', cols: 4, rows: 4 },
+    { id: '32', label: '32', cols: 8, rows: 4 },
+    { id: '64', label: '64', cols: 8, rows: 8 }
+];
+
 function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(props)) {
         if (value === null || value === undefined) continue;
         if (key === 'className' || key === 'textContent') node[key] = value;
+        else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.slice(2).toLowerCase(), value);
         else node.setAttribute(key, value);
     }
     for (const child of [].concat(children)) {
@@ -17,7 +28,7 @@ function el(tag, props = {}, children = []) {
     return node;
 }
 
-function gridShape(count) {
+function autoGridShape(count) {
     if (count <= 1) return { columns: 1, rows: 1 };
     const width = window.innerWidth || 1920;
     const height = window.innerHeight || 1080;
@@ -42,15 +53,35 @@ async function request(path, options = {}) {
     return payload;
 }
 
-function createStatusBar() {
+function createStatusBar(onLayoutChange, onDisplaySelect) {
     const endpoint = el('span', { className: 'statusbar__ip', textContent: 'localhost' });
     const channels = el('span', { className: 'statusbar__value', textContent: '0' });
     const recording = el('span', { className: 'statusbar__value', textContent: '0' });
     const cpu = el('span', { className: 'statusbar__value', textContent: '--' });
     const ram = el('span', { className: 'statusbar__value', textContent: '--' });
     const gpu = el('span', { className: 'statusbar__value', textContent: '--' });
+    const displayInfo = el('span', { className: 'statusbar__value', textContent: '--' });
     const version = el('span', { className: 'statusbar__value', textContent: '--' });
     const clock = el('span', { className: 'statusbar__clock', textContent: '--:--:--' });
+
+    let activeLayout = 'auto';
+
+    const layoutButtons = LAYOUT_PRESETS.map((preset) => {
+        const btn = el('button', {
+            type: 'button',
+            className: `wall-layout-btn ${preset.id === activeLayout ? 'wall-layout-btn--active' : ''}`,
+            textContent: preset.label,
+            title: `Visualizza griglia ${preset.label}`,
+            onclick: () => {
+                activeLayout = preset.id;
+                for (const b of layoutButtons) b.classList.toggle('wall-layout-btn--active', b === btn);
+                onLayoutChange(preset);
+            }
+        });
+        return btn;
+    });
+
+    const layoutBar = el('div', { className: 'wall-layout-bar' }, layoutButtons);
 
     const item = (label, value) => el('span', { className: 'statusbar__item' }, [
         el('span', { className: 'statusbar__label', textContent: label }),
@@ -62,10 +93,11 @@ function createStatusBar() {
             el('span', { className: 'statusbar__mark' }, [icon('shield')]),
             el('span', { textContent: 'ARGUS-PR' })
         ]),
-        item('Web', endpoint),
+        item('Griglia', layoutBar),
         item('Canali', channels),
         item('REC', recording),
         el('span', { className: 'statusbar__spacer' }),
+        item('Uscita', displayInfo),
         item('CPU', cpu),
         item('RAM', ram),
         item('GPU', gpu),
@@ -98,7 +130,13 @@ function createStatusBar() {
             endpoint.textContent = webUrl;
             channels.textContent = String(status.enabled);
             recording.textContent = String(status.recording);
-            version.textContent = status.version;
+            version.textContent = `v${status.version}`;
+            if (status.displays && status.displays.length > 0) {
+                const connected = status.displays.filter((d) => d.connected);
+                displayInfo.textContent = connected.length > 0
+                    ? connected.map((d) => d.label).join(', ')
+                    : `${status.displays.length} uscite (nessun display)`;
+            }
             paintMetrics(status.metrics);
         }
     };
@@ -108,7 +146,9 @@ function createGrid() {
     const element = el('div', { className: 'console__grid' });
     let players = [];
     let signature = null;
-    let cameraCount = 0;
+    let cameraList = [];
+    let spotlightCameraId = null;
+    let selectedLayout = LAYOUT_PRESETS[0];
 
     const teardown = () => {
         for (const player of players) player.destroy();
@@ -116,10 +156,21 @@ function createGrid() {
     };
 
     const updateShape = () => {
-        if (!cameraCount) return;
-        const shape = gridShape(cameraCount);
-        element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
-        element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
+        if (spotlightCameraId) {
+            element.style.setProperty('grid-template-columns', '1fr');
+            element.style.setProperty('grid-template-rows', '1fr');
+            return;
+        }
+
+        if (selectedLayout.id === 'auto') {
+            const count = cameraList.length || 1;
+            const shape = autoGridShape(count);
+            element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
+            element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
+        } else {
+            element.style.setProperty('grid-template-columns', `repeat(${selectedLayout.cols}, 1fr)`);
+            element.style.setProperty('grid-template-rows', `repeat(${selectedLayout.rows}, 1fr)`);
+        }
     };
 
     window.addEventListener('resize', updateShape);
@@ -130,52 +181,100 @@ function createGrid() {
         element.replaceChildren(node);
     };
 
+    const toggleSpotlight = (cameraId) => {
+        spotlightCameraId = spotlightCameraId === cameraId ? null : cameraId;
+        buildDom();
+    };
+
+    const buildDom = () => {
+        teardown();
+        updateShape();
+
+        let visibleCameras = cameraList;
+        if (spotlightCameraId) {
+            visibleCameras = cameraList.filter((c) => c.id === spotlightCameraId);
+            if (visibleCameras.length === 0) {
+                spotlightCameraId = null;
+                visibleCameras = cameraList;
+            }
+        } else if (selectedLayout.id !== 'auto') {
+            const max = selectedLayout.cols * selectedLayout.rows;
+            visibleCameras = cameraList.slice(0, max);
+        }
+
+        element.replaceChildren(...visibleCameras.map((camera) => {
+            const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
+            video.muted = true;
+
+            const state = el('span', { className: 'console__state' });
+            const isSpotlight = spotlightCameraId === camera.id;
+
+            const zoomBtn = el('button', {
+                type: 'button',
+                className: `console__tool-btn ${isSpotlight ? 'console__tool-btn--active' : ''}`,
+                textContent: isSpotlight ? 'Griglia' : 'Zoom',
+                title: isSpotlight ? 'Torna alla griglia' : 'Espandi a schermo intero (doppio clic)',
+                onclick: (e) => {
+                    e.stopPropagation();
+                    toggleSpotlight(camera.id);
+                }
+            });
+
+            const tools = el('div', { className: 'console__tools' }, [zoomBtn]);
+
+            const cell = el('div', {
+                className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
+                ondblclick: () => toggleSpotlight(camera.id)
+            }, [
+                video,
+                el('span', { className: 'console__tag' }, [
+                    state,
+                    el('span', { textContent: camera.name })
+                ]),
+                tools
+            ]);
+
+            if (isPlaybackSupported()) {
+                players.push(createLivePlayer(video, camera.id, {
+                    onState: (value) => {
+                        const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
+                        state.className = `console__state${suffix}`;
+                    }
+                }));
+            }
+
+            return cell;
+        }));
+    };
+
     return {
         element,
+        setLayout(preset) {
+            selectedLayout = preset;
+            spotlightCameraId = null;
+            buildDom();
+        },
         message(text) {
             signature = null;
-            cameraCount = 0;
+            cameraList = [];
+            spotlightCameraId = null;
             teardown();
             single(el('div', { className: 'console__empty', textContent: text }));
         },
         render(cameras) {
-            cameraCount = cameras.length;
+            cameraList = cameras;
             const next = cameras.map((camera) => `${camera.id}:${camera.name}`).join('|');
             if (next === signature) return;
             signature = next;
-            teardown();
-
-            updateShape();
-
-            element.replaceChildren(...cameras.map((camera) => {
-                const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
-                video.muted = true;
-
-                const state = el('span', { className: 'console__state' });
-                const cell = el('div', { className: 'console__cell' }, [
-                    video,
-                    el('span', { className: 'console__tag' }, [state, el('span', { textContent: camera.name })])
-                ]);
-
-                if (isPlaybackSupported()) {
-                    players.push(createLivePlayer(video, camera.id, {
-                        onState: (value) => {
-                            const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
-                            state.className = `console__state${suffix}`;
-                        }
-                    }));
-                }
-
-                return cell;
-            }));
+            buildDom();
         }
     };
 }
 
 async function boot() {
     const root = document.getElementById('console');
-    const bar = createStatusBar();
     const grid = createGrid();
+    const bar = createStatusBar((layout) => grid.setLayout(layout));
 
     root.replaceChildren(grid.element, bar.element);
 
