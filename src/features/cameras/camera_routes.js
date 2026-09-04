@@ -6,6 +6,7 @@ import { readCameraInput } from './camera_payload.js';
 import { getCameraSecrets } from './camera_repository.js';
 import { runAutoconfigureStep, stepsFor } from './autoconfigure.js';
 import { autodiscoverStreams } from './stream_discovery.js';
+import { BRAND_PROFILES } from './camera_brand_profiles.js';
 import { Permission } from '../../security/rbac.js';
 import { Exposure, Zone } from '../../security/net_zones.js';
 import { recordAudit, AuditAction } from '../../security/audit.js';
@@ -171,4 +172,8 @@ export function registerCameraRoutes(router) {
         const result = await autodiscoverStreams({ host, port, username, password });
         return { body: result };
     }, { permission: Permission.CAMERA_MANAGE, rateLimit: { limit: 20, windowMs: 60 * 1000 } });
+
+    router.get('/api/cameras/brand-profiles', async () => ({
+        body: { profiles: BRAND_PROFILES }
+    }), { permission: Permission.LIVE_VIEW, exposure: Exposure.PUBLIC });
 }
