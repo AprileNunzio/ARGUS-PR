@@ -66,7 +66,7 @@ verify_signature() {
         return 1
     fi
 
-    GNUPGHOME="$home" git -C "$INSTALL_DIR" verify-tag "$tag" >/dev/null 2>&1
+    GNUPGHOME="$home" git_repo verify-tag "$tag" >/dev/null 2>&1
     status=$?
     rm -rf "$home"
 
@@ -95,13 +95,13 @@ case "$PHASE" in
 
         log "applico ${TARGET}"
 
-        git -C "$INSTALL_DIR" remote set-url origin "$OFFICIAL_REMOTE"
+        git_repo remote set-url origin "$OFFICIAL_REMOTE"
 
-        if ! git -C "$INSTALL_DIR" fetch --tags --force --quiet origin; then
+        if ! git_repo fetch --tags --force --quiet origin; then
             log "fetch da GitHub non riuscito, verifico se il tag e gia presente in locale"
         fi
 
-        if ! git -C "$INSTALL_DIR" rev-parse --verify --quiet "refs/tags/${TARGET}^{commit}" >/dev/null; then
+        if ! git_repo rev-parse --verify --quiet "refs/tags/${TARGET}^{commit}" >/dev/null; then
             log "tag ${TARGET} non disponibile ne da GitHub ne in locale"
             write_state '{"phase":"failed","message":"Tag non trovato: repository irraggiungibile e nessun pacchetto offline importato"}'
             exit 0
@@ -112,7 +112,7 @@ case "$PHASE" in
             exit 0
         fi
 
-        if ! git -C "$INSTALL_DIR" -c advice.detachedHead=false checkout --quiet --force "$TARGET"; then
+        if ! git_repo -c advice.detachedHead=false checkout --quiet --force "$TARGET"; then
             log "checkout fallito"
             write_state '{"phase":"failed","message":"Checkout fallito"}'
             exit 0
@@ -120,7 +120,7 @@ case "$PHASE" in
 
         if ! install_dependencies; then
             log "npm install fallito, ripristino ${PREVIOUS}"
-            [[ -n "$PREVIOUS" ]] && git -C "$INSTALL_DIR" checkout --quiet --force "$PREVIOUS"
+            [[ -n "$PREVIOUS" ]] && git_repo checkout --quiet --force "$PREVIOUS"
             install_dependencies
             write_state '{"phase":"rolled-back","message":"Installazione dipendenze fallita"}'
             exit 0
@@ -136,7 +136,7 @@ case "$PHASE" in
         NEXT=$((ATTEMPTS + 1))
         if (( NEXT > MAX_ATTEMPTS )); then
             log "la nuova versione non si stabilizza, ripristino ${PREVIOUS}"
-            if [[ -n "$PREVIOUS" ]] && git -C "$INSTALL_DIR" checkout --quiet --force "$PREVIOUS"; then
+            if [[ -n "$PREVIOUS" ]] && git_repo checkout --quiet --force "$PREVIOUS"; then
                 install_dependencies
                 write_state '{"phase":"rolled-back","message":"Ripristino automatico: la nuova versione non si e avviata"}'
             else

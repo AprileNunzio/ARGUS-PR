@@ -11,6 +11,9 @@ import { generatePassword, hashPassword } from '../src/security/password.js';
 import { getDatabase } from '../src/storage/database.js';
 import { readPackageVersion } from '../src/platform/version.js';
 import { ensureTlsMaterial, desiredAltNames } from '../src/platform/tls.js';
+import { checkForUpdate, resetWatchdog } from '../src/features/updates/update_service.js';
+import { readState, writeState, Phase } from '../src/features/updates/update_state.js';
+import { isReleaseTag, isNewer } from '../src/features/updates/semver.js';
 
 const command = process.argv[2] ?? 'serve';
 
@@ -173,6 +176,76 @@ async function resetAdmin() {
     process.exit(0);
 }
 
+async function update() {
+    const config = loadConfig();
+    setLogLevel('warn');
+
+    const requested = process.argv[3] ?? null;
+    const current = readPackageVersion();
+
+    const target = await (async () => {
+        if (requested) return requested;
+        const state = readState(config);
+        if (state.targetRef) return state.targetRef;
+        const check = await checkForUpdate({ force: true }).catch((error) => {
+            process.stderr.write(`\n  Impossibile contattare GitHub: ${error.message}\n\n`);
+            process.exit(1);
+        });
+        return check.latest.tag;
+    })();
+
+    if (!isReleaseTag(target)) {
+        process.stderr.write(`\n  Riferimento non valido: ${target}\n  Sono ammessi solo i tag di release vX.Y.Z\n\n`);
+        process.exit(1);
+    }
+
+    if (!isNewer(target, current)) {
+        process.stderr.write(`\n  ${target} non e successiva alla v${current} installata.\n\n`);
+        process.exit(1);
+    }
+
+    writeState(config, {
+        phase: Phase.REQUESTED,
+        targetRef: target,
+        previousVersion: current,
+        attempts: 0,
+        requestedAt: new Date().toISOString(),
+        appliedAt: null,
+        message: 'Aggiornamento forzato da riga di comando'
+    });
+
+    process.stdout.write([
+        '',
+        `  Aggiornamento a ${target} programmato (da v${current}).`,
+        '  Riavvia il servizio per applicarlo:',
+        '',
+        '    systemctl restart argus-pr',
+        '',
+        '  Se la nuova versione non si stabilizza entro 90 secondi,',
+        '  il watchdog ripristina automaticamente la versione precedente.',
+        ''
+    ].join('\n') + '\n');
+
+    process.exit(0);
+}
+
+async function watchdogReset() {
+    const config = loadConfig();
+    setLogLevel('warn');
+
+    const snapshot = resetWatchdog(config);
+
+    process.stdout.write([
+        '',
+        '  Stato del watchdog azzerato.',
+        `  Quarantena    ${snapshot.quarantined ? snapshot.quarantineList.join(', ') : 'vuota'}`,
+        `  Tentativi     ${snapshot.attempts}/${snapshot.maxAttempts}`,
+        ''
+    ].join('\n') + '\n');
+
+    process.exit(0);
+}
+
 function usage() {
     process.stdout.write(`
   ARGUS-PR ${readPackageVersion()}
@@ -182,12 +255,24 @@ function usage() {
     argus doctor           Verify environment and dependencies
     argus reset-admin [u]  Reset a user password (default: admin)
     argus cert             Show the TLS certificate fingerprint and authority
+    argus update [tag]     Schedule an update to a release tag (default: latest)
+    argus watchdog-reset   Clear the update quarantine and boot attempt counter
 
 `);
     process.exit(0);
 }
 
-const commands = { serve, doctor, cert, 'reset-admin': resetAdmin, help: usage, '--help': usage, '-h': usage };
+const commands = {
+    serve,
+    doctor,
+    cert,
+    update,
+    'watchdog-reset': watchdogReset,
+    'reset-admin': resetAdmin,
+    help: usage,
+    '--help': usage,
+    '-h': usage
+};
 const handler = commands[command];
 
 if (!handler) {

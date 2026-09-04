@@ -31,7 +31,7 @@ export function isUpdateSupported() {
 }
 
 async function git(args) {
-    const result = await run('git', ['-C', projectRoot, ...args], {
+    const result = await run('git', ['-C', projectRoot, '-c', `safe.directory=${projectRoot}`, ...args], {
         windowsHide: true,
         shell: false,
         timeout: 20000,

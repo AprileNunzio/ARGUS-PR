@@ -182,7 +182,7 @@ export async function fetchRemoteBundle(config, rawUrl) {
 }
 
 async function git(args, timeout = 120000) {
-    const result = await run('git', ['-C', projectRoot, ...args], {
+    const result = await run('git', ['-C', projectRoot, '-c', `safe.directory=${projectRoot}`, ...args], {
         windowsHide: true,
         shell: false,
         timeout,
