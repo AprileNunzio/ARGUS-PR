@@ -4,23 +4,33 @@ import { subscribe, Topic } from '../../kernel/event_bus.js';
 
 const sessions = new Map();
 
-export function getSession(cameraId) {
+function sessionKey(cameraId, quality) {
+    return `${cameraId}::${quality === 'main' ? 'main' : 'sub'}`;
+}
+
+export function getSession(cameraId, quality = 'sub') {
     assertStreamable(cameraId);
 
-    const existing = sessions.get(cameraId);
+    const key = sessionKey(cameraId, quality);
+    const existing = sessions.get(key);
     if (existing && !existing.stopped) return existing;
 
-    const session = new StreamSession(cameraId);
-    sessions.set(cameraId, session);
+    const session = new StreamSession(cameraId, quality);
+    sessions.set(key, session);
     return session;
 }
 
 export function stopSession(cameraId, reason = 'stopped') {
-    const session = sessions.get(cameraId);
-    if (!session) return false;
-    session.stop(reason);
-    sessions.delete(cameraId);
-    return true;
+    let stopped = false;
+
+    for (const [key, session] of sessions) {
+        if (session.cameraId !== cameraId) continue;
+        session.stop(reason);
+        sessions.delete(key);
+        stopped = true;
+    }
+
+    return stopped;
 }
 
 export function sessionStates() {
@@ -39,8 +49,8 @@ export function installStreamHub() {
     onShutdown('stream-hub', () => {
         unsubscribe();
         unsubscribeUpdate();
-        for (const cameraId of Array.from(sessions.keys())) {
-            stopSession(cameraId, 'shutdown');
+        for (const session of Array.from(sessions.values())) {
+            stopSession(session.cameraId, 'shutdown');
         }
     });
 }

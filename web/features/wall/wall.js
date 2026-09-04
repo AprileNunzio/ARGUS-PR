@@ -1,18 +1,9 @@
 import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
-import { icon } from '/assets/icons.js';
+import { createStatusBar, presetById } from './wall_statusbar.js';
 
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
-
-const LAYOUT_PRESETS = [
-    { id: 'auto', label: 'Auto' },
-    { id: '1', label: '1', cols: 1, rows: 1 },
-    { id: '4', label: '4', cols: 2, rows: 2 },
-    { id: '9', label: '9', cols: 3, rows: 3 },
-    { id: '16', label: '16', cols: 4, rows: 4 },
-    { id: '32', label: '32', cols: 8, rows: 4 },
-    { id: '64', label: '64', cols: 8, rows: 8 }
-];
+const CONFIG_INTERVAL_MS = 15000;
 
 function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
@@ -53,103 +44,13 @@ async function request(path, options = {}) {
     return payload;
 }
 
-function createStatusBar(onLayoutChange, onDisplaySelect) {
-    const endpoint = el('span', { className: 'statusbar__ip', textContent: 'localhost' });
-    const channels = el('span', { className: 'statusbar__value', textContent: '0' });
-    const recording = el('span', { className: 'statusbar__value', textContent: '0' });
-    const cpu = el('span', { className: 'statusbar__value', textContent: '--' });
-    const ram = el('span', { className: 'statusbar__value', textContent: '--' });
-    const gpu = el('span', { className: 'statusbar__value', textContent: '--' });
-    const displayInfo = el('span', { className: 'statusbar__value', textContent: '--' });
-    const version = el('span', { className: 'statusbar__value', textContent: '--' });
-    const clock = el('span', { className: 'statusbar__clock', textContent: '--:--:--' });
-
-    let activeLayout = 'auto';
-
-    const layoutButtons = LAYOUT_PRESETS.map((preset) => {
-        const btn = el('button', {
-            type: 'button',
-            className: `wall-layout-btn ${preset.id === activeLayout ? 'wall-layout-btn--active' : ''}`,
-            textContent: preset.label,
-            title: `Visualizza griglia ${preset.label}`,
-            onclick: () => {
-                activeLayout = preset.id;
-                for (const b of layoutButtons) b.classList.toggle('wall-layout-btn--active', b === btn);
-                onLayoutChange(preset);
-            }
-        });
-        return btn;
-    });
-
-    const layoutBar = el('div', { className: 'wall-layout-bar' }, layoutButtons);
-
-    const item = (label, value) => el('span', { className: 'statusbar__item' }, [
-        el('span', { className: 'statusbar__label', textContent: label }),
-        value
-    ]);
-
-    const element = el('footer', { className: 'statusbar' }, [
-        el('span', { className: 'statusbar__brand' }, [
-            el('span', { className: 'statusbar__mark' }, [icon('shield')]),
-            el('span', { textContent: 'ARGUS-PR' })
-        ]),
-        item('IP Server', endpoint),
-        item('Griglia', layoutBar),
-        item('Canali', channels),
-        item('REC', recording),
-        el('span', { className: 'statusbar__spacer' }),
-        item('Uscita', displayInfo),
-        item('CPU', cpu),
-        item('RAM', ram),
-        item('GPU', gpu),
-        item('Versione', version),
-        clock
-    ]);
-
-    const tick = () => { clock.textContent = new Date().toLocaleTimeString(); };
-    tick();
-    setInterval(tick, 1000);
-
-    let webUrl = 'https://localhost';
-
-    const paintMetrics = (metrics) => {
-        if (!metrics) return;
-        cpu.textContent = metrics.cpuPercent === null ? '--' : `${metrics.cpuPercent}%`;
-        ram.textContent = `${metrics.memory.usedPercent}%`;
-        gpu.textContent = metrics.gpu.label;
-    };
-
-    return {
-        element,
-        get webUrl() { return webUrl; },
-        metrics: paintMetrics,
-        update(status) {
-            const primary = status.addresses[0];
-            const host = primary ? primary.address : 'localhost';
-            const suffix = status.port === 443 ? '' : `:${status.port}`;
-            webUrl = `https://${host}${suffix}`;
-            endpoint.textContent = webUrl;
-            channels.textContent = String(status.enabled);
-            recording.textContent = String(status.recording);
-            version.textContent = `v${status.version}`;
-            if (status.displays && status.displays.length > 0) {
-                const connected = status.displays.filter((d) => d.connected);
-                displayInfo.textContent = connected.length > 0
-                    ? connected.map((d) => d.label).join(', ')
-                    : `${status.displays.length} uscite (nessun display)`;
-            }
-            paintMetrics(status.metrics);
-        }
-    };
-}
-
 function createGrid() {
     const element = el('div', { className: 'console__grid' });
     let players = [];
     let signature = null;
     let cameraList = [];
     let spotlightCameraId = null;
-    let selectedLayout = LAYOUT_PRESETS[0];
+    let selectedLayout = presetById('auto');
 
     const teardown = () => {
         for (const player of players) player.destroy();
@@ -157,21 +58,21 @@ function createGrid() {
     };
 
     const updateShape = () => {
-        if (spotlightCameraId) {
+        if (spotlightCameraId || selectedLayout.id === '1') {
             element.style.setProperty('grid-template-columns', '1fr');
             element.style.setProperty('grid-template-rows', '1fr');
             return;
         }
 
         if (selectedLayout.id === 'auto') {
-            const count = cameraList.length || 1;
-            const shape = autoGridShape(count);
+            const shape = autoGridShape(cameraList.length || 1);
             element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
             element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
-        } else {
-            element.style.setProperty('grid-template-columns', `repeat(${selectedLayout.cols}, 1fr)`);
-            element.style.setProperty('grid-template-rows', `repeat(${selectedLayout.rows}, 1fr)`);
+            return;
         }
+
+        element.style.setProperty('grid-template-columns', `repeat(${selectedLayout.cols}, 1fr)`);
+        element.style.setProperty('grid-template-rows', `repeat(${selectedLayout.rows}, 1fr)`);
     };
 
     window.addEventListener('resize', updateShape);
@@ -187,70 +88,75 @@ function createGrid() {
         buildDom();
     };
 
+    const buildCell = (camera) => {
+        const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
+        video.muted = true;
+
+        const state = el('span', { className: 'console__state' });
+        const isSpotlight = spotlightCameraId === camera.id;
+
+        const zoomButton = el('button', {
+            type: 'button',
+            className: `console__tool-btn ${isSpotlight ? 'console__tool-btn--active' : ''}`,
+            textContent: isSpotlight ? 'Griglia' : 'Zoom',
+            title: isSpotlight ? 'Torna alla griglia' : 'Espandi a schermo intero (doppio clic)',
+            onclick: (event) => {
+                event.stopPropagation();
+                toggleSpotlight(camera.id);
+            }
+        });
+
+        const cell = el('div', {
+            className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
+            ondblclick: () => toggleSpotlight(camera.id)
+        }, [
+            video,
+            el('span', { className: 'console__tag' }, [
+                state,
+                el('span', { textContent: camera.name }),
+                el('span', {
+                    className: `console__quality console__quality--${camera.quality}`,
+                    textContent: camera.quality === 'main' ? 'HD' : 'SD'
+                })
+            ]),
+            el('div', { className: 'console__tools' }, [zoomButton])
+        ]);
+
+        if (isPlaybackSupported()) {
+            players.push(createLivePlayer(video, camera.id, {
+                quality: camera.quality,
+                onState: (value) => {
+                    const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
+                    state.className = `console__state${suffix}`;
+                }
+            }));
+        }
+
+        return cell;
+    };
+
     const buildDom = () => {
         teardown();
         updateShape();
 
-        let visibleCameras = cameraList;
+        let visible = cameraList;
         if (spotlightCameraId) {
-            visibleCameras = cameraList.filter((c) => c.id === spotlightCameraId);
-            if (visibleCameras.length === 0) {
+            visible = cameraList.filter((camera) => camera.id === spotlightCameraId);
+            if (visible.length === 0) {
                 spotlightCameraId = null;
-                visibleCameras = cameraList;
+                visible = cameraList;
             }
         } else if (selectedLayout.id !== 'auto') {
-            const max = selectedLayout.cols * selectedLayout.rows;
-            visibleCameras = cameraList.slice(0, max);
+            visible = cameraList.slice(0, selectedLayout.cols * selectedLayout.rows);
         }
 
-        element.replaceChildren(...visibleCameras.map((camera) => {
-            const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
-            video.muted = true;
-
-            const state = el('span', { className: 'console__state' });
-            const isSpotlight = spotlightCameraId === camera.id;
-
-            const zoomBtn = el('button', {
-                type: 'button',
-                className: `console__tool-btn ${isSpotlight ? 'console__tool-btn--active' : ''}`,
-                textContent: isSpotlight ? 'Griglia' : 'Zoom',
-                title: isSpotlight ? 'Torna alla griglia' : 'Espandi a schermo intero (doppio clic)',
-                onclick: (e) => {
-                    e.stopPropagation();
-                    toggleSpotlight(camera.id);
-                }
-            });
-
-            const tools = el('div', { className: 'console__tools' }, [zoomBtn]);
-
-            const cell = el('div', {
-                className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
-                ondblclick: () => toggleSpotlight(camera.id)
-            }, [
-                video,
-                el('span', { className: 'console__tag' }, [
-                    state,
-                    el('span', { textContent: camera.name })
-                ]),
-                tools
-            ]);
-
-            if (isPlaybackSupported()) {
-                players.push(createLivePlayer(video, camera.id, {
-                    onState: (value) => {
-                        const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
-                        state.className = `console__state${suffix}`;
-                    }
-                }));
-            }
-
-            return cell;
-        }));
+        element.replaceChildren(...visible.map(buildCell));
     };
 
     return {
         element,
         setLayout(preset) {
+            if (preset.id === selectedLayout.id) return;
             selectedLayout = preset;
             spotlightCameraId = null;
             buildDom();
@@ -263,8 +169,8 @@ function createGrid() {
             single(el('div', { className: 'console__empty', textContent: text }));
         },
         render(cameras) {
+            const next = cameras.map((camera) => `${camera.index}:${camera.id}:${camera.name}:${camera.quality}`).join('|');
             cameraList = cameras;
-            const next = cameras.map((camera) => `${camera.id}:${camera.name}`).join('|');
             if (next === signature) return;
             signature = next;
             buildDom();
@@ -275,11 +181,27 @@ function createGrid() {
 async function boot() {
     const root = document.getElementById('console');
     const grid = createGrid();
-    const bar = createStatusBar((layout) => grid.setLayout(layout));
+    const bar = createStatusBar((preset) => grid.setLayout(preset));
 
     root.replaceChildren(grid.element, bar.element);
 
     let authenticated = false;
+    let plan = [];
+
+    const applyConfig = async () => {
+        const payload = await request('/api/wall/config').catch(() => null);
+        if (!payload) return;
+
+        plan = payload.plan ?? [];
+        bar.setClock(payload.config.clock, payload.timezone ?? null);
+        bar.setLayout(payload.config.layout);
+        grid.setLayout(presetById(payload.config.layout));
+
+        const enabledOutputs = (payload.config.outputs ?? []).filter((output) => output.enabled).map((output) => output.id);
+        bar.setOutputs(enabledOutputs);
+
+        if (plan.length > 0) grid.render(plan);
+    };
 
     const refresh = async () => {
         const status = await request('/api/console/status');
@@ -296,29 +218,28 @@ async function boot() {
             if (current?.username) {
                 authenticated = true;
             } else {
-                const sessionRes = await request('/api/console/session', {
+                const issued = await request('/api/console/session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: '{}'
                 }).catch(() => null);
-                if (sessionRes) {
-                    authenticated = true;
-                } else {
+
+                if (!issued) {
                     grid.message(`Accesso richiesto.\nEffettua prima il login su ${bar.webUrl} per visualizzare il Muro Video.`);
                     return;
                 }
+                authenticated = true;
             }
         }
 
-        const { cameras } = await request('/api/cameras');
-        const active = cameras.filter((camera) => camera.enabled);
+        await applyConfig();
 
-        if (active.length === 0) {
-            grid.message(`Nessuna telecamera attiva.\nApri ${bar.webUrl} da un altro dispositivo per aggiungerne una.`);
+        if (plan.length === 0) {
+            grid.message(`Nessuna telecamera assegnata al muro.\nApri ${bar.webUrl} e configura Regia & Layout Muro Video.`);
             return;
         }
 
-        grid.render(active);
+        grid.render(plan);
     };
 
     const safeRefresh = () => refresh().catch((error) => {
@@ -330,9 +251,15 @@ async function boot() {
         .then((status) => bar.update(status))
         .catch(() => {});
 
+    const safeConfig = () => {
+        if (!authenticated) return;
+        applyConfig().catch(() => {});
+    };
+
     await safeRefresh();
     setInterval(safeRefresh, STATUS_INTERVAL_MS);
     setInterval(safeMetrics, METRICS_INTERVAL_MS);
+    setInterval(safeConfig, CONFIG_INTERVAL_MS);
 }
 
 boot().catch((error) => {

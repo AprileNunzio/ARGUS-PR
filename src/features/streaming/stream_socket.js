@@ -44,14 +44,18 @@ export function cameraIdFromPath(pathname) {
     return decodeURIComponent(pathname.slice('/api/stream/'.length));
 }
 
+export function qualityFromQuery(value) {
+    return value === 'main' ? 'main' : 'sub';
+}
+
 export function authoriseStream(actor) {
     return Boolean(actor) && can(actor.role, Permission.LIVE_VIEW);
 }
 
-export function attachStreamViewer(socket, actor, cameraId) {
+export function attachStreamViewer(socket, actor, cameraId, quality = 'sub') {
     const session = (() => {
         try {
-            return getSession(cameraId);
+            return getSession(cameraId, quality);
         } catch (error) {
             socket.close(1011, error.message.slice(0, 100));
             return null;
@@ -63,7 +67,7 @@ export function attachStreamViewer(socket, actor, cameraId) {
     const viewer = new SocketViewer(socket);
     session.addViewer(viewer);
 
-    log.info('viewer attached', { camera: cameraId, user: actor.username, viewers: session.viewers.size });
+    log.info('viewer attached', { camera: cameraId, quality: session.quality, user: actor.username, viewers: session.viewers.size });
 
     socket.on('close', () => {
         session.removeViewer(viewer);

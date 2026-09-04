@@ -1,6 +1,6 @@
 import { Permission } from '../../security/rbac.js';
 import { recordAudit } from '../../security/audit.js';
-import { checkForUpdate, updateStatus, requestUpdate, cancelUpdate, scheduleRestart } from './update_service.js';
+import { checkForUpdate, updateStatus, requestUpdate, cancelUpdate, scheduleRestart, resetWatchdog } from './update_service.js';
 import { approveRestart, dismissPendingUpgrade } from './auto_update.js';
 
 export function registerUpdateRoutes(router) {
@@ -71,6 +71,24 @@ export function registerUpdateRoutes(router) {
 
         return { body: { state } };
     }, { permission: Permission.SYSTEM_MANAGE });
+
+    router.post('/api/updates/watchdog/reset', async (ctx) => {
+        const watchdog = resetWatchdog(ctx.config);
+
+        recordAudit({
+            actorId: ctx.actor.id,
+            actorName: ctx.actor.username,
+            action: 'update.watchdog.reset',
+            target: null,
+            remoteAddr: ctx.address,
+            detail: null
+        });
+
+        return { body: { watchdog, status: updateStatus(ctx.config) } };
+    }, {
+        permission: Permission.SYSTEM_MANAGE,
+        rateLimit: { limit: 10, windowMs: 60 * 60 * 1000 }
+    });
 
     router.post('/api/updates/cancel', async (ctx) => {
         const state = cancelUpdate(ctx.config);

@@ -9,7 +9,8 @@ export const MACRO_AREAS = [
         getMetric: (info) => `${info.cameraCount ?? 0} canali attivi`,
         subapps: [
             { id: 'live', title: 'Diretta Streaming', desc: 'Flusso fMP4 realtime a bassissima latenza', icon: 'play', png: 'app_live', route: 'live', badge: { text: 'fMP4', tone: 'green' } },
-            { id: 'wall', title: 'Muro Video (Wall)', desc: 'Console multiview a pieno schermo per monitor', icon: 'monitor', png: 'app_wall', route: 'wall', isPage: true, badge: { text: 'Display', tone: 'blue' } }
+            { id: 'wall', title: 'Muro Video (Wall)', desc: 'Console multiview a pieno schermo per monitor', icon: 'monitor', png: 'app_wall', route: 'wall', isPage: true, badge: { text: 'Display', tone: 'blue' } },
+            { id: 'wall-settings', title: 'Regia & Layout Muro', desc: 'Griglia predefinita, riquadri, qualita flussi, uscite HDMI e orologio', icon: 'crop', png: 'app_wall', route: 'wall-settings', badge: { text: 'Regia', tone: 'purple' }, permission: 'system.manage' }
         ]
     },
     {

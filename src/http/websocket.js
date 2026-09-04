@@ -9,7 +9,7 @@ import { SESSION_COOKIE } from './server.js';
 import { classify, isTrustedZone, Zone } from '../security/net_zones.js';
 import { emitSecurityEvent, SecurityEvent } from '../security/security_events.js';
 import { remoteAccessEnabled, trustedNetworksFor } from '../features/settings/settings_service.js';
-import { isStreamPath, cameraIdFromPath, authoriseStream, attachStreamViewer } from '../features/streaming/stream_socket.js';
+import { isStreamPath, cameraIdFromPath, qualityFromQuery, authoriseStream, attachStreamViewer } from '../features/streaming/stream_socket.js';
 
 const log = createLogger('websocket');
 const HEARTBEAT_MS = 30000;
@@ -90,7 +90,7 @@ export function attachEventSocket(server, config) {
             }
 
             streams.handleUpgrade(req, socket, head, (ws) => {
-                attachStreamViewer(ws, actor, cameraIdFromPath(url.pathname));
+                attachStreamViewer(ws, actor, cameraIdFromPath(url.pathname), qualityFromQuery(url.searchParams.get('quality')));
             });
             return;
         }

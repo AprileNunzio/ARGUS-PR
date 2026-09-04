@@ -14,6 +14,12 @@ function toPublic(row) {
         networkHost: row.network_host,
         networkShare: row.network_share,
         networkProto: row.network_proto,
+        smbVersion: row.smb_version,
+        mountOptions: row.mount_options,
+        reconnectSeconds: row.reconnect_seconds,
+        retentionPolicy: row.retention_policy,
+        retentionDays: row.retention_days,
+        alarmPercent: row.alarm_percent,
         username: row.username,
         hasPassword: Boolean(row.password_secret),
         status: row.status,
@@ -58,8 +64,10 @@ export function insertStoragePool(pool) {
         INSERT INTO storage_pools (
             id, name, kind, path, is_default, max_bytes, min_free_bytes,
             network_host, network_share, network_proto, username, password_secret, status,
+            smb_version, mount_options, reconnect_seconds,
+            retention_policy, retention_days, alarm_percent,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         pool.id,
         pool.name,
@@ -74,6 +82,12 @@ export function insertStoragePool(pool) {
         pool.username || null,
         pool.password ? encryptSecret(pool.password) : null,
         pool.status || 'online',
+        pool.smbVersion || null,
+        pool.mountOptions || null,
+        Number.isInteger(pool.reconnectSeconds) ? pool.reconnectSeconds : 30,
+        pool.retentionPolicy || 'fifo',
+        Number.isInteger(pool.retentionDays) ? pool.retentionDays : 30,
+        Number.isInteger(pool.alarmPercent) ? pool.alarmPercent : 10,
         at,
         at
     );
@@ -102,6 +116,12 @@ export function updateStoragePool(id, patch) {
         networkHost: 'network_host',
         networkShare: 'network_share',
         networkProto: 'network_proto',
+        smbVersion: 'smb_version',
+        mountOptions: 'mount_options',
+        reconnectSeconds: 'reconnect_seconds',
+        retentionPolicy: 'retention_policy',
+        retentionDays: 'retention_days',
+        alarmPercent: 'alarm_percent',
         username: 'username',
         status: 'status'
     };

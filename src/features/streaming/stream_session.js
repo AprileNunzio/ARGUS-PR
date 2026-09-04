@@ -21,8 +21,9 @@ const MAX_RESTART_DELAY_MS = 30000;
 const STALL_TIMEOUT_MS = 20000;
 
 export class StreamSession {
-    constructor(cameraId) {
+    constructor(cameraId, quality = 'sub') {
         this.cameraId = cameraId;
+        this.quality = quality === 'main' ? 'main' : 'sub';
         this.viewers = new Set();
         this.process = null;
         this.initSegment = null;
@@ -94,9 +95,10 @@ export class StreamSession {
             return;
         }
 
-        const input = resolveInput(camera, { preferSub: true });
+        const preferSub = this.quality !== 'main';
+        const input = resolveInput(camera, { preferSub });
 
-        const probe = await probeStream(this.cameraId, { preferSub: true })
+        const probe = await probeStream(this.cameraId, { preferSub })
             .then((result) => result.video)
             .catch(() => null);
 
@@ -106,6 +108,7 @@ export class StreamSession {
 
         log.info('stream starting', {
             camera: this.cameraId,
+            quality: this.quality,
             source: input.label,
             transcoded
         });
@@ -220,6 +223,7 @@ export class StreamSession {
     snapshot() {
         return {
             cameraId: this.cameraId,
+            quality: this.quality,
             state: this.state,
             viewers: this.viewers.size,
             lastError: this.lastError

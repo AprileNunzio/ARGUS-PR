@@ -94,7 +94,7 @@ bin/argus.js              CLI: serve | doctor | cert | reset-admin
 src/
   kernel/                 config, result, errors, logger, process_guard, event_bus
   platform/               paths, ffmpeg, media_tools, version, tls, x509, metrics, hardware
-  storage/                database, migrations/ (001_core ... 009_camera_profiles)
+  storage/                database, migrations/ (001_core ... 013_storage_policies)
   security/               vault, password, sessions, rbac, guards, audit,
                           net_zones, lockout, security_events, totp
   http/                   server, router, http_utils, static_files, rate_limit, websocket
@@ -103,15 +103,21 @@ src/
                           (rtsp, http, mjpeg, usb); local_devices.js enumera le
                           periferiche di acquisizione; camera_payload.js valida
   features/settings/      settings_schema.js dichiara OGNI impostazione modificabile
+  features/wall/          wall_config.js: regia del Muro Video (layout, riquadri,
+                          qualita per canale, uscite video, orologio della statusbar)
+  features/system/        time_service.js: fuso orario, ora legale, NTP e formato orario
   app.js                  composizione: avvio, registrazione rotte
 web/
   index.html
-  assets/                 app.js, shell.js, dom.js, api.js, icons.js,
-                          tokens.css, base.css, components.css, views.css
+  assets/                 app.js, shell.js, dom.js, api.js, icons.js, ui.js,
+                          tokens.css, base.css, components.css, views.css, modules.css
   wall.html               console locale a schermo intero (rotta /wall)
   features/<nome>/        vista della funzionalita'
                           system/ ospita la pagina Sistema e il pannello aggiornamenti
                           cameras/ console Telecamere: elenco, wizard, scheda a tab
+                          wall/ console a schermo intero (wall.js) e Regia del muro
+                          (wall_settings.js, wall_tiles.js, wall_statusbar.js,
+                          wall_clock.js)
 shield/                   ARGUS-SHIELD: applicativo firewall autonomo, zero dipendenze
   bin/argus-shield.js     CLI: apply | watch | status | ban | unban | ruleset | flush
   src/                    config, addresses, ruleset, banlist, detectors, watcher,
@@ -638,6 +644,20 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/updates/check` | `system.manage`, rate limit 10/10min |
 | POST | `/api/updates/apply` | `system.manage`, rate limit 5/1h |
 | POST | `/api/updates/cancel` | `system.manage` |
+| POST | `/api/updates/watchdog/reset` | `system.manage`, rate limit 10/1h |
+| GET | `/api/wall/config` | `live.view` |
+| PUT | `/api/wall/config` | `system.manage`, rate limit 60/10min |
+| GET | `/api/system/time` | `live.view` |
+| PUT | `/api/system/time` | `system.manage`, rate limit 30/10min |
+| POST | `/api/system/time/sync` | `system.manage`, rate limit 10/10min |
+| GET | `/api/storage/overview` | `live.view` |
+| GET | `/api/storage/pools` | `live.view` |
+| POST | `/api/storage/pools` | `storage.manage` |
+| PUT/DELETE | `/api/storage/pools/:id` | `storage.manage` |
+| POST | `/api/storage/test-path` | `storage.manage` |
+| POST | `/api/storage/benchmark` | `storage.manage`, rate limit 12/10min |
+| POST | `/api/storage/nas/mount` | `storage.manage` |
+| PUT | `/api/storage/camera-assignment` | `storage.manage` |
 | GET | `/api/exports` | `archive.export` |
 | POST | `/api/exports` | `archive.export`, rate limit 10/10min |
 | GET | `/api/exports/:id` | `archive.export` |

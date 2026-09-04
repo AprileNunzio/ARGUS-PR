@@ -15,12 +15,14 @@ import { renderAccessView } from '/features/access/access_view.js';
 import { renderPeopleView } from '/features/people/people_view.js';
 import { renderAutomation } from '/features/automation/automation.js';
 import { renderUpdatesView } from '/features/updates/updates_view.js';
+import { renderWallSettings } from '/features/wall/wall_settings.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
 
 const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
     live: { label: 'Diretta', icon: 'play', render: renderLive },
+    'wall-settings': { label: 'Regia Muro', icon: 'crop', render: renderWallSettings, permission: 'system.manage' },
     archive: { label: 'Archivio', icon: 'archive', render: renderArchive },
     cameras: { label: 'Telecamere', icon: 'camera', render: renderCameras, permission: 'camera.manage' },
     detections: { label: 'Visione AI', icon: 'eye', render: renderDetectionsView },

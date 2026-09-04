@@ -87,7 +87,8 @@ export function createLivePlayer(video, cameraId, callbacks = {}) {
         await openMedia();
 
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        socket = new WebSocket(`${protocol}//${location.host}/api/stream/${encodeURIComponent(cameraId)}`);
+        const quality = callbacks.quality === 'main' ? 'main' : 'sub';
+        socket = new WebSocket(`${protocol}//${location.host}/api/stream/${encodeURIComponent(cameraId)}?quality=${quality}`);
         socket.binaryType = 'arraybuffer';
 
         socket.addEventListener('message', (event) => {

@@ -1,5 +1,5 @@
 import { AppError, ErrorCode } from '../../kernel/errors.js';
-import { isReleaseTag } from './semver.js';
+import { isReleaseTag, latestRelease } from './semver.js';
 
 const API_ROOT = 'https://api.github.com';
 const OWNER = 'AprileNunzio';
@@ -66,6 +66,23 @@ export async function fetchLatestRelease() {
     const release = normalise(payload);
     if (!release) throw new AppError(ErrorCode.DEPENDENCY, 'Nessuna release valida pubblicata');
     return release;
+}
+
+export async function fetchLatestTag() {
+    const payload = await readJson(endpoint('/tags?per_page=100'));
+    if (!Array.isArray(payload)) return null;
+
+    const tags = payload
+        .map((entry) => (entry && typeof entry.name === 'string' ? entry.name : null))
+        .filter((name) => isReleaseTag(name));
+
+    const best = latestRelease(tags);
+    if (!best) return null;
+
+    return {
+        tag: best,
+        url: `https://github.com/${OWNER}/${REPO}/releases/tag/${encodeURIComponent(best)}`
+    };
 }
 
 export const repository = Object.freeze({ owner: OWNER, name: REPO, url: `https://github.com/${OWNER}/${REPO}.git` });

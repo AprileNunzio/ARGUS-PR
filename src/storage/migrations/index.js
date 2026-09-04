@@ -10,8 +10,20 @@ import cameraProfiles from './009_camera_profiles.js';
 import cameraAnalytics from './010_camera_analytics.js';
 import automation from './011_automation.js';
 import storagePools from './012_storage_pools.js';
+import storagePolicies from './013_storage_policies.js';
 
-export const migrations = [core, exportsMigration, schedules, motion, detections, visionAccess, hardening, mfa, cameraProfiles, cameraAnalytics, automation, storagePools].sort((a, b) => a.version - b.version);
-
-
-
+export const migrations = [
+    core,
+    exportsMigration,
+    schedules,
+    motion,
+    detections,
+    visionAccess,
+    hardening,
+    mfa,
+    cameraProfiles,
+    cameraAnalytics,
+    automation,
+    storagePools,
+    storagePolicies
+].sort((a, b) => a.version - b.version);

@@ -7,14 +7,15 @@ import { readPackageVersion } from '../../platform/version.js';
 import { createLogger } from '../../kernel/logger.js';
 import { onShutdown } from '../../kernel/process_guard.js';
 import { AppError, ErrorCode } from '../../kernel/errors.js';
-import { fetchLatestRelease, repository } from './release_client.js';
-import { isNewer, isReleaseTag } from './semver.js';
-import { Phase, readState, writeState, pardon } from './update_state.js';
+import { fetchLatestRelease, fetchLatestTag, repository } from './release_client.js';
+import { isNewer, isReleaseTag, compareVersions } from './semver.js';
+import { Phase, readState, writeState, pardon, clearState } from './update_state.js';
 
 const run = promisify(execFile);
 const log = createLogger('updates');
 
 const HEALTHY_AFTER_MS = 90 * 1000;
+const MAX_BOOT_ATTEMPTS = 3;
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const RESTART_EXIT_CODE = 75;
 
@@ -55,11 +56,23 @@ export async function checkForUpdate({ force = false } = {}) {
 
     const current = readPackageVersion();
     const release = await fetchLatestRelease();
+    const tag = await fetchLatestTag().catch(() => null);
+
+    const publishedIsNewer = tag && isNewer(tag.tag, release.tag);
+    const latest = publishedIsNewer
+        ? { ...release, tag: tag.tag, name: tag.tag, url: tag.url, notes: '', publishedAt: null, taggedOnly: true }
+        : { ...release, taggedOnly: false };
+
+    const comparison = compareVersions(latest.tag, current);
 
     const result = {
         currentVersion: current,
-        latest: release,
-        updateAvailable: isNewer(release.tag, current),
+        latest,
+        latestRelease: release,
+        latestTag: tag,
+        updateAvailable: comparison > 0,
+        aligned: comparison === 0,
+        ahead: comparison < 0,
         checkedAt: new Date().toISOString()
     };
 
@@ -67,11 +80,39 @@ export async function checkForUpdate({ force = false } = {}) {
     return result;
 }
 
+export function watchdogSnapshot(config) {
+    const state = readState(config);
+    const settled = state.phase === Phase.IDLE || state.phase === Phase.HEALTHY;
+
+    return {
+        quarantined: state.quarantine.length > 0,
+        quarantineList: state.quarantine,
+        attempts: settled ? 0 : state.attempts,
+        maxAttempts: MAX_BOOT_ATTEMPTS,
+        armed: isUpdateSupported(),
+        settled
+    };
+}
+
+export function resetWatchdog(config) {
+    const state = readState(config);
+
+    if (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING) {
+        throw new AppError(ErrorCode.CONFLICT, 'Un aggiornamento e in corso: attendi l\'esito prima di azzerare il watchdog');
+    }
+
+    clearState(config);
+    log.warn('watchdog state cleared by the operator', { version: readPackageVersion() });
+
+    return watchdogSnapshot(config);
+}
+
 export function updateStatus(config) {
     const state = readState(config);
 
     return {
         currentVersion: readPackageVersion(),
+        watchdog: watchdogSnapshot(config),
         phase: state.phase,
         targetRef: state.targetRef,
         previousVersion: state.previousVersion,
@@ -182,6 +223,16 @@ export function installUpdateWatchdog(config) {
     activeConfig = config;
 
     const state = readState(config);
+
+    if (state.phase !== Phase.PENDING && state.phase !== Phase.REQUESTED && state.attempts > 0) {
+        writeState(config, { attempts: 0 });
+        log.info('stale boot attempts cleared', { version: readPackageVersion() });
+    }
+
+    if (state.phase === Phase.HEALTHY && state.targetRef) {
+        pardon(config, state.targetRef);
+    }
+
     if (state.phase === Phase.PENDING) {
         log.warn('running a freshly applied version, waiting for the health window', {
             version: readPackageVersion(),

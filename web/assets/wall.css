@@ -197,3 +197,9 @@
     color: #fff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
+
+.statusbar__time { display: inline-flex; align-items: baseline; gap: 0.55rem; }
+.statusbar__date { color: #94a3b8; font-size: 0.78rem; text-transform: capitalize; }
+.console__quality { font-family: var(--mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 999px; }
+.console__quality--main { background: rgba(124, 92, 240, .25); color: #c4b5fd; }
+.console__quality--sub { background: rgba(56, 189, 248, .2); color: #7dd3fc; }
