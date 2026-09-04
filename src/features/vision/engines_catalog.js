@@ -32,20 +32,20 @@ export const CAPABILITIES = Object.freeze([
     {
         id: Capability.VEHICLE,
         label: 'Veicoli',
-        hint: 'Auto, furgoni, autobus, moto e biciclette.',
+        hint: 'Auto, furgoni, autobus, moto, biciclette, treni, imbarcazioni e aeromobili.',
         task: 'objects',
         defaultEnabled: false,
         defaultThreshold: 0.4,
-        classes: ['car', 'truck', 'bus', 'motorcycle', 'bicycle']
+        classes: ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'train', 'boat', 'airplane']
     },
     {
         id: Capability.ANIMAL,
         label: 'Animali',
-        hint: 'Cani, gatti e uccelli.',
+        hint: 'Cani, gatti, uccelli e animali di taglia grande.',
         task: 'objects',
         defaultEnabled: false,
         defaultThreshold: 0.45,
-        classes: ['dog', 'cat', 'bird']
+        classes: ['dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'bear', 'elephant', 'zebra', 'giraffe']
     },
     {
         id: Capability.FACE_DETECT,

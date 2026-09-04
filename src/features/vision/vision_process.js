@@ -28,6 +28,21 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
     let isTerminated = false;
     let restartTimer = null;
 
+    const stats = {
+        state: 'starting',
+        startedAt: null,
+        restarts: 0,
+        frames: 0,
+        detections: 0,
+        lastFrameAt: null,
+        lastDetectionAt: null,
+        lastError: null,
+        inferenceMs: null,
+        provider: null
+    };
+
+    const framesWindow = [];
+
     const workerScript = join(process.cwd(), 'vision', 'worker.py');
 
     function start() {
@@ -52,10 +67,13 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         const ffmpegArgs = local ? null : buildCaptureArgs(input);
 
         if (!local) {
-            if (performanceSettings.hwaccelBackend && performanceSettings.hwaccelBackend !== 'none') {
-                const backend = performanceSettings.hwaccelBackend === 'auto' ? 'auto' : performanceSettings.hwaccelBackend;
-                ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
-            }
+            const usable = status.accelerators ?? [];
+            const requested = performanceSettings.hwaccelBackend ?? 'auto';
+            const backend = requested === 'none'
+                ? null
+                : (requested === 'auto' ? usable[0] ?? null : (usable.includes(requested) ? requested : null));
+
+            if (backend) ffmpegArgs.splice(ffmpegArgs.indexOf('-i'), 0, '-hwaccel', backend);
 
             ffmpegArgs.push(
                 '-an',
@@ -88,11 +106,17 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
                 stdio: ['pipe', 'pipe', 'pipe']
             });
         } catch (err) {
+            stats.state = 'failed';
+            stats.lastError = err.message.slice(0, 200);
             log.warn('cannot spawn vision process', { error: err.message, cameraId: camera.id });
             if (onError) onError(err);
             scheduleRestart();
             return;
         }
+
+        stats.state = 'running';
+        stats.startedAt = Date.now();
+        stats.lastError = null;
 
         if (local) {
             localHandle.stream.on('data', (chunk) => {
@@ -106,7 +130,9 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         }
 
         workerChild.stderr.on('data', (d) => {
-            log.debug('worker vision stderr', { msg: d.toString().trim() });
+            const message = d.toString().trim();
+            if (message.length > 0) stats.lastError = message.slice(-200);
+            log.debug('worker vision stderr', { msg: message });
         });
 
         const rl = createInterface({ input: workerChild.stdout });
@@ -114,6 +140,22 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
             if (!line.trim()) return;
             try {
                 const parsed = JSON.parse(line);
+                const now = Date.now();
+
+                stats.frames += 1;
+                stats.lastFrameAt = now;
+                if (Number.isFinite(parsed.ms)) stats.inferenceMs = Math.round(parsed.ms);
+                if (typeof parsed.provider === 'string') stats.provider = parsed.provider;
+
+                framesWindow.push(now);
+                while (framesWindow.length > 0 && now - framesWindow[0] > 10000) framesWindow.shift();
+
+                const found = parsed.dets?.length ?? 0;
+                if (found > 0) {
+                    stats.detections += found;
+                    stats.lastDetectionAt = now;
+                }
+
                 if (onDetections) {
                     onDetections({
                         cameraId: camera.id,
@@ -128,6 +170,8 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         });
 
         const handleExit = () => {
+            stats.state = 'restarting';
+            stats.restarts += 1;
             stopPipes();
             scheduleRestart();
         };
@@ -165,8 +209,20 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
     start();
 
     return {
+        snapshot() {
+            const now = Date.now();
+            const recent = framesWindow.filter((entry) => now - entry <= 10000);
+
+            return {
+                ...stats,
+                framesPerSecond: Math.round((recent.length / 10) * 10) / 10,
+                uptimeSeconds: stats.startedAt ? Math.round((now - stats.startedAt) / 1000) : 0,
+                stale: stats.lastFrameAt !== null && now - stats.lastFrameAt > 15000
+            };
+        },
         stop() {
             isTerminated = true;
+            stats.state = 'stopped';
             if (restartTimer) {
                 clearTimeout(restartTimer);
                 restartTimer = null;

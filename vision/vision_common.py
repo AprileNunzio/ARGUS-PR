@@ -6,15 +6,24 @@ COCO_CLASSES = {
     1: 'bicycle',
     2: 'car',
     3: 'motorcycle',
+    4: 'airplane',
     5: 'bus',
+    6: 'train',
     7: 'truck',
+    8: 'boat',
     14: 'bird',
     15: 'cat',
     16: 'dog',
     17: 'horse',
     18: 'sheep',
     19: 'cow',
-    21: 'bear'
+    20: 'elephant',
+    21: 'bear',
+    22: 'zebra',
+    23: 'giraffe',
+    24: 'backpack',
+    26: 'handbag',
+    28: 'suitcase'
 }
 
 VEHICLE_CLASSES = {'car', 'truck', 'bus', 'motorcycle'}

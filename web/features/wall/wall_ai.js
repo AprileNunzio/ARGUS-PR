@@ -14,13 +14,19 @@ const CLASS_GROUPS = [
         id: 'vehicles',
         label: 'Veicoli',
         icon: 'camera',
-        classes: ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'vehicle']
+        classes: ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'train', 'boat', 'airplane']
     },
     {
         id: 'animals',
         label: 'Animali',
         icon: 'sparkles',
-        classes: ['dog', 'cat', 'bird', 'animal']
+        classes: ['dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'bear', 'elephant', 'zebra', 'giraffe']
+    },
+    {
+        id: 'baggage',
+        label: 'Bagagli abbandonati',
+        icon: 'archive',
+        classes: ['backpack', 'handbag', 'suitcase']
     },
     {
         id: 'biometrics',

@@ -40,9 +40,13 @@ function readEntries(body) {
     });
 }
 
-export function registerAnalyticsRoutes(router, { config }) {
+export function registerAnalyticsRoutes(router, { config, visionHub = null }) {
     router.get('/api/vision/engines', async () => ({
         body: catalogView()
+    }), { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/vision/status', async () => ({
+        body: visionHub?.status ? visionHub.status() : { active: 0, configured: 0, cameras: [], modelsDir: null }
     }), { permission: Permission.LIVE_VIEW });
 
     router.get('/api/vision/models', async () => ({

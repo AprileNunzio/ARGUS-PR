@@ -243,6 +243,31 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
     log.info('vision hub ready', { active: processes.size, modelsDir });
 
     return {
+        status() {
+            const cameras = cameraRepository.list();
+            const byId = new Map(cameras.map((camera) => [camera.id, camera]));
+
+            const entries = [...processes.entries()].map(([cameraId, process]) => {
+                const plan = runtime.get(cameraId);
+                const snapshot = process.snapshot ? process.snapshot() : { state: 'unknown' };
+
+                return {
+                    cameraId,
+                    cameraName: byId.get(cameraId)?.name ?? cameraId,
+                    capabilities: plan ? plan.entries.filter((entry) => entry.enabled).map((entry) => entry.capability) : [],
+                    engines: plan ? [...new Set(plan.entries.filter((entry) => entry.enabled).map((entry) => entry.engineId))] : [],
+                    classes: plan ? [...plan.accepted] : [],
+                    ...snapshot
+                };
+            });
+
+            return {
+                active: entries.length,
+                configured: cameras.length,
+                modelsDir,
+                cameras: entries.sort((a, b) => a.cameraName.localeCompare(b.cameraName))
+            };
+        },
         sync() {
             syncCameras();
         },

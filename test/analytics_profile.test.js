@@ -67,7 +67,10 @@ test('le classi degli oggetti sono l unione delle capacita attive', () => {
     ]);
 
     const worker = buildWorkerProfile(merged, MODEL_FILES);
-    assert.deepEqual(worker.tasks.objects.classes.sort(), ['bird', 'cat', 'dog', 'person']);
+    assert.deepEqual(
+        worker.tasks.objects.classes.sort(),
+        ['bear', 'bird', 'cat', 'cow', 'dog', 'elephant', 'giraffe', 'horse', 'person', 'sheep', 'zebra']
+    );
     assert.equal(worker.tasks.objects.model, 'yolox_nano.onnx');
     assert.equal(worker.tasks.objects.threshold, 0.5);
     assert.equal(acceptedClasses(merged).has('person'), true);

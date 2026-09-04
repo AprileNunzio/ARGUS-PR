@@ -9,8 +9,12 @@ export const CLOCK_FORMATS = Object.freeze(['24h', '12h']);
 export const DATE_STYLES = Object.freeze(['none', 'short', 'long']);
 export const OVERLAY_STYLES = Object.freeze(['solid', 'corner', 'glow']);
 export const OVERLAY_CLASSES = Object.freeze([
-    'person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
-    'dog', 'cat', 'bird', 'animal', 'vehicle', 'face', 'plate'
+    'person', 'vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
+    'train', 'boat', 'airplane',
+    'animal', 'dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'bear',
+    'elephant', 'zebra', 'giraffe',
+    'backpack', 'handbag', 'suitcase',
+    'face', 'plate'
 ]);
 
 const MAX_TILES = 64;

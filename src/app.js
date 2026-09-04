@@ -54,7 +54,7 @@ import { readPackageVersion } from './platform/version.js';
 
 const log = createLogger('app');
 
-function registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub }) {
+function registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub, visionHub }) {
     registerSetupRoutes(router);
     registerAuthRoutes(router);
     registerCameraRoutes(router);
@@ -74,7 +74,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerSchedulingRoutes(router);
     registerMotionRoutes(router);
     registerDetectionRoutes(router);
-    registerAnalyticsRoutes(router, { config });
+    registerAnalyticsRoutes(router, { config, visionHub });
     registerAutomationRoutes(router, { hub: automationHub });
     registerAccessRoutes({ router, accessRepository });
     registerPeopleRoutes({ router, peopleRepository, db, config });
@@ -160,7 +160,7 @@ export async function bootstrap(overrides = {}) {
 
     const automationHub = installAutomationHub({ cameraRepository: { list: listCameras } });
 
-    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub }));
+    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub, visionHub }));
     attachEventSocket(server, config);
     await listen(server, config);
 

@@ -650,3 +650,10 @@
 .ai-engine__capability { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--violet); }
 .ai-engine__hint { margin: 0; font-size: 0.77rem; color: var(--muted); line-height: 1.45; }
 .ai-engine__meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 0.15rem; }
+
+.vision-row { display: flex; flex-direction: column; gap: var(--gap-2); padding: 0.8rem 0.9rem; border: 1px solid var(--rule-soft); border-radius: var(--radius); background: var(--surface); }
+.vision-row__head { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.vision-row__icon { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--violet-soft); color: var(--violet); }
+.vision-row__name { font-size: 0.9rem; }
+.vision-row .spec-grid { padding: 0; }
+.vision-row__error { display: flex; align-items: flex-start; gap: var(--gap-2); margin: 0; padding: 0.5rem 0.65rem; border-radius: var(--radius-sm); background: var(--bad-soft); color: var(--bad); font-family: var(--mono); font-size: 0.72rem; line-height: 1.4; overflow-wrap: anywhere; }

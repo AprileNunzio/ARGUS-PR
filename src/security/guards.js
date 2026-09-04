@@ -117,7 +117,11 @@ const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MASK_PATTERN = /^[01]{336}$/;
 const DETECTION_CLASSES = Object.freeze([
     'person', 'vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
-    'dog', 'cat', 'bird', 'animal', 'face', 'plate', 'motion'
+    'train', 'boat', 'airplane',
+    'dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'bear', 'elephant',
+    'zebra', 'giraffe', 'animal',
+    'backpack', 'handbag', 'suitcase', 'baggage',
+    'face', 'plate', 'motion'
 ]);
 
 export function requireScheduleMode(value, field = 'mode') {

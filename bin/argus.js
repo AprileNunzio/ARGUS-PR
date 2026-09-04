@@ -14,8 +14,10 @@ import { ensureTlsMaterial, desiredAltNames } from '../src/platform/tls.js';
 import { checkForUpdate, resetWatchdog } from '../src/features/updates/update_service.js';
 import { readState, writeState, Phase } from '../src/features/updates/update_state.js';
 import { isReleaseTag, isNewer } from '../src/features/updates/semver.js';
+import { visionOverview, applyVisionCapabilities } from '../src/features/vision/vision_cli.js';
 
 const command = process.argv[2] ?? 'serve';
+const NEWLINE = '\n';
 
 function interfaceUrl(config) {
     const address = config.host === '0.0.0.0' ? 'localhost' : config.host;
@@ -176,6 +178,64 @@ async function resetAdmin() {
     process.exit(0);
 }
 
+async function vision() {
+    const config = loadConfig();
+    setLogLevel('warn');
+    initVault(config);
+    openDatabase(config);
+
+    const action = process.argv[3] ?? 'list';
+
+    if (action === 'list') {
+        const rows = visionOverview(config);
+        const lines = [''];
+
+        for (const row of rows) {
+            lines.push(`  ${row.name}`);
+            lines.push(`    id            ${row.id}`);
+            lines.push(`    canale        ${row.enabled ? 'attivo' : 'disattivato'}`);
+            lines.push(`    analisi       ${row.capabilities.length > 0 ? row.capabilities.join(', ') : 'nessuna'}`);
+            lines.push(`    motori        ${row.engines.length > 0 ? row.engines.join(', ') : '-'}`);
+            if (row.missing.length > 0) lines.push(`    modelli       MANCANTI: ${row.missing.join(', ')}`);
+            lines.push('');
+        }
+
+        if (rows.length === 0) lines.push('  Nessuna telecamera registrata.', '');
+        process.stdout.write(lines.join(NEWLINE));
+        process.exit(0);
+    }
+
+    if (action !== 'enable' && action !== 'disable') {
+        process.stderr.write(`${NEWLINE}  Azione sconosciuta: ${action}${NEWLINE}  Usa: argus vision list | enable <camera> <capacita> | disable <camera> <capacita>${NEWLINE}${NEWLINE}`);
+        process.exit(1);
+    }
+
+    const reference = process.argv[4];
+    const capabilities = process.argv[5];
+
+    if (!reference || !capabilities) {
+        process.stderr.write(`${NEWLINE}  Uso: argus vision ${action} <telecamera> <capacita separate da virgola>${NEWLINE}${NEWLINE}`);
+        process.exit(1);
+    }
+
+    const outcome = applyVisionCapabilities(config, reference, capabilities, action === 'enable');
+
+    const lines = [
+        '',
+        `  ${outcome.camera.name}`,
+        `    analisi attive  ${outcome.active.length > 0 ? outcome.active.join(', ') : 'nessuna'}`,
+        `    motori          ${outcome.engines.length > 0 ? outcome.engines.join(', ') : '-'}`
+    ];
+
+    if (outcome.missing.length > 0) {
+        lines.push(`    ATTENZIONE      modelli mancanti: ${outcome.missing.join(', ')}`);
+    }
+
+    lines.push('', '  Il servizio applica il nuovo profilo entro trenta secondi.', '');
+    process.stdout.write(lines.join(NEWLINE));
+    process.exit(0);
+}
+
 async function update() {
     const config = loadConfig();
     setLogLevel('warn');
@@ -257,6 +317,9 @@ function usage() {
     argus cert             Show the TLS certificate fingerprint and authority
     argus update [tag]     Schedule an update to a release tag (default: latest)
     argus watchdog-reset   Clear the update quarantine and boot attempt counter
+    argus vision list      Show the analytics profile of every camera
+    argus vision enable <camera> <capabilities>   Turn analytics on
+    argus vision disable <camera> <capabilities>  Turn analytics off
 
 `);
     process.exit(0);
@@ -267,6 +330,7 @@ const commands = {
     doctor,
     cert,
     update,
+    vision,
     'watchdog-reset': watchdogReset,
     'reset-admin': resetAdmin,
     help: usage,

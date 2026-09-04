@@ -86,6 +86,8 @@ def main():
     enabled = [name for name, task in profile.get('tasks', {}).items() if task.get('enabled')]
     sys.stderr.write("Vision engine ready on stdin, tasks: " + ','.join(enabled) + "\n")
 
+    provider = getattr(engine, 'provider', None) or (ort.get_available_providers() or ['CPUExecutionProvider'])[0]
+
     frame_bytes = FRAME_WIDTH * FRAME_HEIGHT * 3
     seq = 0
 
@@ -95,8 +97,16 @@ def main():
             break
         seq += 1
         frame = np.frombuffer(raw, dtype=np.uint8).reshape((FRAME_HEIGHT, FRAME_WIDTH, 3))
+        started = time.perf_counter()
         detections = engine.process_frame(frame)
-        sys.stdout.write(json.dumps({'t': int(time.time() * 1000), 'seq': seq, 'dets': detections}) + '\n')
+        elapsed = (time.perf_counter() - started) * 1000.0
+        sys.stdout.write(json.dumps({
+            't': int(time.time() * 1000),
+            'seq': seq,
+            'ms': round(elapsed, 1),
+            'provider': provider,
+            'dets': detections
+        }) + '\n')
         sys.stdout.flush()
 
 

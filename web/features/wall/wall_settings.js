@@ -4,6 +4,7 @@ import { card, segmented, toggle, optionRow, metricTile } from '/assets/ui.js';
 import { CLOCK_FORMAT_OPTIONS, DATE_STYLE_OPTIONS, formatWallTime, formatWallDate } from './wall_clock.js';
 import { renderTileBoard, renderCameraRoster, renderOutputBoard, tileCount } from './wall_tiles.js';
 import { classPicker, engineTable, overlayControls } from './wall_ai.js';
+import { visionStatusBody } from './wall_vision_status.js';
 
 const LAYOUT_OPTIONS = [
     { value: 'auto', label: 'Auto', icon: 'sparkles', hint: 'Adatta la griglia al numero di canali attivi' },
@@ -30,6 +31,7 @@ export async function renderWallSettings({ api }) {
     const feedback = el('div', {});
 
     let payload = await api.get('/api/wall/config').catch((error) => ({ failure: error }));
+    let visionStatus = await api.get('/api/vision/status').catch(() => null);
     const engines = await api.get('/api/vision/engines')
         .then((data) => (data.capabilities ?? []).flatMap((capability) => (capability.engines ?? []).map((engine) => ({
             ...engine,
@@ -270,6 +272,32 @@ export async function renderWallSettings({ api }) {
         });
     };
 
+    const visionCard = () => {
+        const refreshButton = el('button', { className: 'btn btn--sm', type: 'button' }, [
+            icon('refresh'),
+            el('span', { textContent: 'Aggiorna stato' })
+        ]);
+
+        refreshButton.addEventListener('click', async () => {
+            refreshButton.disabled = true;
+            visionStatus = await api.get('/api/vision/status').catch(() => visionStatus);
+            refreshButton.disabled = false;
+            render();
+        });
+
+        const active = visionStatus?.active ?? 0;
+
+        return card({
+            title: 'Stato del motore di visione',
+            subtitle: 'Telemetria reale dei worker di inferenza: fotogrammi, latenza, rilevamenti e riavvii',
+            iconName: 'activity',
+            tone: active > 0 ? 'emerald' : 'amber',
+            badge: chip(active > 0 ? `${active} canali in analisi` : 'Nessuna analisi attiva', active > 0 ? 'ok' : 'warn'),
+            actions: [refreshButton],
+            body: visionStatusBody(visionStatus)
+        });
+    };
+
     const enginesCard = () => card({
         title: 'Algoritmi di visione disponibili',
         subtitle: 'Modelli open source integrati, con costo di calcolo, ambiente di esecuzione e licenza',
@@ -381,6 +409,7 @@ export async function renderWallSettings({ api }) {
                 tilesCard(),
                 rosterCard(),
                 aiCard(),
+                visionCard(),
                 enginesCard(),
                 outputsCard(),
                 clockCard()

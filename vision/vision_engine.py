@@ -13,6 +13,7 @@ class VisionEngine:
         self.models_dir = models_dir
         self.tasks = profile.get('tasks', {})
         self.ort_session = None
+        self.provider = None
         self.face_detector = None
         self.face_recognizer = None
         self.text_recognizer = None
@@ -61,6 +62,7 @@ class VisionEngine:
                 so.execution_mode = ort.ExecutionMode.ORT_PARALLEL
 
             self.ort_session = ort.InferenceSession(model_path, sess_options=so, providers=active_providers)
+            self.provider = (self.ort_session.get_providers() or ['CPUExecutionProvider'])[0]
             sys.stderr.write("Vision: loaded " + model_path + "\n")
         except Exception as e:
             sys.stderr.write("Vision warning: could not load object model: " + str(e) + "\n")
