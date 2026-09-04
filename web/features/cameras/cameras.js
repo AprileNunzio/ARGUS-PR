@@ -4,6 +4,7 @@ import { go } from '/assets/router.js';
 import { renderKindPage, renderNewCameraPage, renderDiscoveryPage } from './camera_wizard.js';
 import { renderCameraDetail } from './camera_detail.js';
 import { renderAutoconfigurePage } from './camera_autoconfig.js';
+import { renderBrandProfilesPage } from './camera_brand_profiles.js';
 import { SOURCE_KINDS } from './camera_form.js';
 
 const KIND_LABELS = Object.fromEntries(SOURCE_KINDS.map((entry) => [entry.id, entry.title]));
@@ -85,6 +86,10 @@ async function renderList({ api, session }) {
             hint: `${cameras.length} canali configurati · rete e periferiche locali`,
             actions: canEdit
                 ? [
+                    el('button', { className: 'btn', type: 'button', onclick: () => go('cameras', 'profiles') }, [
+                        icon('settings'),
+                        el('span', { textContent: 'Profili Marche' })
+                    ]),
                     el('button', { className: 'btn', type: 'button', onclick: () => go('cameras', 'discover') }, [
                         icon('search'),
                         el('span', { textContent: 'Cerca ONVIF' })
@@ -134,6 +139,7 @@ export async function renderCameras({ api, session, params = [] }) {
 
     if (first === 'new') return second ? renderNewCameraPage({ api, kind: second }) : renderKindPage();
     if (first === 'discover') return renderDiscoveryPage({ api });
+    if (first === 'profiles') return renderBrandProfilesPage();
 
     if (first && second === 'autoconfig') return renderAutoconfigurePage({ api, cameraId: first });
     if (first) return renderDetailPage({ api, session, cameraId: first, tab: second ?? 'general' });

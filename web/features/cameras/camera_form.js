@@ -1,5 +1,6 @@
 import { el, field, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { BRAND_PROFILES, buildRtspUrl } from './camera_brand_profiles.js';
 
 export const SOURCE_KINDS = Object.freeze([
     { id: 'rtsp', title: 'Telecamera IP (RTSP)', hint: 'ONVIF, Hikvision, Dahua, Reolink, Axis', glyph: 'camera' },
@@ -172,6 +173,48 @@ function networkSection({ api, camera, manufacturer, model }) {
         placeholder: camera?.hasPassword ? 'invariata' : ''
     });
 
+    const brandSelect = selectFrom([
+        ['', 'Seleziona marca (o personalizzato)'],
+        ...BRAND_PROFILES.map((p) => [p.id, `${p.name} · porta ${p.port}`])
+    ], '');
+
+    const streamTemplateSelect = selectFrom([
+        ['', 'Seleziona modello / canale']
+    ], '');
+
+    function updateTemplates() {
+        const profile = BRAND_PROFILES.find((p) => p.id === brandSelect.value);
+        if (!profile) {
+            streamTemplateSelect.replaceChildren(el('option', { value: '', textContent: 'Seleziona prima una marca' }));
+            return;
+        }
+        streamTemplateSelect.replaceChildren(
+            el('option', { value: '', textContent: 'Seleziona modello / canale' }),
+            ...profile.channels.map((ch, idx) => el('option', { value: String(idx), textContent: `${ch.label} (${ch.main})` }))
+        );
+    }
+
+    brandSelect.addEventListener('change', () => {
+        const profile = BRAND_PROFILES.find((p) => p.id === brandSelect.value);
+        if (profile && !manufacturer.value) {
+            manufacturer.value = profile.name.split('/')[0].trim();
+        }
+        updateTemplates();
+    });
+
+    streamTemplateSelect.addEventListener('change', () => {
+        const profile = BRAND_PROFILES.find((p) => p.id === brandSelect.value);
+        if (!profile || streamTemplateSelect.value === '') return;
+        const ch = profile.channels[Number.parseInt(streamTemplateSelect.value, 10)];
+        if (!ch) return;
+
+        const host = ipInput.value.trim() || '192.168.1.64';
+        main.value = buildRtspUrl({ host, port: profile.port, path: ch.main });
+        if (ch.sub) {
+            sub.value = buildRtspUrl({ host, port: profile.port, path: ch.sub });
+        }
+    });
+
     if (camera?.mainStreamUrl) {
         try {
             const parsed = new URL(camera.mainStreamUrl);
@@ -228,15 +271,17 @@ function networkSection({ api, camera, manufacturer, model }) {
 
     const node = el('div', { className: 'form-grid' }, [
         el('div', { className: 'span-all row row--between' }, [
-            el('span', { className: 'panel__title', textContent: 'Riconoscimento automatico da IP' }),
+            el('span', { className: 'panel__title', textContent: 'Riconoscimento e profili marca' }),
             autoButton
         ]),
         el('div', { className: 'span-all' }, [field('Indirizzo IP telecamera', ipInput)]),
+        field('Marca / Produttore', brandSelect),
+        field('Profilo flusso RTSP preimpostato', streamTemplateSelect),
         field('Utente', username),
         field('Password', password),
         el('div', { className: 'span-all' }, [autoStatus]),
-        el('div', { className: 'span-all' }, [field('URL flusso principale (rilevato)', main)]),
-        el('div', { className: 'span-all' }, [field('URL flusso secondario (rilevato)', sub)]),
+        el('div', { className: 'span-all' }, [field('URL flusso principale (modificabile)', main)]),
+        el('div', { className: 'span-all' }, [field('URL flusso secondario (modificabile)', sub)]),
         field('Trasporto RTSP', transport)
     ]);
 
