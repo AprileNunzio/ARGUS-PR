@@ -1,6 +1,6 @@
 {
   "name": "argus-pr",
-  "version": "0.23.3",
+  "version": "0.24.0",
   "description": "Self-hosted Network Video Recorder with ONVIF discovery, RTSP recording and AI-assisted analytics",
 
 

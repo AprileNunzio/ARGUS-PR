@@ -1,4 +1,4 @@
-const LIVE_TOPICS = new Set([
+const CONFIG_TOPICS = new Set([
     'wall.config',
     'time.config',
     'settings.changed',
@@ -7,7 +7,7 @@ const LIVE_TOPICS = new Set([
     'camera.deleted'
 ]);
 
-export function connectWallEvents(onChange, onLinkState) {
+export function connectWallEvents(onChange, onLinkState, onVision) {
     let socket = null;
     let attempt = 0;
     let closed = false;
@@ -32,7 +32,12 @@ export function connectWallEvents(onChange, onLinkState) {
                 }
             })();
 
-            if (parsed && LIVE_TOPICS.has(parsed.topic)) onChange(parsed.topic);
+            if (!parsed) return;
+            if (parsed.topic === 'vision.live') {
+                onVision?.(parsed.payload);
+                return;
+            }
+            if (CONFIG_TOPICS.has(parsed.topic)) onChange(parsed.topic);
         });
 
         socket.addEventListener('close', () => {

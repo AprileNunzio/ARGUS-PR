@@ -2,6 +2,7 @@ import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js'
 import { createStatusBar, presetById } from './wall_statusbar.js';
 import { connectWallEvents } from './wall_live.js';
 import { createBootScreen } from './wall_boot.js';
+import { createOverlay } from './wall_overlay.js';
 
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
@@ -48,7 +49,9 @@ async function request(path, options = {}) {
 
 function createGrid() {
     const element = el('div', { className: 'console__grid' });
+    const overlays = new Map();
     let players = [];
+    let overlaySettings = null;
     let signature = null;
     let cameraList = [];
     let spotlightCameraId = null;
@@ -56,7 +59,9 @@ function createGrid() {
 
     const teardown = () => {
         for (const player of players) player.destroy();
+        for (const overlay of overlays.values()) overlay.destroy();
         players = [];
+        overlays.clear();
     };
 
     const updateShape = () => {
@@ -96,6 +101,9 @@ function createGrid() {
 
         const state = el('span', { className: 'console__state' });
         const isSpotlight = spotlightCameraId === camera.id;
+        const overlay = createOverlay(video);
+        overlay.configure(overlaySettings);
+        overlays.set(camera.id, overlay);
 
         const zoomButton = el('button', {
             type: 'button',
@@ -113,6 +121,7 @@ function createGrid() {
             ondblclick: () => toggleSpotlight(camera.id)
         }, [
             video,
+            overlay.element,
             el('span', { className: 'console__tag' }, [
                 state,
                 el('span', { textContent: camera.name }),
@@ -157,6 +166,13 @@ function createGrid() {
 
     return {
         element,
+        setOverlay(settings) {
+            overlaySettings = settings;
+            for (const overlay of overlays.values()) overlay.configure(settings);
+        },
+        applyVision(payload) {
+            overlays.get(payload.cameraId)?.apply(payload);
+        },
         setLayout(preset) {
             if (preset.id === selectedLayout.id) return;
             selectedLayout = preset;
@@ -234,6 +250,7 @@ async function boot() {
         if (payload.revision !== revision) {
             revision = payload.revision;
             bar.setClock(payload.config.clock, payload.timezone ?? null);
+            grid.setOverlay(payload.config.overlay);
             bar.setLayout(payload.config.layout);
             grid.setLayout(presetById(payload.config.layout));
 
@@ -312,7 +329,11 @@ Effettua il login su ${bar.webUrl} per visualizzare il Muro Video.`);
 
     await safeRefresh();
 
-    connectWallEvents(() => safeConfig(), (state) => bar.setLink(state));
+    connectWallEvents(
+        () => safeConfig(),
+        (state) => bar.setLink(state),
+        (payload) => grid.applyVision(payload)
+    );
 
     setInterval(safeRefresh, STATUS_INTERVAL_MS);
     setInterval(safeMetrics, METRICS_INTERVAL_MS);

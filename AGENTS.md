@@ -666,6 +666,7 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/system/maintenance/cache` | `system.manage`, rate limit 20/10min |
 | GET | `/api/wall/config` | `live.view` |
 | PUT | `/api/wall/config` | `system.manage`, rate limit 60/10min |
+| WS | `vision.live` (su `/api/events`) | `live.view` |
 | GET | `/api/system/time` | `live.view` |
 | PUT | `/api/system/time` | `system.manage`, rate limit 30/10min |
 | POST | `/api/system/time/sync` | `system.manage`, rate limit 10/10min |

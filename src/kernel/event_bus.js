@@ -21,7 +21,8 @@ export const Topic = Object.freeze({
     UPDATE: 'update.state',
     SETTINGS: 'settings.changed',
     WALL_CONFIG: 'wall.config',
-    TIME_CONFIG: 'time.config'
+    TIME_CONFIG: 'time.config',
+    VISION_LIVE: 'vision.live'
 });
 
 

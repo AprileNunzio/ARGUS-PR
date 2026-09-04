@@ -604,3 +604,49 @@
 .bundle-row__name { font-size: 0.85rem; font-weight: 650; }
 .bundle-row__path { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bundle-row__meta { font-size: 0.71rem; color: var(--muted); }
+
+.ai-group { display: flex; flex-direction: column; gap: var(--gap-2); padding: 0.7rem 0.8rem; border: 1px solid var(--rule-soft); border-radius: var(--radius); background: var(--surface); }
+.ai-group__head { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.ai-group__head .icon { color: var(--violet); }
+.ai-classes { display: flex; gap: var(--gap-2); flex-wrap: wrap; }
+
+.ai-class {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.34rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: all var(--speed) var(--ease);
+}
+
+.ai-class:hover { border-color: var(--accent-line); color: var(--ink); }
+.ai-class--on { background: var(--surface); color: var(--ink); border-color: var(--accent); box-shadow: var(--shadow-xs); }
+.ai-class__swatch { width: 9px; height: 9px; border-radius: 50%; opacity: .35; }
+.ai-class--on .ai-class__swatch { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent); }
+
+.ai-engines { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+
+.ai-engine {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--rule-soft);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    opacity: .72;
+}
+
+.ai-engine--ready { background: var(--surface); border-color: color-mix(in srgb, var(--emerald) 30%, var(--rule)); opacity: 1; }
+.ai-engine__head { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-2); flex-wrap: wrap; }
+.ai-engine__name { font-size: 0.88rem; }
+.ai-engine__capability { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--violet); }
+.ai-engine__hint { margin: 0; font-size: 0.77rem; color: var(--muted); line-height: 1.45; }
+.ai-engine__meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 0.15rem; }

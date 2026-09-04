@@ -3,6 +3,7 @@ import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow, metricTile } from '/assets/ui.js';
 import { CLOCK_FORMAT_OPTIONS, DATE_STYLE_OPTIONS, formatWallTime, formatWallDate } from './wall_clock.js';
 import { renderTileBoard, renderCameraRoster, renderOutputBoard, tileCount } from './wall_tiles.js';
+import { classPicker, engineTable, overlayControls } from './wall_ai.js';
 
 const LAYOUT_OPTIONS = [
     { value: 'auto', label: 'Auto', icon: 'sparkles', hint: 'Adatta la griglia al numero di canali attivi' },
@@ -29,6 +30,12 @@ export async function renderWallSettings({ api }) {
     const feedback = el('div', {});
 
     let payload = await api.get('/api/wall/config').catch((error) => ({ failure: error }));
+    const engines = await api.get('/api/vision/engines')
+        .then((data) => (data.capabilities ?? []).flatMap((capability) => (capability.engines ?? []).map((engine) => ({
+            ...engine,
+            capabilityLabel: capability.label
+        }))))
+        .catch(() => []);
 
     if (payload.failure) {
         root.replaceChildren(
@@ -213,6 +220,71 @@ export async function renderWallSettings({ api }) {
         ]
     });
 
+    const aiCard = () => {
+        const overlay = draft.overlay;
+        const patchOverlay = (patch) => {
+            draft.overlay = { ...draft.overlay, ...patch };
+            dirty = true;
+        };
+
+        return card({
+            title: 'Riconoscimento oggetti sul muro',
+            subtitle: 'Disegna i contorni di persone, veicoli e animali direttamente sui riquadri, su HDMI e su web',
+            iconName: 'eye',
+            tone: 'purple',
+            badge: chip(overlay.enabled ? `${overlay.classes.length} classi attive` : 'Disattivato', overlay.enabled ? 'ok' : 'info'),
+            body: [
+                optionRow({
+                    title: 'Sovrapposizione dei riconoscimenti',
+                    hint: 'I riquadri arrivano dal motore di visione gia attivo sulle telecamere: non viene aperto nessun flusso aggiuntivo',
+                    iconName: 'sparkles',
+                    control: toggle(overlay.enabled, (value) => {
+                        patchOverlay({ enabled: value });
+                        render();
+                    })
+                }),
+                overlay.enabled ? el('div', { className: 'stack' }, [
+                    el('span', { className: 'xrow__title', textContent: 'Oggetti da evidenziare' }),
+                    classPicker(overlay, (className, active) => {
+                        const set = new Set(overlay.classes);
+                        if (active) set.add(className);
+                        else set.delete(className);
+                        patchOverlay({ classes: [...set] });
+                        render();
+                    }, (classes, active) => {
+                        const set = new Set(overlay.classes);
+                        for (const entry of classes) {
+                            if (active) set.add(entry);
+                            else set.delete(entry);
+                        }
+                        patchOverlay({ classes: [...set] });
+                        render();
+                    }),
+                    ...overlayControls(overlay, (patch) => patchOverlay(patch))
+                ]) : null,
+                el('p', { className: 'xcard__note' }, [
+                    icon('info'),
+                    el('span', { textContent: 'Le classi compaiono soltanto se la telecamera ha la relativa analisi attiva in Telecamere, scheda Analisi. Qui scegli cosa disegnare, li scegli cosa far analizzare.' })
+                ])
+            ]
+        });
+    };
+
+    const enginesCard = () => card({
+        title: 'Algoritmi di visione disponibili',
+        subtitle: 'Modelli open source integrati, con costo di calcolo, ambiente di esecuzione e licenza',
+        iconName: 'sparkles',
+        tone: 'cyan',
+        badge: chip(`${engines.filter((engine) => engine.status === 'ready').length} pronti`, 'ok'),
+        body: [
+            engineTable(engines),
+            el('p', { className: 'xcard__note' }, [
+                icon('info'),
+                el('span', { textContent: 'La scelta del motore e per telecamera e si trova in Sistema › Telecamere › scheda Analisi, perche il costo di calcolo dipende dal singolo canale.' })
+            ])
+        ]
+    });
+
     const clockCard = () => {
         const preview = el('span', { className: 'clock-preview__time' });
         const previewDate = el('span', { className: 'clock-preview__date' });
@@ -308,6 +380,8 @@ export async function renderWallSettings({ api }) {
                 layoutCard(),
                 tilesCard(),
                 rosterCard(),
+                aiCard(),
+                enginesCard(),
                 outputsCard(),
                 clockCard()
             ])

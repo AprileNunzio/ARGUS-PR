@@ -7,6 +7,11 @@ export const LAYOUT_PRESETS = Object.freeze(['auto', '1', '4', '9', '16', '25', 
 export const STREAM_QUALITIES = Object.freeze(['main', 'sub']);
 export const CLOCK_FORMATS = Object.freeze(['24h', '12h']);
 export const DATE_STYLES = Object.freeze(['none', 'short', 'long']);
+export const OVERLAY_STYLES = Object.freeze(['solid', 'corner', 'glow']);
+export const OVERLAY_CLASSES = Object.freeze([
+    'person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
+    'dog', 'cat', 'bird', 'animal', 'vehicle', 'face', 'plate'
+]);
 
 const MAX_TILES = 64;
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
@@ -27,6 +32,16 @@ export const DEFAULT_WALL_CONFIG = Object.freeze({
         showSeconds: true,
         dateStyle: 'short',
         showTimezone: false
+    }),
+    overlay: Object.freeze({
+        enabled: false,
+        classes: Object.freeze(['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'dog', 'cat']),
+        minConfidence: 0.45,
+        showLabel: true,
+        showConfidence: true,
+        showTrackId: false,
+        style: 'corner',
+        holdMs: 1500
     })
 });
 
@@ -93,6 +108,29 @@ function sanitiseClock(raw) {
     };
 }
 
+function sanitiseOverlay(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const confidence = Number(source.minConfidence);
+    const hold = Number.parseInt(source.holdMs, 10);
+
+    const classes = Array.isArray(source.classes)
+        ? [...new Set(source.classes.filter((entry) => OVERLAY_CLASSES.includes(entry)))]
+        : [...DEFAULT_WALL_CONFIG.overlay.classes];
+
+    return {
+        enabled: source.enabled === true,
+        classes,
+        minConfidence: Number.isFinite(confidence) && confidence >= 0.05 && confidence <= 0.95
+            ? Math.round(confidence * 100) / 100
+            : DEFAULT_WALL_CONFIG.overlay.minConfidence,
+        showLabel: source.showLabel !== false,
+        showConfidence: source.showConfidence !== false,
+        showTrackId: source.showTrackId === true,
+        style: OVERLAY_STYLES.includes(source.style) ? source.style : DEFAULT_WALL_CONFIG.overlay.style,
+        holdMs: Number.isInteger(hold) && hold >= 200 && hold <= 10000 ? hold : DEFAULT_WALL_CONFIG.overlay.holdMs
+    };
+}
+
 export function sanitiseWallConfig(raw) {
     const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     const rotate = Number.parseInt(source.rotateSeconds, 10);
@@ -109,7 +147,8 @@ export function sanitiseWallConfig(raw) {
         quality: sanitiseQuality(source.quality),
         outputs: sanitiseOutputs(source.outputs),
         primaryOutput: cleanOutput(source.primaryOutput),
-        clock: sanitiseClock(source.clock)
+        clock: sanitiseClock(source.clock),
+        overlay: sanitiseOverlay(source.overlay)
     };
 }
 

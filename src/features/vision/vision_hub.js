@@ -20,12 +20,16 @@ import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js'
 
 const log = createLogger('vision-hub');
 
+const LIVE_INTERVAL_MS = 200;
+const MAX_LIVE_BOXES = 24;
+
 const PLATE_SOURCES = new Set(['car', 'truck', 'bus', 'motorcycle', 'plate']);
 
 export function installVisionHub({ config, cameraRepository, detectionsRepository, peopleRepository, accessRepository }) {
     const processes = new Map();
     const trackers = new Map();
     const runtime = new Map();
+    const lastBroadcast = new Map();
     const modelsDir = modelsDirFor(config);
 
     function plannedFor(camera) {
@@ -181,6 +185,29 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         }
     }
 
+    function broadcastLive(cameraId, tracker, plan, timestamp) {
+        const previous = lastBroadcast.get(cameraId) ?? 0;
+        if (timestamp - previous < LIVE_INTERVAL_MS) return;
+        lastBroadcast.set(cameraId, timestamp);
+
+        const boxes = [];
+        for (const track of tracker.tracks.values()) {
+            if (!track.isConfirmed || !plan.accepted.has(track.className)) continue;
+            if (!Array.isArray(track.box) || track.box.length !== 4) continue;
+            if (boxes.length >= MAX_LIVE_BOXES) break;
+
+            boxes.push({
+                id: track.id.slice(0, 8),
+                className: track.className,
+                confidence: Math.round(track.maxConfidence * 100) / 100,
+                box: track.box.map((value) => Math.round(value * 1000) / 1000),
+                plate: track.plateReadings?.[0]?.text ?? null
+            });
+        }
+
+        publish(Topic.VISION_LIVE, { cameraId, at: timestamp, boxes });
+    }
+
     function handleDetections({ cameraId, timestamp, detections }) {
         const tracker = trackers.get(cameraId);
         const plan = runtime.get(cameraId);
@@ -191,9 +218,11 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         for (const track of newlyConfirmed) recordTrack(cameraId, plan, track);
         recordFaces(cameraId, plan, detections, timestamp);
         recordPlates(cameraId, plan, closedTracks, timestamp);
+        broadcastLive(cameraId, tracker, plan, timestamp);
     }
 
     const interval = setInterval(syncCameras, 30000);
+
     interval.unref();
     syncCameras();
 
