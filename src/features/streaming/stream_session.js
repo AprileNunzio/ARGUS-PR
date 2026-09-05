@@ -10,8 +10,7 @@ import { createLogger } from '../../kernel/logger.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
 import { AppError, ErrorCode, notFound } from '../../kernel/errors.js';
 import { redactCredentials } from '../../security/guards.js';
-import { getSetting } from '../settings/settings_repository.js';
-import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
+import { readPerformanceSettings } from '../settings/performance_tuning.js';
 
 
 const log = createLogger('stream');
@@ -119,7 +118,7 @@ export class StreamSession {
             .then((result) => result.video)
             .catch(() => null);
 
-        const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
+        const perf = readPerformanceSettings();
         const { args, transcoded } = buildPreviewArgs(input, probe, tools, perf);
 
 

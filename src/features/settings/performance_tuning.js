@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { getHardwareProfile } from '../../platform/hardware.js';
+import { getSetting } from './settings_repository.js';
 
 export const PERFORMANCE_PRESETS = Object.freeze({
     MAX_PERFORMANCE: 'max_performance',
@@ -142,6 +143,10 @@ export function sanitizePerformanceSettings(input, profile = getHardwareProfile(
         analysisFps,
         performancePreset
     };
+}
+
+export function readPerformanceSettings(profile = getHardwareProfile()) {
+    return sanitizePerformanceSettings(getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS), profile);
 }
 
 export function applySqlitePerformance(db, settings) {

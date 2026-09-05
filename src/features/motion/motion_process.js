@@ -5,8 +5,7 @@ import { resolveInput, isLocalKind } from '../cameras/camera_input.js';
 import { attachLocalConsumer } from '../cameras/local_capture.js';
 import { buildMotionArgs } from '../streaming/ffmpeg_args.js';
 import { MotionDetector, FRAME_BYTES } from './motion_detector.js';
-import { getSetting } from '../settings/settings_repository.js';
-import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
+import { readPerformanceSettings } from '../settings/performance_tuning.js';
 import { createLogger } from '../../kernel/logger.js';
 
 import { notFound } from '../../kernel/errors.js';
@@ -51,7 +50,7 @@ export class MotionProcess {
             return;
         }
 
-        const perf = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
+        const perf = readPerformanceSettings();
         const args = buildMotionArgs(input, tools.accelerators, perf);
 
         const child = spawn(tools.ffmpeg.path, args, {

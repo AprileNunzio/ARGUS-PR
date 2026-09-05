@@ -15,8 +15,7 @@ import {
     requiredModels
 } from './analytics_profile.js';
 import { modelFiles, modelsDirFor, missingModels } from './models_service.js';
-import { getSetting } from '../settings/settings_repository.js';
-import { DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
+import { readPerformanceSettings } from '../settings/performance_tuning.js';
 
 const log = createLogger('vision-hub');
 
@@ -78,7 +77,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             if (!planned.has(cameraId)) stopCamera(cameraId, 'analytics-off');
         }
 
-        const performanceSettings = getSetting('performance', DEFAULT_PERFORMANCE_SETTINGS);
+        const performanceSettings = readPerformanceSettings();
 
         for (const [cameraId, plan] of planned.entries()) {
             const current = runtime.get(cameraId);
