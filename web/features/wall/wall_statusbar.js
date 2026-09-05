@@ -66,32 +66,38 @@ export function createStatusBar(onLayoutChange) {
 
     const layoutBar = el('div', { className: 'wall-layout-bar' }, layoutButtons);
 
-    const item = (label, value) => el('span', { className: 'statusbar__item' }, [
-        el('span', { className: 'statusbar__label', textContent: label }),
-        value
-    ]);
+    const slots = {};
+
+    const item = (id, label, value) => {
+        const node = el('span', { className: 'statusbar__item' }, [
+            el('span', { className: 'statusbar__label', textContent: label }),
+            value
+        ]);
+        slots[id] = node;
+        return node;
+    };
 
     const element = el('footer', { className: 'statusbar' }, [
-        el('span', { className: 'statusbar__brand' }, [
+        slots.brand = el('span', { className: 'statusbar__brand' }, [
             el('span', { className: 'statusbar__mark' }, [icon('shield')]),
             el('span', { textContent: 'ARGUS-PR' })
         ]),
-        item('IP Server', endpoint),
-        el('span', { className: 'statusbar__item', title: 'Sincronizzazione live della configurazione' }, [
+        item('endpoint', 'IP Server', endpoint),
+        slots.sync = el('span', { className: 'statusbar__item', title: 'Sincronizzazione live della configurazione' }, [
             el('span', { className: 'statusbar__label', textContent: 'Sync' }),
             linkDot,
             linkLabel
         ]),
-        item('Griglia', layoutBar),
-        item('Canali', channels),
-        item('REC', recording),
+        item('layout', 'Griglia', layoutBar),
+        item('channels', 'Canali', channels),
+        item('recording', 'REC', recording),
         el('span', { className: 'statusbar__spacer' }),
-        item('Uscita', displayInfo),
-        item('CPU', cpu),
-        item('RAM', ram),
-        item('GPU', gpu),
-        item('Versione', version),
-        el('span', { className: 'statusbar__time' }, [clockDate, clockTime])
+        item('outputs', 'Uscita', displayInfo),
+        item('cpu', 'CPU', cpu),
+        item('ram', 'RAM', ram),
+        item('gpu', 'GPU', gpu),
+        item('version', 'Versione', version),
+        slots.clock = el('span', { className: 'statusbar__time' }, [clockDate, clockTime])
     ]);
 
     const tick = () => {
@@ -123,6 +129,13 @@ export function createStatusBar(onLayoutChange) {
             clockSettings = { ...DEFAULT_CLOCK, ...(clock ?? {}) };
             timeZone = zone ?? null;
             tick();
+        },
+        setParts(parts) {
+            if (!parts) return;
+            element.hidden = parts.visible === false;
+            for (const [id, node] of Object.entries(slots)) {
+                if (node) node.hidden = parts[id] === false;
+            }
         },
         setLink(state) {
             const online = state === 'online';

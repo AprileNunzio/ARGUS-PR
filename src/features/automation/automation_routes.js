@@ -114,6 +114,38 @@ export function registerAutomationRoutes(router, { hub }) {
         return { body: { rule } };
     }, { permission: Permission.ALARM_MANAGE, exposure: Exposure.PRIVATE });
 
+    router.post('/api/automation/cameras/:id/enabled', async (ctx) => {
+        const cameraId = requireId(ctx.params.id, 'Camera id');
+        const enabled = requireBool(ctx.body.enabled);
+
+        const affected = listRules().filter((rule) => rule.cameraId === cameraId);
+        for (const rule of affected) saveRule({ ...rule, enabled });
+
+        recordAudit({
+            action: AuditAction.SETTINGS_CHANGED,
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
+            target: cameraId,
+            remoteAddr: ctx.address,
+            detail: { action: 'automation_camera_toggle', enabled, rules: affected.length }
+        });
+
+        return { body: { cameraId, enabled, rules: affected.length } };
+    }, { permission: Permission.ALARM_MANAGE });
+
+    router.get('/api/automation/cameras/:id', async (ctx) => {
+        const cameraId = requireId(ctx.params.id, 'Camera id');
+        const rules = listRules().filter((rule) => rule.cameraId === cameraId);
+
+        return {
+            body: {
+                cameraId,
+                total: rules.length,
+                enabled: rules.filter((rule) => rule.enabled).length
+            }
+        };
+    }, { permission: Permission.LIVE_VIEW });
+
     router.delete('/api/automation/rules/:id', async (ctx) => {
         const id = requireId(ctx.params.id, 'Rule id');
         if (!deleteRule(id)) throw notFound('Regola');

@@ -8,6 +8,29 @@ export const STREAM_QUALITIES = Object.freeze(['main', 'sub']);
 export const CLOCK_FORMATS = Object.freeze(['24h', '12h']);
 export const DATE_STYLES = Object.freeze(['none', 'short', 'long']);
 export const OVERLAY_STYLES = Object.freeze(['solid', 'corner', 'glow']);
+
+export const STATUSBAR_PARTS = Object.freeze([
+    { id: 'brand', label: 'Marchio ARGUS-PR', hint: 'Logo e nome del software a sinistra' },
+    { id: 'endpoint', label: 'Indirizzo IP del server', hint: 'Utile in fase di installazione, superfluo su un muro in esercizio' },
+    { id: 'sync', label: 'Stato sincronizzazione', hint: 'Pallino che segnala se la configurazione arriva in tempo reale' },
+    { id: 'layout', label: 'Pulsanti della griglia', hint: 'Selettore rapido del numero di riquadri' },
+    { id: 'channels', label: 'Numero di canali', hint: 'Quante telecamere sono attive' },
+    { id: 'recording', label: 'Canali in registrazione', hint: 'Quante telecamere stanno registrando' },
+    { id: 'outputs', label: 'Uscita video', hint: 'Monitor collegati alle uscite hardware' },
+    { id: 'cpu', label: 'Carico CPU', hint: 'Percentuale di occupazione del processore' },
+    { id: 'ram', label: 'Memoria occupata', hint: 'Percentuale di RAM in uso' },
+    { id: 'gpu', label: 'Acceleratore grafico', hint: 'Etichetta della GPU rilevata' },
+    { id: 'version', label: 'Versione installata', hint: 'Numero di versione di ARGUS-PR' },
+    { id: 'clock', label: 'Orologio', hint: 'Data e ora nell angolo destro' }
+]);
+
+export const TILE_PARTS = Object.freeze([
+    { id: 'name', label: 'Nome della telecamera', hint: 'Etichetta in alto a sinistra su ogni riquadro' },
+    { id: 'state', label: 'Pallino di stato', hint: 'Verde in diretta, giallo in connessione, rosso non disponibile' },
+    { id: 'quality', label: 'Indicatore HD o SD', hint: 'Segnala se il riquadro riceve il flusso principale o secondario' },
+    { id: 'tools', label: 'Comandi al passaggio del mouse', hint: 'Barra con playback, foto, registrazione e altre azioni' },
+    { id: 'placeholder', label: 'Marchio sui riquadri liberi', hint: 'Logo e firma negli spazi senza telecamera' }
+]);
 export const OVERLAY_CLASSES = Object.freeze([
     'person', 'vehicle', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
     'train', 'boat', 'airplane',
@@ -36,6 +59,28 @@ export const DEFAULT_WALL_CONFIG = Object.freeze({
         showSeconds: true,
         dateStyle: 'short',
         showTimezone: false
+    }),
+    statusbar: Object.freeze({
+        visible: true,
+        brand: true,
+        endpoint: true,
+        sync: true,
+        layout: true,
+        channels: true,
+        recording: true,
+        outputs: true,
+        cpu: true,
+        ram: true,
+        gpu: true,
+        version: true,
+        clock: true
+    }),
+    tile: Object.freeze({
+        name: true,
+        state: true,
+        quality: true,
+        tools: true,
+        placeholder: true
     }),
     overlay: Object.freeze({
         enabled: false,
@@ -112,6 +157,16 @@ function sanitiseClock(raw) {
     };
 }
 
+function sanitiseParts(raw, definitions, extra = []) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const result = {};
+
+    for (const key of extra) result[key] = source[key] !== false;
+    for (const entry of definitions) result[entry.id] = source[entry.id] !== false;
+
+    return result;
+}
+
 function sanitiseOverlay(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const confidence = Number(source.minConfidence);
@@ -152,6 +207,8 @@ export function sanitiseWallConfig(raw) {
         outputs: sanitiseOutputs(source.outputs),
         primaryOutput: cleanOutput(source.primaryOutput),
         clock: sanitiseClock(source.clock),
+        statusbar: sanitiseParts(source.statusbar, STATUSBAR_PARTS, ['visible']),
+        tile: sanitiseParts(source.tile, TILE_PARTS),
         overlay: sanitiseOverlay(source.overlay)
     };
 }

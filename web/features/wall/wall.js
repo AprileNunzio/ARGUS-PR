@@ -3,6 +3,8 @@ import { createStatusBar, presetById } from './wall_statusbar.js';
 import { connectWallEvents } from './wall_live.js';
 import { createBootScreen } from './wall_boot.js';
 import { createOverlay } from './wall_overlay.js';
+import { createToolbar } from './wall_tools.js';
+import { icon } from '/assets/icons.js';
 
 const STATUS_INTERVAL_MS = 10000;
 const METRICS_INTERVAL_MS = 3000;
@@ -50,8 +52,11 @@ async function request(path, options = {}) {
 function createGrid() {
     const element = el('div', { className: 'console__grid' });
     const overlays = new Map();
+    const qualityOverrides = new Map();
     let players = [];
     let overlaySettings = null;
+    let tileSettings = null;
+    let notify = () => {};
     let signature = null;
     let cameraList = [];
     let spotlightCameraId = null;
@@ -95,58 +100,106 @@ function createGrid() {
         buildDom();
     };
 
-    const buildCell = (camera) => {
+    const buildCell = (source) => {
+        const camera = { ...source, quality: qualityOverrides.get(source.id) ?? source.quality };
+
         const video = el('video', { autoplay: 'autoplay', playsinline: 'playsinline' });
         video.muted = true;
 
+        const parts = tileSettings ?? {};
+
         const state = el('span', { className: 'console__state' });
+        state.hidden = parts.state === false;
+
         const isSpotlight = spotlightCameraId === camera.id;
         const overlay = createOverlay(video);
         overlay.configure(overlaySettings);
         overlays.set(camera.id, overlay);
 
-        const zoomButton = el('button', {
-            type: 'button',
-            className: `console__tool-btn ${isSpotlight ? 'console__tool-btn--active' : ''}`,
-            textContent: isSpotlight ? 'Griglia' : 'Zoom',
-            title: isSpotlight ? 'Torna alla griglia' : 'Espandi a schermo intero (doppio clic)',
-            onclick: (event) => {
-                event.stopPropagation();
-                toggleSpotlight(camera.id);
+        const badge = el('span', {
+            className: `console__quality console__quality--${camera.quality}`,
+            textContent: camera.quality === 'main' ? 'HD' : 'SD'
+        });
+        badge.hidden = parts.quality === false;
+
+        const label = el('span', { textContent: camera.name });
+        label.hidden = parts.name === false;
+
+        const tag = el('span', { className: 'console__tag' }, [state, label, badge]);
+        tag.hidden = parts.name === false && parts.state === false && parts.quality === false;
+
+        let livePlayer = null;
+
+        const attachLive = (quality) => {
+            livePlayer?.destroy();
+            video.removeAttribute('src');
+            video.load();
+
+            if (!isPlaybackSupported()) return;
+
+            livePlayer = createLivePlayer(video, camera.id, {
+                quality,
+                onState: (value) => {
+                    const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
+                    state.className = `console__state${suffix}`;
+                    state.hidden = parts.state === false;
+                }
+            });
+
+            players.push(livePlayer);
+        };
+
+        const bannerText = el('span', { className: 'console__playback-text', textContent: 'Riproduzione registrata' });
+
+        const banner = el('div', { className: 'console__playback', hidden: 'hidden' }, [
+            icon('timeline'),
+            bannerText,
+            el('button', {
+                type: 'button',
+                className: 'console__tool-btn',
+                onclick: (event) => {
+                    event.stopPropagation();
+                    banner.hidden = true;
+                    attachLive(camera.quality);
+                }
+            }, [icon('play'), el('span', { className: 'console__tool-label', textContent: 'Torna in diretta' })])
+        ]);
+
+        const toolbar = createToolbar({
+            camera,
+            video,
+            isSpotlight,
+            onNotice: (text) => notify(text),
+            onSpotlight: () => toggleSpotlight(camera.id),
+            onRestart: () => attachLive(camera.quality),
+            onQuality: (quality) => {
+                qualityOverrides.set(camera.id, quality);
+                signature = null;
+                buildDom();
+            },
+            onPlayback: (segment) => {
+                livePlayer?.destroy();
+                livePlayer = null;
+                video.src = `/api/archive/${encodeURIComponent(camera.id)}/media?file=${encodeURIComponent(segment.file)}`;
+                video.play().catch(() => undefined);
+                bannerText.textContent = `Registrazione delle ${new Date(segment.startedAt).toLocaleTimeString('it-IT')}`;
+                banner.hidden = false;
             }
         });
+
+        toolbar.element.hidden = parts.tools === false;
 
         const cell = el('div', {
             className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
             ondblclick: () => toggleSpotlight(camera.id)
-        }, [
-            video,
-            overlay.element,
-            el('span', { className: 'console__tag' }, [
-                state,
-                el('span', { textContent: camera.name }),
-                el('span', {
-                    className: `console__quality console__quality--${camera.quality}`,
-                    textContent: camera.quality === 'main' ? 'HD' : 'SD'
-                })
-            ]),
-            el('div', { className: 'console__tools' }, [zoomButton])
-        ]);
+        }, [video, overlay.element, tag, banner, toolbar.element]);
 
-        if (isPlaybackSupported()) {
-            players.push(createLivePlayer(video, camera.id, {
-                quality: camera.quality,
-                onState: (value) => {
-                    const suffix = value === 'live' ? ' console__state--live' : (value === 'unsupported' ? ' console__state--down' : '');
-                    state.className = `console__state${suffix}`;
-                }
-            }));
-        }
+        attachLive(camera.quality);
 
         return cell;
     };
 
-    const buildPlaceholder = (index) => el('div', { className: 'console__cell console__cell--empty' }, [
+    const buildPlaceholder = (index) => el('div', { className: 'console__cell console__cell--empty' }, tileSettings?.placeholder === false ? [] : [
         el('div', { className: 'console__brand' }, [
             el('span', { className: 'console__brand-mark' }, [
                 el('span', { className: 'console__brand-glyph', textContent: 'A' })
@@ -188,6 +241,17 @@ function createGrid() {
             overlaySettings = settings;
             for (const overlay of overlays.values()) overlay.configure(settings);
         },
+        setTileParts(parts) {
+            const changed = JSON.stringify(parts) !== JSON.stringify(tileSettings);
+            tileSettings = parts;
+            if (changed) {
+                signature = null;
+                buildDom();
+            }
+        },
+        onNotice(handler) {
+            notify = handler;
+        },
         applyVision(payload) {
             overlays.get(payload.cameraId)?.apply(payload);
         },
@@ -220,7 +284,17 @@ async function boot() {
     const bar = createStatusBar((preset) => grid.setLayout(preset));
     const boot = createBootScreen();
 
-    root.replaceChildren(grid.element, bar.element, boot.element);
+    const toast = el('div', { className: 'wall-toast', hidden: 'hidden' });
+    let toastTimer = null;
+
+    grid.onNotice((text) => {
+        toast.textContent = text;
+        toast.hidden = false;
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+    });
+
+    root.replaceChildren(grid.element, bar.element, boot.element, toast);
 
     let authenticated = false;
     let plan = [];
@@ -274,6 +348,8 @@ async function boot() {
             revision = payload.revision;
             bar.setClock(payload.config.clock, payload.timezone ?? null);
             grid.setOverlay(payload.config.overlay);
+            grid.setTileParts(payload.config.tile);
+            bar.setParts(payload.config.statusbar);
             bar.setLayout(payload.config.layout);
             grid.setLayout(presetById(payload.config.layout));
 
