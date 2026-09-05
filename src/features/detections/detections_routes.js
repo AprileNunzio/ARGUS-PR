@@ -6,7 +6,9 @@ import {
     deleteDetectionSource,
     insertDetectionEvent,
     listDetectionEvents,
-    getDetectionEventById
+    getDetectionEventById,
+    getDetectionStats,
+    countRecentOccurrences
 } from './detections_repository.js';
 import { serveFile } from '../../http/static_files.js';
 import { Permission, can } from '../../security/rbac.js';
@@ -129,6 +131,7 @@ export function registerDetectionRoutes(router) {
             plate: ctx.query.plate,
             personId: ctx.query.personId,
             zoneId: ctx.query.zoneId,
+            upperColor: ctx.query.upperColor,
             minConfidence: ctx.query.minConfidence,
             from: ctx.query.from,
             to: ctx.query.to,
@@ -136,6 +139,26 @@ export function registerDetectionRoutes(router) {
             offset: ctx.query.offset
         });
         return { body: { events } };
+    }, { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/detections/stats/summary', async (ctx) => {
+        const stats = getDetectionStats({
+            from: ctx.query.from,
+            to: ctx.query.to
+        });
+        return { body: stats };
+    }, { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/detections/stats/occurrences', async (ctx) => {
+        const total = countRecentOccurrences({
+            cameraId: ctx.query.cameraId,
+            className: ctx.query.className,
+            plateText: ctx.query.plate,
+            personId: ctx.query.personId,
+            upperColor: ctx.query.upperColor,
+            windowMinutes: Number(ctx.query.windowMinutes) || 60
+        });
+        return { body: { occurrences: total } };
     }, { permission: Permission.LIVE_VIEW });
 
     router.get('/api/detections/:id/snapshot', async (ctx) => {

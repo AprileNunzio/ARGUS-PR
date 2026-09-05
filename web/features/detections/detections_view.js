@@ -26,12 +26,83 @@ const CLASS_LABELS = {
 const ANIMAL_CLASSES = new Set(['dog', 'cat', 'horse', 'cow', 'sheep', 'bear', 'bird', 'animal']);
 const VEHICLE_CLASSES = new Set(['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'vehicle']);
 
+const COLOR_LABELS = {
+    white: 'Maglia bianca',
+    black: 'Abito nero',
+    gray: 'Abito grigio',
+    red: 'Abito rosso',
+    blue: 'Abito blu',
+    green: 'Abito verde',
+    yellow: 'Abito giallo',
+    orange: 'Abito arancione',
+    purple: 'Abito viola'
+};
+
 export async function renderDetectionsView({ api, session }) {
     const outlet = el('div', { className: 'view' });
     let selectedFilter = 'all';
     let plateFilter = '';
+    let colorFilter = '';
     let minConfFilter = 0;
+    const statsHost = el('div', { className: 'grid--cols-2' });
     const listHost = el('div', { className: 'stack' });
+
+    async function loadStats() {
+        const stats = await api.get('/api/detections/stats/summary?windowHours=168').catch(() => null);
+        if (!stats) {
+            statsHost.replaceChildren();
+            return;
+        }
+
+        const topPlates = stats.plates?.slice(0, 5) ?? [];
+        const topPeople = stats.people?.slice(0, 5) ?? [];
+        const topColors = stats.colors?.slice(0, 5) ?? [];
+
+        const plateRows = topPlates.length === 0
+            ? [el('span', { className: 'section__hint', textContent: 'Nessun transito targa recente' })]
+            : topPlates.map((p) => el('button', {
+                type: 'button',
+                className: 'device-row row--spread',
+                onclick: () => {
+                    plateInput.value = p.plateText;
+                    plateFilter = p.plateText;
+                    loadEvents();
+                }
+            }, [
+                el('strong', { className: 'font-mono', textContent: `🚗 ${p.plateText}` }),
+                chip(`${p.count} passaggi`, 'info')
+            ]));
+
+        const colorRows = topColors.length === 0
+            ? [el('span', { className: 'section__hint', textContent: 'Nessun attributo abbigliamento registrato' })]
+            : topColors.map((c) => el('button', {
+                type: 'button',
+                className: 'device-row row--spread',
+                onclick: () => {
+                    colorSelect.value = c.upperColor;
+                    colorFilter = c.upperColor;
+                    loadEvents();
+                }
+            }, [
+                el('strong', { textContent: `👕 ${COLOR_LABELS[c.upperColor] ?? c.upperColor}` }),
+                chip(`${c.count} persone`, c.upperColor === 'white' ? 'ok' : 'brand')
+            ]));
+
+        statsHost.replaceChildren(
+            el('section', { className: 'panel' }, [
+                el('div', { className: 'panel__head' }, [
+                    el('strong', { className: 'panel__title', textContent: 'Frequenza Veicoli & Targhe' })
+                ]),
+                el('div', { className: 'panel__body stack stack--tight' }, plateRows)
+            ]),
+            el('section', { className: 'panel' }, [
+                el('div', { className: 'panel__head' }, [
+                    el('strong', { className: 'panel__title', textContent: 'Frequenza Abbigliamento Persone' })
+                ]),
+                el('div', { className: 'panel__body stack stack--tight' }, colorRows)
+            ])
+        );
+    }
 
     async function loadEvents() {
         const params = new URLSearchParams();
@@ -40,6 +111,9 @@ export async function renderDetectionsView({ api, session }) {
         }
         if (plateFilter.trim().length > 0) {
             params.set('plate', plateFilter.trim());
+        }
+        if (colorFilter.trim().length > 0) {
+            params.set('upperColor', colorFilter.trim());
         }
         if (minConfFilter > 0) {
             params.set('minConfidence', String(minConfFilter / 100));
@@ -77,6 +151,10 @@ export async function renderDetectionsView({ api, session }) {
                 })
                 : null;
 
+            const colorBadge = ev.upperColor
+                ? chip(COLOR_LABELS[ev.upperColor] ?? `Abito ${ev.upperColor}`, ev.upperColor === 'white' ? 'ok' : 'brand')
+                : null;
+
             const seekBtn = el('button', {
                 type: 'button',
                 className: 'btn btn--sm btn--primary',
@@ -100,13 +178,14 @@ export async function renderDetectionsView({ api, session }) {
                     el('div', { className: 'row' }, [
                         chip(label, badgeKind),
                         plateBadge,
+                        colorBadge,
                         el('strong', { textContent: `Telecamera: ${ev.cameraName ?? ev.cameraId}` }),
                         el('span', { className: 'section__hint mono', textContent: dateStr })
                     ]),
                     el('div', { className: 'row' }, [
                         el('span', { className: 'section__hint', textContent: `Confidenza: ${confPct}` }),
                         ev.trackId ? el('span', { className: 'chip', textContent: `Track #${ev.trackId.slice(0, 8)}` }) : null,
-                        ev.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${ev.box.map(b => Number(b).toFixed(2)).join(', ')}]` }) : null
+                        ev.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${ev.box.map((b) => Number(b).toFixed(2)).join(', ')}]` }) : null
                     ])
                 ]),
                 seekBtn
@@ -150,23 +229,44 @@ export async function renderDetectionsView({ api, session }) {
         }
     });
 
+    const colorSelect = el('select', {
+        className: 'select select--sm',
+        onchange: (e) => {
+            colorFilter = e.target.value;
+            loadEvents();
+        }
+    }, [
+        el('option', { value: '', textContent: 'Tutti i colori' }),
+        el('option', { value: 'white', textContent: 'Maglia Bianca' }),
+        el('option', { value: 'black', textContent: 'Abito Nero' }),
+        el('option', { value: 'gray', textContent: 'Abito Grigio' }),
+        el('option', { value: 'red', textContent: 'Abito Rosso' }),
+        el('option', { value: 'blue', textContent: 'Abito Blu' }),
+        el('option', { value: 'green', textContent: 'Abito Verde' }),
+        el('option', { value: 'yellow', textContent: 'Abito Giallo' })
+    ]);
+
     const refreshBtn = el('button', {
         className: 'btn btn--sm',
         type: 'button',
-        onclick: loadEvents
+        onclick: () => {
+            loadStats();
+            loadEvents();
+        }
     }, [icon('refresh'), el('span', { textContent: 'Aggiorna' })]);
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Ricerca Forense & Rilevamenti' }),
-            el('div', { className: 'row row--tight' }, [plateInput, refreshBtn])
+            el('h1', { className: 'view__title', textContent: 'Ricerca Forense & Statistiche Passaggi' }),
+            el('div', { className: 'row row--tight' }, [plateInput, colorSelect, refreshBtn])
         ]),
+        statsHost,
         el('div', { className: 'row schedule-presets' }, filterButtons),
         el('section', { className: 'panel' }, [
             el('div', { className: 'panel__body' }, [listHost])
         ])
     );
 
-    await loadEvents();
+    await Promise.all([loadStats(), loadEvents()]);
     return outlet;
 }

@@ -40,6 +40,11 @@ function readRule(body) {
             : requireNumberRange(body.minConfidence, 'Confidenza minima', 0, 1),
         plateScope: requireEnum(body.plateScope ?? 'any', 'Ambito targa', PLATE_SCOPES),
         personScope: requireEnum(body.personScope ?? 'any', 'Ambito persona', PERSON_SCOPES),
+        targetPlate: body.targetPlate ? optionalString(body.targetPlate, 'Targa specifica', { max: 32 }) : null,
+        targetPersonId: body.targetPersonId ? optionalString(body.targetPersonId, 'Persona specifica', { max: 64 }) : null,
+        upperColor: body.upperColor ? optionalString(body.upperColor, 'Colore abito', { max: 32 }) : null,
+        minOccurrences: body.minOccurrences ? Math.trunc(requireNumberRange(body.minOccurrences, 'Occorrenze minime', 1, 1000)) : 1,
+        occurrenceWindowMinutes: body.occurrenceWindowMinutes ? Math.trunc(requireNumberRange(body.occurrenceWindowMinutes, 'Finestra minuti', 1, 10080)) : 60,
         weekMask: body.weekMask === undefined || body.weekMask === null || body.weekMask === ''
             ? null
             : requireWeekMask(body.weekMask),

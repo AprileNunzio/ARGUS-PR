@@ -34,13 +34,32 @@ function selectFrom(pairs, value) {
     return select;
 }
 
-function ruleEditor({ api, catalog, cameras, channels, rule }) {
+const COLOR_OPTIONS = Object.freeze([
+    ['', 'Qualsiasi colore'],
+    ['white', 'Bianco (es. maglia bianca)'],
+    ['black', 'Nero'],
+    ['gray', 'Grigio'],
+    ['red', 'Rosso'],
+    ['blue', 'Blu / Azzurro'],
+    ['green', 'Verde'],
+    ['yellow', 'Giallo'],
+    ['orange', 'Arancione'],
+    ['purple', 'Viola']
+]);
+
+function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
     const name = el('input', { className: 'input', type: 'text', value: rule?.name ?? '', placeholder: 'Persona di notte sul retro' });
     const trigger = selectFrom(catalog.triggers.map((kind) => [kind, TRIGGER_LABELS[kind] ?? kind]), rule?.triggerKind);
     const camera = selectFrom([['', 'Tutte le telecamere'], ...cameras.map((entry) => [entry.id, entry.name])], rule?.cameraId ?? '');
     const className = selectFrom(CLASS_OPTIONS, rule?.className ?? '');
     const plateScope = selectFrom(catalog.plateScopes.map((scope) => [scope, PLATE_LABELS[scope] ?? scope]), rule?.plateScope);
     const personScope = selectFrom(catalog.personScopes.map((scope) => [scope, PERSON_LABELS[scope] ?? scope]), rule?.personScope);
+
+    const targetPlate = el('input', { className: 'input', type: 'text', value: rule?.targetPlate ?? '', placeholder: 'Targa esatta (es. AB123CD)' });
+    const targetPerson = selectFrom([['', 'Qualsiasi persona registrata'], ...(people ?? []).map((p) => [p.id, p.name])], rule?.targetPersonId ?? '');
+    const upperColor = selectFrom(COLOR_OPTIONS, rule?.upperColor ?? '');
+    const minOccurrences = el('input', { className: 'input', type: 'number', min: '1', max: '1000', value: String(rule?.minOccurrences ?? 1) });
+    const occurrenceWindow = el('input', { className: 'input', type: 'number', min: '1', max: '10080', value: String(rule?.occurrenceWindowMinutes ?? 60) });
 
     const confidence = el('input', {
         className: 'slider-input',
@@ -90,6 +109,11 @@ function ruleEditor({ api, catalog, cameras, channels, rule }) {
             minConfidence: Number.parseInt(confidence.value, 10) / 100,
             plateScope: plateScope.value,
             personScope: personScope.value,
+            targetPlate: targetPlate.value.trim() || null,
+            targetPersonId: targetPerson.value || null,
+            upperColor: upperColor.value || null,
+            minOccurrences: Number.parseInt(minOccurrences.value, 10) || 1,
+            occurrenceWindowMinutes: Number.parseInt(occurrenceWindow.value, 10) || 60,
             weekMask: schedule.value === 'night' ? NIGHT_MASK : null,
             cooldownSeconds: Number.parseInt(cooldown.value, 10) || 0,
             dailyLimit: dailyLimit.value ? Number.parseInt(dailyLimit.value, 10) : null,
@@ -126,8 +150,13 @@ function ruleEditor({ api, catalog, cameras, channels, rule }) {
                 field('Quando succede', trigger),
                 field('Telecamera', camera),
                 field('Classe', className),
+                field('Targa specifica (opzionale)', targetPlate),
                 field('Esito targa', plateScope),
-                field('Persone', personScope),
+                field('Persona specifica (opzionale)', targetPerson),
+                field('Ambito persone', personScope),
+                field('Colore abito superiore (opzionale)', upperColor),
+                field('Soglia passaggi minimi (occorrenze)', minOccurrences),
+                field('Finestra temporale passaggi (minuti)', occurrenceWindow),
                 field('Confidenza minima', el('div', { className: 'slider-wrap' }, [confidence, confidenceBadge])),
                 field('Fascia oraria', schedule),
                 field('Pausa fra due esecuzioni (secondi)', cooldown),
@@ -150,11 +179,12 @@ function ruleEditor({ api, catalog, cameras, channels, rule }) {
 }
 
 export async function renderRulePage({ api, ruleId }) {
-    const [catalog, rulesData, channelsData, camerasData] = await Promise.all([
+    const [catalog, rulesData, channelsData, camerasData, peopleData] = await Promise.all([
         api.get('/api/automation/catalog'),
         api.get('/api/automation/rules'),
         api.get('/api/automation/channels'),
-        api.get('/api/cameras').catch(() => ({ cameras: [] }))
+        api.get('/api/cameras').catch(() => ({ cameras: [] })),
+        api.get('/api/people').catch(() => ({ people: [] }))
     ]);
 
     const rule = ruleId ? (rulesData.rules ?? []).find((entry) => entry.id === ruleId) ?? null : null;
@@ -164,6 +194,7 @@ export async function renderRulePage({ api, ruleId }) {
         catalog,
         cameras: camerasData.cameras ?? [],
         channels: channelsData.channels ?? [],
+        people: peopleData.people ?? [],
         rule
     });
 }

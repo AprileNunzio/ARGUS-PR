@@ -60,8 +60,35 @@ export function evaluateRule(rule, event, options = {}) {
         return { fires: false, reason: 'esito targa non corrispondente' };
     }
 
+    if (rule.targetPlate) {
+        const expected = rule.targetPlate.toUpperCase().trim();
+        const actual = (event.plate ?? event.plateText ?? '').toUpperCase().trim();
+        if (!actual.includes(expected)) {
+            return { fires: false, reason: 'targa specifica non corrispondente' };
+        }
+    }
+
+    if (rule.targetPersonId && event.personId !== rule.targetPersonId) {
+        return { fires: false, reason: 'persona specifica non corrispondente' };
+    }
+
+    if (rule.upperColor && event.upperColor) {
+        if (rule.upperColor.toLowerCase().trim() !== event.upperColor.toLowerCase().trim()) {
+            return { fires: false, reason: 'colore abito non corrispondente' };
+        }
+    } else if (rule.upperColor && !event.upperColor) {
+        return { fires: false, reason: 'colore abito non rilevato' };
+    }
+
     if (rule.triggerKind === TriggerKind.DETECTION && event.className === 'face' && !matchesPerson(rule, event)) {
         return { fires: false, reason: 'persona non corrispondente' };
+    }
+
+    if (rule.minOccurrences && rule.minOccurrences > 1) {
+        const recentCount = (options.recentOccurrences ?? 1);
+        if (recentCount < rule.minOccurrences) {
+            return { fires: false, reason: `occorrenze insufficienti (${recentCount}/${rule.minOccurrences})` };
+        }
     }
 
     if (!withinSchedule(rule, when)) return { fires: false, reason: 'fuori orario' };

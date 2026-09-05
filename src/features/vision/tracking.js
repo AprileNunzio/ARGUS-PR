@@ -72,6 +72,10 @@ export class Tracker {
                 track.faceEmbeddings.push({ embedding: det.faceEmbedding, confidence: det.confidence });
             }
 
+            if (det.upperColor && !track.upperColor) {
+                track.upperColor = det.upperColor;
+            }
+
             if (!track.isConfirmed && track.hits >= this.minHits) {
                 track.isConfirmed = true;
                 newlyConfirmed.push(track);
@@ -93,7 +97,8 @@ export class Tracker {
                 misses: 0,
                 isConfirmed: this.minHits <= 1,
                 plateReadings: det.plateText ? [{ text: det.plateText, confidence: det.confidence }] : [],
-                faceEmbeddings: det.faceEmbedding ? [{ embedding: det.faceEmbedding, confidence: det.confidence }] : []
+                faceEmbeddings: det.faceEmbedding ? [{ embedding: det.faceEmbedding, confidence: det.confidence }] : [],
+                upperColor: det.upperColor ?? null
             };
 
             this.tracks.set(newTrackId, track);

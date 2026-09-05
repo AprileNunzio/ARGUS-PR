@@ -99,6 +99,25 @@ test('gli ambiti di targa e persona discriminano gli eventi', () => {
     assert.equal(describeEvent(denied).includes('AB123CD'), true);
 });
 
+test('regole personalizzate per targa specifica, persona specifica, colore maglia e frequenza passaggi', () => {
+    const plateRule = { ...BASE_RULE, className: null, targetPlate: 'AB123CD' };
+    assert.equal(evaluateRule(plateRule, { kind: TriggerKind.DETECTION, className: 'car', confidence: 0.9, plateText: 'AB123CD', timestamp: MONDAY_10 }).fires, true);
+    assert.equal(evaluateRule(plateRule, { kind: TriggerKind.DETECTION, className: 'car', confidence: 0.9, plateText: 'XY999ZZ', timestamp: MONDAY_10 }).fires, false);
+
+    const personRule = { ...BASE_RULE, targetPersonId: 'usr-42' };
+    assert.equal(evaluateRule(personRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, personId: 'usr-42', timestamp: MONDAY_10 }).fires, true);
+    assert.equal(evaluateRule(personRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, personId: 'usr-99', timestamp: MONDAY_10 }).fires, false);
+
+    const whiteShirtRule = { ...BASE_RULE, upperColor: 'white' };
+    assert.equal(evaluateRule(whiteShirtRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, upperColor: 'white', timestamp: MONDAY_10 }).fires, true);
+    assert.equal(evaluateRule(whiteShirtRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, upperColor: 'red', timestamp: MONDAY_10 }).fires, false);
+
+    const occurrencesRule = { ...BASE_RULE, minOccurrences: 3 };
+    assert.equal(evaluateRule(occurrencesRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, timestamp: MONDAY_10 }, { recentOccurrences: 2 }).fires, false);
+    assert.equal(evaluateRule(occurrencesRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, timestamp: MONDAY_10 }, { recentOccurrences: 3 }).fires, true);
+    assert.equal(evaluateRule(occurrencesRule, { kind: TriggerKind.DETECTION, className: 'person', confidence: 0.9, timestamp: MONDAY_10 }, { recentOccurrences: 5 }).fires, true);
+});
+
 test('i pacchetti MQTT rispettano il formato 3.1.1', () => {
     assert.deepEqual([...encodeLength(0)], [0]);
     assert.deepEqual([...encodeLength(127)], [127]);

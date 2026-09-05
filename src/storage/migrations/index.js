@@ -15,6 +15,7 @@ import audioClips from './014_audio_clips.js';
 import userProfiles from './015_user_profiles.js';
 import auditChain from './016_audit_chain.js';
 import floorPlansAndBarriers from './017_floor_plans_and_barriers.js';
+import analyticsAttributesAndStats from './018_analytics_attributes_and_stats.js';
 
 export const migrations = [
     core,
@@ -33,5 +34,6 @@ export const migrations = [
     audioClips,
     userProfiles,
     auditChain,
-    floorPlansAndBarriers
+    floorPlansAndBarriers,
+    analyticsAttributesAndStats
 ].sort((a, b) => a.version - b.version);

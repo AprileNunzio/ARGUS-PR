@@ -8,7 +8,9 @@ import {
     deleteDetectionSource,
     insertDetectionEvent,
     listDetectionEvents,
-    hasRecentEvent
+    hasRecentEvent,
+    getDetectionStats,
+    countRecentOccurrences
 } from '../src/features/detections/detections_repository.js';
 
 test('gestione sorgenti di inferenza e autenticazione chiave', () => {
@@ -113,5 +115,73 @@ test('rilevamento veicoli con targa associata e animali domestici e selvatici', 
 
     const animals = listDetectionEvents({}).filter((e) => ['dog', 'cat', 'horse', 'cow', 'sheep', 'bear', 'bird'].includes(e.className));
     assert.equal(animals.length, 2);
+});
+
+test('attributi avanzati di abbigliamento, frequenza passaggi e statistiche transiti', () => {
+    openDatabase({ databaseFile: ':memory:' });
+    const now = Date.now();
+
+    insertDetectionEvent({
+        cameraId: 'cam-main',
+        className: 'person',
+        confidence: 0.95,
+        upperColor: 'white',
+        startedAt: new Date(now - 120000).toISOString()
+    });
+
+    insertDetectionEvent({
+        cameraId: 'cam-main',
+        className: 'person',
+        confidence: 0.92,
+        upperColor: 'white',
+        startedAt: new Date(now - 60000).toISOString()
+    });
+
+    insertDetectionEvent({
+        cameraId: 'cam-main',
+        className: 'person',
+        confidence: 0.89,
+        upperColor: 'black',
+        startedAt: new Date(now - 30000).toISOString()
+    });
+
+    insertDetectionEvent({
+        cameraId: 'cam-gate',
+        className: 'car',
+        confidence: 0.96,
+        plateText: 'TEST999',
+        startedAt: new Date(now - 100000).toISOString()
+    });
+
+    insertDetectionEvent({
+        cameraId: 'cam-gate',
+        className: 'car',
+        confidence: 0.97,
+        plateText: 'TEST999',
+        startedAt: new Date(now - 50000).toISOString()
+    });
+
+    const whiteDetections = listDetectionEvents({ upperColor: 'white' });
+    assert.equal(whiteDetections.length, 2);
+    assert.equal(whiteDetections[0].upperColor, 'white');
+
+    const recentWhite = countRecentOccurrences({
+        cameraId: 'cam-main',
+        className: 'person',
+        upperColor: 'white',
+        windowMinutes: 10
+    });
+    assert.equal(recentWhite, 2);
+
+    const recentPlate = countRecentOccurrences({
+        plateText: 'TEST999',
+        windowMinutes: 10
+    });
+    assert.equal(recentPlate, 2);
+
+    const stats = getDetectionStats({ windowHours: 1 });
+    assert.ok(stats.plates.some((p) => p.plateText === 'TEST999' && p.count === 2));
+    assert.ok(stats.colors.some((c) => c.upperColor === 'white' && c.count === 2));
+    assert.ok(stats.colors.some((c) => c.upperColor === 'black' && c.count === 1));
 });
 

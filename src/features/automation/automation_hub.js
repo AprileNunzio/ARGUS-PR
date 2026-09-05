@@ -3,6 +3,7 @@ import { createLogger } from '../../kernel/logger.js';
 import { onShutdown } from '../../kernel/process_guard.js';
 import { evaluateRule, nextState, describeEvent, TriggerKind } from './rule_matcher.js';
 import { listActiveRules, getChannel, getChannelSecret, recordRun, pruneRuns } from './automation_repository.js';
+import { countRecentOccurrences } from '../detections/detections_repository.js';
 import { deliver } from './channels/index.js';
 
 const log = createLogger('automation');
@@ -62,7 +63,19 @@ function handleEvent(kind, payload, resolveCameraName) {
 
     for (const rule of listActiveRules()) {
         const state = states.get(rule.id);
-        const verdict = evaluateRule(rule, event, { state });
+        let recentOccurrences = 1;
+        if (rule.minOccurrences && rule.minOccurrences > 1) {
+            recentOccurrences = countRecentOccurrences({
+                cameraId: rule.cameraId || event.cameraId,
+                className: rule.className || event.className,
+                plateText: rule.targetPlate || event.plateText || event.plate,
+                personId: rule.targetPersonId || event.personId,
+                upperColor: rule.upperColor || event.upperColor,
+                windowMinutes: rule.occurrenceWindowMinutes || 60
+            });
+        }
+
+        const verdict = evaluateRule(rule, event, { state, recentOccurrences });
 
         if (!verdict.fires) continue;
 

@@ -3,7 +3,7 @@
 Contesto operativo per assistenti AI che lavorano su questo repository.
 Leggi questo file **prima** di scrivere codice. Per sapere **cosa manca ancora** leggi [HANDOVER.md](HANDOVER.md); per **come costruirlo** leggi [docs/IMPLEMENTAZIONE.md](docs/IMPLEMENTAZIONE.md); per **le difese di sicurezza ancora mancanti** leggi [docs/SICUREZZA.md](docs/SICUREZZA.md). Se modifichi il progetto, **aggiorna questo file nello stesso commit**.
 
-Ultimo aggiornamento: 2026-09-05 · versione progetto: 0.37.0
+Ultimo aggiornamento: 2026-09-05 · versione progetto: 0.38.0
 
 **Mappa della documentazione.** Ogni file ha un compito, e ognuno dichiara in testa cosa e' gia' costruito, cosi' nessuno ricostruisce quello che esiste.
 
@@ -767,6 +767,8 @@ Risposta di errore: `{ "error": { "code", "message", "details" } }`.
 ---
 
 ## 9. Stato reale: cosa esiste e cosa no
+ 
+Aggiunte della versione 0.38.0: **conteggio transiti e statistiche per targa, persona e colore abito superiore** (maglia bianca, nero, rosso, ecc. con campionamento HSV sul torso), **query di frequenza passaggi con finestra temporale**, **nuove schede statistiche e filtro rapido per colore e targa nella Ricerca Forense**, **automazioni avanzate personalizzate** con trigger su targa esatta, persona registrata specifica, colore abito superiore e soglia minima di passaggi ($N$ occorrenze in $M$ minuti) con persistenza su DB (migrazione 018), valutazione in tempo reale e form di configurazione responsive nel frontend.
 
 Aggiunte della versione 0.19.0: **nessuna finestra di dialogo del browser in tutta l'interfaccia** (le conferme distruttive sono pannelli dentro la pagina) e **ogni schermata ha il proprio indirizzo** — elenco telecamere, scelta del tipo di sorgente, nuovo canale, ricerca ONVIF, scheda del canale con le sue cinque sezioni, autoconfigurazione, regole e canali di automazione sono pagine navigabili invece che pannelli sovrapposti; **router a segmenti** e **test automatico del grafo dei moduli dell'interfaccia**.
 

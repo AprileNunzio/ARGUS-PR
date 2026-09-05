@@ -121,6 +121,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             confidence: track.maxConfidence,
             box: track.bestBox,
             plateText: plate,
+            upperColor: track.upperColor ?? null,
             startedAt: new Date(track.startedAt).toISOString(),
             endedAt: new Date(track.endedAt).toISOString()
         });
@@ -131,6 +132,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             confidence: track.maxConfidence,
             box: track.bestBox,
             plateText: plate,
+            upperColor: track.upperColor ?? null,
             timestamp: track.startedAt
         });
     }

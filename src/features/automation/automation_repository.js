@@ -12,6 +12,11 @@ function ruleToPublic(row) {
         minConfidence: row.min_confidence,
         plateScope: row.plate_scope,
         personScope: row.person_scope,
+        targetPlate: row.target_plate,
+        targetPersonId: row.target_person_id,
+        upperColor: row.upper_color,
+        minOccurrences: row.min_occurrences ?? 1,
+        occurrenceWindowMinutes: row.occurrence_window_minutes ?? 60,
         weekMask: row.week_mask,
         cooldownSeconds: row.cooldown_seconds,
         dailyLimit: row.daily_limit,
@@ -54,11 +59,14 @@ export function saveRule(rule) {
     if (existing) {
         getDatabase().prepare(`UPDATE automation_rules SET
             name = ?, enabled = ?, trigger_kind = ?, camera_id = ?, class_name = ?, min_confidence = ?,
-            plate_scope = ?, person_scope = ?, week_mask = ?, cooldown_seconds = ?, daily_limit = ?,
-            actions = ?, updated_at = ? WHERE id = ?`)
+            plate_scope = ?, person_scope = ?, target_plate = ?, target_person_id = ?, upper_color = ?,
+            min_occurrences = ?, occurrence_window_minutes = ?, week_mask = ?, cooldown_seconds = ?,
+            daily_limit = ?, actions = ?, updated_at = ? WHERE id = ?`)
             .run(
                 rule.name, rule.enabled ? 1 : 0, rule.triggerKind, rule.cameraId ?? null, rule.className ?? null,
-                rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any', rule.weekMask ?? null,
+                rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any',
+                rule.targetPlate ?? null, rule.targetPersonId ?? null, rule.upperColor ?? null,
+                rule.minOccurrences ?? 1, rule.occurrenceWindowMinutes ?? 60, rule.weekMask ?? null,
                 rule.cooldownSeconds ?? 60, rule.dailyLimit ?? null, JSON.stringify(rule.actions ?? []), at, rule.id
             );
         return getRule(rule.id);
@@ -66,12 +74,16 @@ export function saveRule(rule) {
 
     getDatabase().prepare(`INSERT INTO automation_rules
         (id, name, enabled, trigger_kind, camera_id, class_name, min_confidence, plate_scope, person_scope,
+         target_plate, target_person_id, upper_color, min_occurrences, occurrence_window_minutes,
          week_mask, cooldown_seconds, daily_limit, actions, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(
             rule.id, rule.name, rule.enabled ? 1 : 0, rule.triggerKind, rule.cameraId ?? null, rule.className ?? null,
-            rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any', rule.weekMask ?? null,
-            rule.cooldownSeconds ?? 60, rule.dailyLimit ?? null, JSON.stringify(rule.actions ?? []), at, at
+            rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any',
+            rule.targetPlate ?? null, rule.targetPersonId ?? null, rule.upperColor ?? null,
+            rule.minOccurrences ?? 1, rule.occurrenceWindowMinutes ?? 60,
+            rule.weekMask ?? null, rule.cooldownSeconds ?? 60, rule.dailyLimit ?? null,
+            JSON.stringify(rule.actions ?? []), at, at
         );
 
     return getRule(rule.id);

@@ -8,6 +8,38 @@ import onnxruntime as ort
 
 from vision_common import COCO_CLASSES, VEHICLE_CLASSES, MIN_BOX_AREA, MIN_BOX_SIDE, get_glyph_templates, letterbox, nms
 
+def classify_dominant_color(bgr_patch):
+    if bgr_patch is None or bgr_patch.size == 0:
+        return None
+    hsv = cv2.cvtColor(bgr_patch, cv2.COLOR_BGR2HSV)
+    h = hsv[:, :, 0]
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
+    mean_s = np.mean(s)
+    mean_v = np.mean(v)
+
+    if mean_v < 45:
+        return 'black'
+    if mean_s < 35 and mean_v > 165:
+        return 'white'
+    if mean_s < 45:
+        return 'gray'
+
+    mean_h = np.median(h)
+    if mean_h < 10 or mean_h >= 170:
+        return 'red'
+    if 10 <= mean_h < 25:
+        return 'orange'
+    if 25 <= mean_h < 35:
+        return 'yellow'
+    if 35 <= mean_h < 85:
+        return 'green'
+    if 85 <= mean_h < 135:
+        return 'blue'
+    if 135 <= mean_h < 170:
+        return 'purple'
+    return None
+
 class VisionEngine:
     def __init__(self, models_dir, profile, provider='auto', intra_threads=0, inter_threads=0):
         self.models_dir = models_dir
@@ -143,10 +175,27 @@ class VisionEngine:
                 continue
             if self.min_size > 0 and width * height < self.min_size:
                 continue
+            cls_name = COCO_CLASSES[int(class_ids[idx])]
+            upper_color = None
+            if cls_name == 'person':
+                bx, by, bw, bh = boxes[idx]
+                px1 = int(max(0, bx * w))
+                py1 = int(max(0, by * h))
+                pw = int(min(w - px1, bw * w))
+                ph = int(min(h - py1, bh * h))
+                if pw >= 20 and ph >= 40:
+                    torso_y1 = py1 + int(ph * 0.2)
+                    torso_y2 = py1 + int(ph * 0.6)
+                    torso_x1 = px1 + int(pw * 0.15)
+                    torso_x2 = px1 + int(pw * 0.85)
+                    torso = frame[torso_y1:torso_y2, torso_x1:torso_x2]
+                    upper_color = classify_dominant_color(torso)
+
             detections.append({
-                'className': COCO_CLASSES[int(class_ids[idx])],
+                'className': cls_name,
                 'confidence': round(float(scores[idx]), 3),
-                'box': [round(float(v), 4) for v in boxes[idx]]
+                'box': [round(float(v), 4) for v in boxes[idx]],
+                'upperColor': upper_color
             })
         return detections
 
