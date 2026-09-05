@@ -12,6 +12,8 @@ const log = createLogger('vision-process');
 
 const WORKER_FAILURE = /traceback|error|exception|failed|failure|cannot|could not|unable|warning|missing|unavailable|invalid|rejected|no such|not found/i;
 const WORKER_READY = /engine ready|loaded /i;
+const WORKER_BENIGN = /persist telemetry device id|in-memory identifier|onnxruntime.*telemetry/i;
+const ANSI_CODES = /\u001b\[[0-9;]*m/g;
 
 export function resolvePythonBin(dataDir) {
     if (dataDir) {
@@ -159,8 +161,13 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
         }
 
         workerChild.stderr.on('data', (chunk) => {
-            const message = chunk.toString().trim();
+            const message = chunk.toString().replace(ANSI_CODES, '').trim();
             if (message.length === 0) return;
+
+            if (WORKER_BENIGN.test(message)) {
+                log.debug('worker vision notice', { camera: camera.id, msg: message });
+                return;
+            }
 
             if (WORKER_FAILURE.test(message)) {
                 stats.lastError = message.slice(-200);
