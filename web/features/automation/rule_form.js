@@ -61,6 +61,30 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
     const minOccurrences = el('input', { className: 'input', type: 'number', min: '1', max: '1000', value: String(rule?.minOccurrences ?? 1) });
     const occurrenceWindow = el('input', { className: 'input', type: 'number', min: '1', max: '10080', value: String(rule?.occurrenceWindowMinutes ?? 60) });
 
+    const minDwell = el('input', { className: 'input', type: 'number', min: '0', max: '86400', value: String(rule?.minDwellSeconds ?? 0), placeholder: '0 = immediato' });
+    const solarMode = selectFrom([
+        ['none', 'Nessun vincolo solare'],
+        ['night_solar', 'Dal tramonto all alba (crepuscolare solare)'],
+        ['day_solar', 'Dall alba al tramonto (solo ore di luce)']
+    ], rule?.solarMode ?? 'none');
+
+    const armDisarmed = el('input', { type: 'checkbox', checked: rule?.armStates ? rule.armStates.includes('disarmed') : true });
+    const armHome = el('input', { type: 'checkbox', checked: rule?.armStates ? rule.armStates.includes('armed_home') : true });
+    const armAway = el('input', { type: 'checkbox', checked: rule?.armStates ? rule.armStates.includes('armed_away') : true });
+
+    const armHost = el('div', { className: 'row row--tight' }, [
+        el('label', { className: 'row row--tight' }, [armDisarmed, el('span', { textContent: 'Disarmato' })]),
+        el('label', { className: 'row row--tight' }, [armHome, el('span', { textContent: 'Notte / In casa' })]),
+        el('label', { className: 'row row--tight' }, [armAway, el('span', { textContent: 'Armato totale' })])
+    ]);
+
+    const messageTemplate = el('textarea', {
+        className: 'input',
+        rows: '2',
+        value: rule?.messageTemplate ?? '',
+        placeholder: 'Es. Allarme su {camera}: {class} {plate} staziona da {dwell_formatted}!'
+    });
+
     const confidence = el('input', {
         className: 'slider-input',
         type: 'range',
@@ -100,6 +124,11 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
             .filter((input) => input.checked)
             .map((input) => ({ channelId: input.dataset.channel }));
 
+        const armStates = [];
+        if (armDisarmed.checked) armStates.push('disarmed');
+        if (armHome.checked) armStates.push('armed_home');
+        if (armAway.checked) armStates.push('armed_away');
+
         const payload = {
             name: name.value.trim(),
             enabled: true,
@@ -114,6 +143,10 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
             upperColor: upperColor.value || null,
             minOccurrences: Number.parseInt(minOccurrences.value, 10) || 1,
             occurrenceWindowMinutes: Number.parseInt(occurrenceWindow.value, 10) || 60,
+            minDwellSeconds: Number.parseInt(minDwell.value, 10) || 0,
+            solarMode: solarMode.value,
+            armStates,
+            messageTemplate: messageTemplate.value.trim() || null,
             weekMask: schedule.value === 'night' ? NIGHT_MASK : null,
             cooldownSeconds: Number.parseInt(cooldown.value, 10) || 0,
             dailyLimit: dailyLimit.value ? Number.parseInt(dailyLimit.value, 10) : null,
@@ -157,8 +190,12 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
                 field('Colore abito superiore (opzionale)', upperColor),
                 field('Soglia passaggi minimi (occorrenze)', minOccurrences),
                 field('Finestra temporale passaggi (minuti)', occurrenceWindow),
+                field('Stazionamento minimo (secondi loitering)', minDwell),
+                field('Fascia solare (alba/tramonto)', solarMode),
+                field('Attiva negli stati impianto', armHost),
+                field('Messaggio personalizzato (variabili: {camera}, {plate}, {person}, {class}, {upper_color}, {dwell_formatted})', messageTemplate),
                 field('Confidenza minima', el('div', { className: 'slider-wrap' }, [confidence, confidenceBadge])),
-                field('Fascia oraria', schedule),
+                field('Fascia oraria settimanale', schedule),
                 field('Pausa fra due esecuzioni (secondi)', cooldown),
                 field('Limite giornaliero', dailyLimit)
             ]),

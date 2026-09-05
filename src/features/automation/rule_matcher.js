@@ -1,4 +1,5 @@
 import { slotIndex } from '../scheduling/schedule.js';
+import { isSunUp } from './solar_calc.js';
 
 export const TriggerKind = Object.freeze({
     DETECTION: 'detection',
@@ -8,14 +9,32 @@ export const TriggerKind = Object.freeze({
 
 export const PlateScope = Object.freeze({ ANY: 'any', ALLOWED: 'allowed', DENIED: 'denied', UNKNOWN: 'unknown' });
 export const PersonScope = Object.freeze({ ANY: 'any', KNOWN: 'known', UNKNOWN: 'unknown' });
+export const SolarMode = Object.freeze({ NONE: 'none', NIGHT_SOLAR: 'night_solar', DAY_SOLAR: 'day_solar' });
+export const ArmState = Object.freeze({ DISARMED: 'disarmed', ARMED_HOME: 'armed_home', ARMED_AWAY: 'armed_away' });
 
 export const TRIGGER_KINDS = Object.freeze(Object.values(TriggerKind));
 export const PLATE_SCOPES = Object.freeze(Object.values(PlateScope));
 export const PERSON_SCOPES = Object.freeze(Object.values(PersonScope));
+export const SOLAR_MODES = Object.freeze(Object.values(SolarMode));
+export const ARM_STATES = Object.freeze(Object.values(ArmState));
 
 function withinSchedule(rule, when) {
     if (typeof rule.weekMask !== 'string' || rule.weekMask.length !== 336) return true;
     return rule.weekMask[slotIndex(when)] === '1';
+}
+
+function withinSolarMode(rule, when) {
+    if (!rule.solarMode || rule.solarMode === SolarMode.NONE) return true;
+    const sunUp = isSunUp(when);
+    if (rule.solarMode === SolarMode.NIGHT_SOLAR) return !sunUp;
+    if (rule.solarMode === SolarMode.DAY_SOLAR) return sunUp;
+    return true;
+}
+
+function withinArmState(rule, currentArmState) {
+    if (!rule.armStates || !Array.isArray(rule.armStates) || rule.armStates.length === 0) return true;
+    if (!currentArmState) return true;
+    return rule.armStates.includes(currentArmState);
 }
 
 function withinCooldown(rule, state, timestamp) {
@@ -55,6 +74,21 @@ export function evaluateRule(rule, event, options = {}) {
 
     const confidence = event.confidence ?? 1;
     if (confidence < (rule.minConfidence ?? 0)) return { fires: false, reason: 'confidenza insufficiente' };
+
+    if (!withinArmState(rule, options.currentArmState)) {
+        return { fires: false, reason: `impianto non armato nello stato richiesto (${options.currentArmState ?? 'nessuno'})` };
+    }
+
+    if (!withinSolarMode(rule, when)) {
+        return { fires: false, reason: 'fascia solare non corrispondente' };
+    }
+
+    if (rule.minDwellSeconds && rule.minDwellSeconds > 0) {
+        const dwell = options.dwellSeconds ?? event.dwellSeconds ?? (event.durationMs ? Math.round(event.durationMs / 1000) : 0);
+        if (dwell < rule.minDwellSeconds) {
+            return { fires: false, reason: `stazionamento insufficiente (${dwell}s < ${rule.minDwellSeconds}s)` };
+        }
+    }
 
     if (rule.triggerKind === TriggerKind.ACCESS && !matchesPlate(rule, event)) {
         return { fires: false, reason: 'esito targa non corrispondente' };

@@ -2,6 +2,13 @@ import { getDatabase } from '../../storage/database.js';
 import { encryptSecret, decryptSecret } from '../../security/vault.js';
 
 function ruleToPublic(row) {
+    let armStates = ['disarmed', 'armed_home', 'armed_away'];
+    try {
+        if (row.arm_states) armStates = JSON.parse(row.arm_states);
+    } catch {
+        armStates = ['disarmed', 'armed_home', 'armed_away'];
+    }
+
     return {
         id: row.id,
         name: row.name,
@@ -17,6 +24,10 @@ function ruleToPublic(row) {
         upperColor: row.upper_color,
         minOccurrences: row.min_occurrences ?? 1,
         occurrenceWindowMinutes: row.occurrence_window_minutes ?? 60,
+        messageTemplate: row.message_template ?? null,
+        minDwellSeconds: row.min_dwell_seconds ?? 0,
+        solarMode: row.solar_mode ?? 'none',
+        armStates,
         weekMask: row.week_mask,
         cooldownSeconds: row.cooldown_seconds,
         dailyLimit: row.daily_limit,
@@ -55,18 +66,23 @@ export function getRule(id) {
 export function saveRule(rule) {
     const at = new Date().toISOString();
     const existing = getRule(rule.id);
+    const armStatesJson = JSON.stringify(rule.armStates ?? ['disarmed', 'armed_home', 'armed_away']);
 
     if (existing) {
         getDatabase().prepare(`UPDATE automation_rules SET
             name = ?, enabled = ?, trigger_kind = ?, camera_id = ?, class_name = ?, min_confidence = ?,
             plate_scope = ?, person_scope = ?, target_plate = ?, target_person_id = ?, upper_color = ?,
-            min_occurrences = ?, occurrence_window_minutes = ?, week_mask = ?, cooldown_seconds = ?,
+            min_occurrences = ?, occurrence_window_minutes = ?, message_template = ?, min_dwell_seconds = ?,
+            solar_mode = ?, arm_states = ?, week_mask = ?, cooldown_seconds = ?,
             daily_limit = ?, actions = ?, updated_at = ? WHERE id = ?`)
             .run(
                 rule.name, rule.enabled ? 1 : 0, rule.triggerKind, rule.cameraId ?? null, rule.className ?? null,
                 rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any',
                 rule.targetPlate ?? null, rule.targetPersonId ?? null, rule.upperColor ?? null,
-                rule.minOccurrences ?? 1, rule.occurrenceWindowMinutes ?? 60, rule.weekMask ?? null,
+                rule.minOccurrences ?? 1, rule.occurrenceWindowMinutes ?? 60,
+                rule.messageTemplate ?? null, rule.minDwellSeconds ?? 0,
+                rule.solarMode ?? 'none', armStatesJson,
+                rule.weekMask ?? null,
                 rule.cooldownSeconds ?? 60, rule.dailyLimit ?? null, JSON.stringify(rule.actions ?? []), at, rule.id
             );
         return getRule(rule.id);
@@ -75,13 +91,16 @@ export function saveRule(rule) {
     getDatabase().prepare(`INSERT INTO automation_rules
         (id, name, enabled, trigger_kind, camera_id, class_name, min_confidence, plate_scope, person_scope,
          target_plate, target_person_id, upper_color, min_occurrences, occurrence_window_minutes,
+         message_template, min_dwell_seconds, solar_mode, arm_states,
          week_mask, cooldown_seconds, daily_limit, actions, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(
             rule.id, rule.name, rule.enabled ? 1 : 0, rule.triggerKind, rule.cameraId ?? null, rule.className ?? null,
             rule.minConfidence ?? 0, rule.plateScope ?? 'any', rule.personScope ?? 'any',
             rule.targetPlate ?? null, rule.targetPersonId ?? null, rule.upperColor ?? null,
             rule.minOccurrences ?? 1, rule.occurrenceWindowMinutes ?? 60,
+            rule.messageTemplate ?? null, rule.minDwellSeconds ?? 0,
+            rule.solarMode ?? 'none', armStatesJson,
             rule.weekMask ?? null, rule.cooldownSeconds ?? 60, rule.dailyLimit ?? null,
             JSON.stringify(rule.actions ?? []), at, at
         );
@@ -91,6 +110,21 @@ export function saveRule(rule) {
 
 export function deleteRule(id) {
     return getDatabase().prepare('DELETE FROM automation_rules WHERE id = ?').run(id).changes > 0;
+}
+
+export function getSecurityArmState() {
+    const row = getDatabase().prepare("SELECT arm_state, updated_at FROM security_system_state WHERE id = 'global'").get();
+    return row ? { state: row.arm_state, updatedAt: row.updated_at } : { state: 'disarmed', updatedAt: new Date().toISOString() };
+}
+
+export function setSecurityArmState(state) {
+    const at = new Date().toISOString();
+    getDatabase().prepare(`
+        INSERT INTO security_system_state (id, arm_state, updated_at)
+        VALUES ('global', ?, ?)
+        ON CONFLICT(id) DO UPDATE SET arm_state = excluded.arm_state, updated_at = excluded.updated_at
+    `).run(state, at);
+    return { state, updatedAt: at };
 }
 
 export function listChannels() {
@@ -104,7 +138,8 @@ export function getChannel(id) {
 
 export function getChannelSecret(id) {
     const row = getDatabase().prepare('SELECT secret FROM automation_channels WHERE id = ?').get(id);
-    return row?.secret ? decryptSecret(row.secret) : null;
+    if (!row?.secret) return null;
+    return decryptSecret(row.secret);
 }
 
 export function saveChannel(channel) {

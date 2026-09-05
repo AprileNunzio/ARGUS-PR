@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 import {
     listRules, getRule, saveRule, deleteRule,
     listChannels, getChannel, saveChannel, deleteChannel,
-    listRuns
+    listRuns, getSecurityArmState, setSecurityArmState
 } from './automation_repository.js';
-import { TRIGGER_KINDS, PLATE_SCOPES, PERSON_SCOPES } from './rule_matcher.js';
+import { TRIGGER_KINDS, PLATE_SCOPES, PERSON_SCOPES, SOLAR_MODES, ARM_STATES } from './rule_matcher.js';
 import { CHANNEL_KINDS, CHANNEL_LABELS, SECRET_LABELS } from './channels/index.js';
 import { Permission } from '../../security/rbac.js';
 import { Exposure } from '../../security/net_zones.js';
@@ -25,6 +25,12 @@ function readActions(raw) {
 }
 
 function readRule(body) {
+    let armStates = ['disarmed', 'armed_home', 'armed_away'];
+    if (Array.isArray(body.armStates) && body.armStates.length > 0) {
+        armStates = body.armStates.filter((s) => ARM_STATES.includes(s));
+        if (armStates.length === 0) armStates = ['disarmed', 'armed_home', 'armed_away'];
+    }
+
     return {
         name: requireString(body.name, 'Nome', { max: 120 }),
         enabled: body.enabled === undefined ? true : requireBool(body.enabled),
@@ -45,6 +51,10 @@ function readRule(body) {
         upperColor: body.upperColor ? optionalString(body.upperColor, 'Colore abito', { max: 32 }) : null,
         minOccurrences: body.minOccurrences ? Math.trunc(requireNumberRange(body.minOccurrences, 'Occorrenze minime', 1, 1000)) : 1,
         occurrenceWindowMinutes: body.occurrenceWindowMinutes ? Math.trunc(requireNumberRange(body.occurrenceWindowMinutes, 'Finestra minuti', 1, 10080)) : 60,
+        messageTemplate: body.messageTemplate ? optionalString(body.messageTemplate, 'Template messaggio', { max: 1024 }) : null,
+        minDwellSeconds: body.minDwellSeconds ? Math.trunc(requireNumberRange(body.minDwellSeconds, 'Soglia stazionamento', 0, 86400)) : 0,
+        solarMode: body.solarMode ? requireEnum(body.solarMode, 'Modalità solare', SOLAR_MODES) : 'none',
+        armStates,
         weekMask: body.weekMask === undefined || body.weekMask === null || body.weekMask === ''
             ? null
             : requireWeekMask(body.weekMask),
@@ -84,9 +94,29 @@ export function registerAutomationRoutes(router, { hub }) {
             triggers: TRIGGER_KINDS,
             plateScopes: PLATE_SCOPES,
             personScopes: PERSON_SCOPES,
+            solarModes: SOLAR_MODES,
+            armStates: ARM_STATES,
             channels: CHANNEL_KINDS.map((kind) => ({ kind, label: CHANNEL_LABELS[kind], secretLabel: SECRET_LABELS[kind] ?? null }))
         }
     }), { permission: Permission.ALARM_MANAGE });
+
+    router.get('/api/automation/arm-state', async () => ({
+        body: getSecurityArmState()
+    }), { permission: Permission.ALARM_MANAGE });
+
+    router.put('/api/automation/arm-state', async (ctx) => {
+        const state = requireEnum(ctx.body.state, 'Stato armamento', ARM_STATES);
+        const result = setSecurityArmState(state);
+        recordAudit({
+            action: AuditAction.SETTINGS_CHANGED,
+            actorId: ctx.actor.id,
+            actorName: ctx.actor.username,
+            target: 'security:arm_state',
+            remoteAddr: ctx.address,
+            detail: { state }
+        });
+        return { body: result };
+    }, { permission: Permission.ALARM_MANAGE, exposure: Exposure.PRIVATE });
 
     router.get('/api/automation/rules', async () => ({ body: { rules: listRules() } }), { permission: Permission.ALARM_MANAGE });
 

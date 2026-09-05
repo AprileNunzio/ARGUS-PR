@@ -16,6 +16,7 @@ import userProfiles from './015_user_profiles.js';
 import auditChain from './016_audit_chain.js';
 import floorPlansAndBarriers from './017_floor_plans_and_barriers.js';
 import analyticsAttributesAndStats from './018_analytics_attributes_and_stats.js';
+import automationEnterpriseVariables from './019_automation_enterprise_variables.js';
 
 export const migrations = [
     core,
@@ -35,5 +36,6 @@ export const migrations = [
     userProfiles,
     auditChain,
     floorPlansAndBarriers,
-    analyticsAttributesAndStats
+    analyticsAttributesAndStats,
+    automationEnterpriseVariables
 ].sort((a, b) => a.version - b.version);

@@ -126,6 +126,8 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             endedAt: new Date(track.endedAt).toISOString()
         });
 
+        const dwellSeconds = Math.max(0, Math.round(((track.endedAt ?? track.startedAt) - track.startedAt) / 1000));
+
         publish(Topic.DETECTION, {
             cameraId,
             className: track.className,
@@ -133,6 +135,8 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             box: track.bestBox,
             plateText: plate,
             upperColor: track.upperColor ?? null,
+            dwellSeconds,
+            durationMs: (track.endedAt ?? track.startedAt) - track.startedAt,
             timestamp: track.startedAt
         });
     }

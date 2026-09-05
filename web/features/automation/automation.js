@@ -49,14 +49,44 @@ async function renderList({ api }) {
     const outlet = el('div', { className: 'view' });
     const confirmHost = el('div', {});
 
-    const [rulesData, channelsData, runsData] = await Promise.all([
+    const [rulesData, channelsData, runsData, armData] = await Promise.all([
         api.get('/api/automation/rules'),
         api.get('/api/automation/channels'),
-        api.get('/api/automation/runs?limit=30').catch(() => ({ runs: [] }))
+        api.get('/api/automation/runs?limit=30').catch(() => ({ runs: [] })),
+        api.get('/api/automation/arm-state').catch(() => ({ state: 'disarmed' }))
     ]);
 
+    let currentArm = armData.state ?? 'disarmed';
     const rules = rulesData.rules ?? [];
     const channels = channelsData.channels ?? [];
+
+    const armBtns = [
+        { id: 'disarmed', label: '🟢 Disarmato (In Casa)' },
+        { id: 'armed_home', label: '🟡 Notte / Perimetrale' },
+        { id: 'armed_away', label: '🔴 Armato Totale' }
+    ].map((m) => {
+        const btn = el('button', {
+            type: 'button',
+            className: `seg__btn ${currentArm === m.id ? 'seg__btn--on' : ''}`,
+            textContent: m.label,
+            onclick: async () => {
+                await api.put('/api/automation/arm-state', { state: m.id }).catch(() => undefined);
+                currentArm = m.id;
+                armBtns.forEach((b) => b.classList.remove('seg__btn--on'));
+                btn.classList.add('seg__btn--on');
+            }
+        });
+        return btn;
+    });
+
+    const armWidget = el('section', { className: 'panel' }, [
+        el('div', { className: 'panel__head' }, [
+            el('span', { className: 'panel__title', textContent: 'Stato Impianto di Sicurezza' })
+        ]),
+        el('div', { className: 'panel__body' }, [
+            el('div', { className: 'row schedule-presets' }, armBtns)
+        ])
+    ]);
 
     const askDelete = (kind, entity) => {
         confirmHost.replaceChildren(confirmPanel({
@@ -91,6 +121,7 @@ async function renderList({ api }) {
             ]
         }),
         confirmHost,
+        armWidget,
         el('section', { className: 'panel' }, [
             el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: `Regole (${rules.length})` })]),
             el('div', { className: 'panel__body stack stack--tight' },

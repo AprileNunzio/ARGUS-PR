@@ -2,8 +2,9 @@ import { subscribe, Topic } from '../../kernel/event_bus.js';
 import { createLogger } from '../../kernel/logger.js';
 import { onShutdown } from '../../kernel/process_guard.js';
 import { evaluateRule, nextState, describeEvent, TriggerKind } from './rule_matcher.js';
-import { listActiveRules, getChannel, getChannelSecret, recordRun, pruneRuns } from './automation_repository.js';
+import { listActiveRules, getChannel, getChannelSecret, recordRun, pruneRuns, getSecurityArmState } from './automation_repository.js';
 import { countRecentOccurrences } from '../detections/detections_repository.js';
+import { formatTemplate, buildTemplateContext } from './template_engine.js';
 import { deliver } from './channels/index.js';
 
 const log = createLogger('automation');
@@ -11,9 +12,15 @@ const log = createLogger('automation');
 const PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const states = new Map();
 
-function messageFor(rule, event, cameraName) {
+function messageFor(rule, event, cameraName, context) {
     const description = describeEvent(event);
     const when = new Date(event.timestamp ?? Date.now()).toLocaleString('it-IT');
+
+    let text = `${rule.name}\n${description} su ${cameraName ?? event.cameraId ?? 'canale sconosciuto'}\n${when}`;
+    if (rule.messageTemplate) {
+        const templated = formatTemplate(rule.messageTemplate, context);
+        if (templated) text = templated;
+    }
 
     return {
         rule: rule.name,
@@ -22,12 +29,12 @@ function messageFor(rule, event, cameraName) {
         cameraId: event.cameraId ?? null,
         timestamp: event.timestamp ?? Date.now(),
         subject: `ARGUS-PR: ${rule.name}`,
-        text: `${rule.name}\n${description} su ${cameraName ?? event.cameraId ?? 'canale sconosciuto'}\n${when}`
+        text
     };
 }
 
-async function runActions(rule, event, cameraName) {
-    const message = messageFor(rule, event, cameraName);
+async function runActions(rule, event, cameraName, context) {
+    const message = messageFor(rule, event, cameraName, context);
     const outcomes = [];
 
     for (const action of rule.actions ?? []) {
@@ -60,6 +67,8 @@ async function runActions(rule, event, cameraName) {
 
 function handleEvent(kind, payload, resolveCameraName) {
     const event = { ...payload, kind, timestamp: payload.timestamp ?? Date.now() };
+    const currentArmState = getSecurityArmState().state;
+    const dwellSeconds = event.dwellSeconds ?? (event.durationMs ? Math.round(event.durationMs / 1000) : 0);
 
     for (const rule of listActiveRules()) {
         const state = states.get(rule.id);
@@ -75,12 +84,15 @@ function handleEvent(kind, payload, resolveCameraName) {
             });
         }
 
-        const verdict = evaluateRule(rule, event, { state, recentOccurrences });
+        const verdict = evaluateRule(rule, event, { state, recentOccurrences, currentArmState, dwellSeconds });
 
         if (!verdict.fires) continue;
 
+        const cameraName = resolveCameraName(event.cameraId);
+        const context = buildTemplateContext({ rule, event, cameraName, recentOccurrences, dwellSeconds });
+
         states.set(rule.id, nextState(state, event.timestamp));
-        runActions(rule, event, resolveCameraName(event.cameraId)).catch((error) => {
+        runActions(rule, event, cameraName, context).catch((error) => {
             log.error('automation crashed', { rule: rule.name, message: error.message });
         });
     }
