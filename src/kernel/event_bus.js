@@ -36,6 +36,12 @@ export function subscribe(topic, handler) {
     return () => emitter.off(topic, handler);
 }
 
+export const on = subscribe;
+
+export function off(topic, handler) {
+    emitter.off(topic, handler);
+}
+
 export function subscribeAll(handler) {
     return subscribe('*', handler);
 }
