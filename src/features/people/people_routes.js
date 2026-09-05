@@ -46,11 +46,12 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
             embedding,
             photoPath
         });
-        recordAudit(db, {
-            userId: ctx.actor?.id,
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
             action: 'people.create',
-            resource: person.id,
-            details: { name: person.name, role: person.role }
+            target: person.id,
+            detail: { name: person.name, role: person.role }
         });
         return { body: { person }, status: 201 };
     }, { permission: Permission.CAMERA_MANAGE });
@@ -89,11 +90,12 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
 
         const updated = peopleRepository.updatePerson(id, changes);
         if (!updated) throw notFound('Person not found');
-        recordAudit(db, {
-            userId: ctx.actor?.id,
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
             action: 'people.update',
-            resource: id,
-            details: { name: updated.name }
+            target: id,
+            detail: { name: updated.name }
         });
         return { body: { person: updated } };
     }, { permission: Permission.CAMERA_MANAGE });
@@ -104,13 +106,35 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         if (!person) throw notFound('Person not found');
 
         peopleRepository.deletePerson(id);
-        recordAudit(db, {
-            userId: ctx.actor?.id,
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
             action: 'people.purge_gdpr',
-            resource: id,
-            details: { name: person.name }
+            target: id,
+            detail: { name: person.name }
         });
         return { body: { ok: true, purged: true } };
+    }, { permission: Permission.CAMERA_MANAGE });
+
+    router.post('/api/people/:id/merge', async (ctx) => {
+        const id = requireId(ctx.params.id, 'id');
+        const targetId = requireId(ctx.body?.targetId, 'targetId');
+        
+        const sourcePerson = peopleRepository.getPerson(id);
+        if (!sourcePerson) throw notFound('Source person not found');
+        const targetPerson = peopleRepository.getPerson(targetId);
+        if (!targetPerson) throw notFound('Target person not found');
+
+        peopleRepository.mergePerson(id, targetId);
+
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
+            action: 'people.merge',
+            target: id,
+            detail: { sourceName: sourcePerson.name, targetId, targetName: targetPerson.name }
+        });
+        return { body: { ok: true, mergedTo: targetId } };
     }, { permission: Permission.CAMERA_MANAGE });
 
     router.post('/api/people/match', async (ctx) => {
@@ -137,11 +161,12 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         const updated = peopleRepository.correctFaceLog(logId, newPersonId);
         if (!updated) throw notFound('Face log not found');
 
-        recordAudit(db, {
-            userId: ctx.actor?.id,
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
             action: 'people.correct_log',
-            resource: logId,
-            details: { correctedPersonId: newPersonId }
+            target: logId,
+            detail: { correctedPersonId: newPersonId }
         });
         return { body: { ok: true, logId, correctedPersonId: newPersonId } };
     }, { permission: Permission.CAMERA_MANAGE });

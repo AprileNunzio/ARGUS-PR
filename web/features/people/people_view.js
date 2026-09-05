@@ -21,46 +21,41 @@ export async function renderPeopleView({ api, session }) {
     const confirmHost = el('div', {});
     const logsHost = el('div', { className: 'stack' });
 
-    function renderPersonCard(p) {
+    function renderPersonCard(p, allPeople = []) {
         const hasBiometrics = Array.isArray(p.embedding) && p.embedding.length > 0;
         const dateStr = new Date(p.createdAt).toLocaleDateString();
         const roleConfig = ROLE_CHIPS[p.role] ?? { label: p.role, variant: 'info' };
 
         const avatarEl = p.photoPath 
-            ? el('img', { src: p.photoPath, className: 'avatar-thumb' })
-            : el('div', { className: 'avatar-thumb--empty' }, [icon('user')]);
+            ? el('img', { src: p.photoPath, className: 'person-card__avatar' })
+            : el('div', { className: 'person-card__avatar' }, [icon('user')]);
 
         const permChips = (p.specialPermissions ?? []).map(perm => {
-            const labels = {
-                varchi: 'Varchi',
-                h24: 'H24',
-                vip: 'VIP',
-                allarme_silenzioso: 'Allarme'
-            };
+            const labels = { varchi: 'Varchi', h24: 'H24', vip: 'VIP', allarme_silenzioso: 'Allarme' };
             return el('span', { className: 'chip chip--info mono', textContent: labels[perm] ?? perm });
         });
 
         const has3d = p.face3dParams && Object.keys(p.face3dParams).length > 0;
         let canvas3D = null;
         if (has3d) {
-            canvas3D = el('div', { className: 'face3d-mini-host' }, [
+            canvas3D = el('div', { className: 'person-card__3d-container' }, [
                 createFace3DCanvas(p.face3dParams, 90, 90)
             ]);
         }
 
         const galleryThumbs = (p.gallery ?? []).map((photo) => el('img', {
             src: photo,
-            className: 'avatar-thumb avatar-thumb--sm'
+            className: 'person-card__gallery-img'
         }));
 
         const deleteBtn = canManage ? el('button', {
             className: 'btn btn--sm btn--danger',
             type: 'button',
-            textContent: 'Elimina (GDPR)',
+            textContent: 'Elimina',
             onclick: () => {
                 confirmHost.replaceChildren(confirmPanel({
                     title: `Cancellare definitivamente ${p.name}?`,
-                    message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati, ai sensi del GDPR. L operazione non e reversibile.',
+                    message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati, ai sensi del GDPR. L\'operazione non è reversibile.',
                     confirmLabel: 'Cancella tutto',
                     onCancel: () => confirmHost.replaceChildren(),
                     onConfirm: async () => {
@@ -73,25 +68,66 @@ export async function renderPeopleView({ api, session }) {
             }
         }) : null;
 
-        return el('div', { className: 'device-row row--space' }, [
-            el('div', { className: 'row row--tight' }, [
+        const mergeBtn = canManage ? el('button', {
+            className: 'btn btn--sm btn--ghost',
+            type: 'button',
+            textContent: 'Unisci...',
+            onclick: () => {
+                const otherPeople = allPeople.filter(op => op.id !== p.id);
+                if (otherPeople.length === 0) {
+                    notice('warn', 'Non ci sono altre persone nel catalogo con cui unire.');
+                    return;
+                }
+                const selectTarget = el('select', { className: 'input select' }, [
+                    el('option', { value: '', textContent: '– Seleziona Persona Destinazione –' }),
+                    ...otherPeople.map(op => el('option', {
+                        value: op.id,
+                        textContent: `${op.name} (${op.role})`
+                    }))
+                ]);
+
+                confirmHost.replaceChildren(confirmPanel({
+                    title: `Unisci i transiti di ${p.name} a un'altra persona`,
+                    message: 'Seleziona la persona reale di destinazione. Tutti i transiti di questo profilo verranno assegnati a quella selezionata, e questo profilo verrà rimosso.',
+                    body: selectTarget,
+                    confirmLabel: 'Esegui Fusione',
+                    onCancel: () => confirmHost.replaceChildren(),
+                    onConfirm: async () => {
+                        const targetId = selectTarget.value;
+                        if (!targetId) return;
+                        await api.post(`/api/people/${p.id}/merge`, { targetId }).catch(() => undefined);
+                        confirmHost.replaceChildren();
+                        await loadPeople();
+                    }
+                }));
+                confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }) : null;
+
+        return el('article', { className: 'person-card' }, [
+            el('header', { className: 'person-card__header' }, [
                 avatarEl,
-                canvas3D,
-                el('div', { className: 'stack' }, [
+                el('div', { className: 'person-card__info' }, [
+                    el('div', { className: 'person-card__name', textContent: p.name }),
                     el('div', { className: 'row row--wrap row--tight' }, [
-                        el('strong', { textContent: p.name }),
                         chip(roleConfig.label, roleConfig.variant),
                         p.department ? chip(p.department, 'info') : null,
                         hasBiometrics ? chip(`vettori: ${p.sampleCount || 1}`, 'ok') : chip('senza foto', 'warn'),
                         has3d ? renderBiometricBadge(p.face3dParams) : null
-                    ]),
-                    permChips.length > 0 ? el('div', { className: 'row row--wrap row--tight' }, permChips) : null,
-                    p.notes ? el('div', { className: 'section__hint', textContent: p.notes }) : null,
-                    galleryThumbs.length > 0 ? el('div', { className: 'row row--tight' }, galleryThumbs) : null,
-                    el('span', { className: 'section__hint mono', textContent: `Iscritto il ${dateStr}` })
+                    ])
                 ])
             ]),
-            deleteBtn
+            el('div', { className: 'person-card__body' }, [
+                permChips.length > 0 ? el('div', { className: 'row row--wrap row--tight' }, permChips) : null,
+                p.notes ? el('div', { className: 'section__hint', textContent: p.notes }) : null,
+                canvas3D,
+                galleryThumbs.length > 0 ? el('div', { className: 'person-card__gallery' }, galleryThumbs) : null,
+                el('span', { className: 'section__hint mono', textContent: `Iscritto il ${dateStr}` })
+            ]),
+            el('footer', { className: 'person-card__footer' }, [
+                mergeBtn,
+                deleteBtn
+            ].filter(Boolean))
         ]);
     }
 
@@ -100,11 +136,13 @@ export async function renderPeopleView({ api, session }) {
         const people = data.people ?? [];
 
         if (people.length === 0) {
+            listHost.className = 'stack';
             listHost.replaceChildren(empty('Nessuna persona iscritta nell\'anagrafica biometrica.'));
             return;
         }
 
-        listHost.replaceChildren(...people.map(renderPersonCard));
+        listHost.className = 'people-grid';
+        listHost.replaceChildren(...people.map(p => renderPersonCard(p, people)));
     }
 
     async function loadLogs() {
@@ -166,37 +204,42 @@ export async function renderPeopleView({ api, session }) {
                 className: 'btn btn--sm btn--primary btn--full',
                 type: 'button',
                 textContent: 'Nuova Persona',
-                onclick: async () => {
-                    try {
-                        const response = await fetch(log.snapshotPath);
-                        const blob = await response.blob();
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            formHost.replaceChildren(renderAddPersonForm({
-                                api,
-                                initialImageBase64: e.target.result,
-                                onSaved: async () => {
-                                    formHost.setAttribute('hidden', 'hidden');
-                                    await loadPeople();
-                                },
-                                onCancel: () => formHost.setAttribute('hidden', 'hidden')
-                            }));
-                            formHost.removeAttribute('hidden');
-                            formHost.scrollIntoView({ behavior: 'smooth' });
-                        };
-                        reader.readAsDataURL(blob);
-                    } catch (err) {
-                        notice('error', 'Impossibile caricare l\'immagine.');
+                onclick: () => {
+                    const renderForm = (base64) => {
+                        formHost.replaceChildren(renderAddPersonForm({
+                            api,
+                            initialImageBase64: base64,
+                            onSaved: async () => {
+                                formHost.setAttribute('hidden', 'hidden');
+                                await loadPeople();
+                            },
+                            onCancel: () => formHost.setAttribute('hidden', 'hidden')
+                        }));
+                        formHost.removeAttribute('hidden');
+                        formHost.scrollIntoView({ behavior: 'smooth' });
+                    };
+
+                    if (log.snapshotPath.startsWith('data:')) {
+                        renderForm(log.snapshotPath);
+                    } else {
+                        fetch(log.snapshotPath)
+                            .then(res => res.blob())
+                            .then(blob => {
+                                const reader = new FileReader();
+                                reader.onload = (e) => renderForm(e.target.result);
+                                reader.readAsDataURL(blob);
+                            })
+                            .catch(() => notice('error', 'Impossibile caricare l\'immagine.'));
                     }
                 }
             }) : null;
 
             const imgEl = log.snapshotPath 
                 ? el('img', { className: 'face-card__img', src: log.snapshotPath })
-                : el('div', { className: 'face-card__img', style: 'display:grid;place-items:center;color:#444' }, [icon('eye-off')]);
+                : el('div', { className: 'face-card__img face-card__img--empty' }, [icon('eye-off')]);
 
             return el('article', { className: 'face-card' }, [
-                el('div', { style: 'position:relative' }, [
+                el('div', { className: 'face-card__img-wrapper' }, [
                     imgEl,
                     el('div', { className: 'face-card__overlay' }, [
                         log.isVerified ? chip('V', 'ok') : null,
@@ -207,7 +250,7 @@ export async function renderPeopleView({ api, session }) {
                 el('div', { className: 'face-card__body' }, [
                     el('div', { className: 'stack stack--tight' }, [
                         personBadge,
-                        el('div', { className: 'section__hint mono', style: 'font-size:0.7rem' }, [
+                        el('div', { className: 'section__hint mono face-card__details' }, [
                             el('div', { textContent: `ID: ${log.id.split('-')[0].toUpperCase()}` }),
                             el('div', { textContent: dateStr }),
                             el('div', { textContent: `Cam: ${log.cameraName ?? log.cameraId}` })

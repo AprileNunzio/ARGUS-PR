@@ -99,6 +99,16 @@ export function createPeopleRepository(db) {
             is_verified = 1
         WHERE id = @id
     `);
+    const mergeFaceLogsCorrectedStmt = db.prepare(`
+        UPDATE face_logs
+        SET corrected_person_id = @targetId
+        WHERE corrected_person_id = @sourceId
+    `);
+    const mergeFaceLogsPersonStmt = db.prepare(`
+        UPDATE face_logs
+        SET person_id = @targetId
+        WHERE person_id = @sourceId
+    `);
 
     return {
         listPeople() {
@@ -188,6 +198,14 @@ export function createPeopleRepository(db) {
         },
         correctFaceLog(logId, newPersonId) {
             correctFaceLogStmt.run({ id: logId, correctedPersonId: newPersonId || null });
+            return true;
+        },
+        mergePerson(sourceId, targetId) {
+            db.transaction(() => {
+                mergeFaceLogsCorrectedStmt.run({ sourceId, targetId });
+                mergeFaceLogsPersonStmt.run({ sourceId, targetId });
+                deletePersonStmt.run(sourceId);
+            })();
             return true;
         },
         listFaceLogs({ limit = 50, offset = 0, personId = null } = {}) {

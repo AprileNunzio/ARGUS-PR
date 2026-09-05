@@ -469,4 +469,25 @@
 .zone-hint { margin: 0; padding: 0.5rem 0.7rem; border-radius: var(--radius-sm); background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--brand-700); font-size: 0.78rem; line-height: 1.45; }
 .zone-presets { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
 .zone-presets__label { font-size: 0.74rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.faces-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); } .face-card { display: flex; flex-direction: column; background: var(--surface-1); border: 1px solid var(--rule); border-radius: var(--radius-md); overflow: hidden; position: relative; } .face-card__img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #000; } .face-card__body { padding: var(--gap-2); display: flex; flex-direction: column; gap: var(--gap-1); flex: 1; justify-content: space-between; } .face-card__overlay { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; } .face-card__confidence { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; }
+.faces-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.face-card { display: flex; flex-direction: column; background: var(--surface-1); border: 1px solid var(--rule); border-radius: var(--radius-md); overflow: hidden; position: relative; }
+.face-card__img-wrapper { position: relative; }
+.face-card__img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #000; }
+.face-card__img--empty { display: grid; place-items: center; color: var(--muted); }
+.face-card__body { padding: var(--gap-2); display: flex; flex-direction: column; gap: var(--gap-1); flex: 1; justify-content: space-between; }
+.face-card__overlay { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.face-card__confidence { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; }
+.face-card__details { font-size: 0.7rem; }
+
+.people-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.person-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s; }
+.person-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-line); }
+.person-card__header { display: flex; gap: var(--gap-2); padding: var(--gap-3); border-bottom: 1px solid var(--rule-soft); align-items: flex-start; }
+.person-card__avatar { width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover; background: var(--surface-2); display: grid; place-items: center; flex-shrink: 0; color: var(--muted); }
+.person-card__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.person-card__name { font-weight: 700; font-size: 1.05rem; color: var(--foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-card__body { padding: var(--gap-3); display: flex; flex-direction: column; gap: var(--gap-2); flex: 1; }
+.person-card__footer { padding: var(--gap-3); border-top: 1px solid var(--rule-soft); background: var(--surface-1); display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-2); }
+.person-card__3d-container { display: flex; justify-content: center; padding: var(--gap-2); background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--rule-soft); }
+.person-card__gallery { display: flex; gap: var(--gap-1); overflow-x: auto; padding-bottom: 4px; }
+.person-card__gallery-img { width: 40px; height: 40px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--rule-soft); }
