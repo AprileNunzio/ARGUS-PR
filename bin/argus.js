@@ -15,6 +15,7 @@ import { checkForUpdate, resetWatchdog } from '../src/features/updates/update_se
 import { readState, writeState, Phase } from '../src/features/updates/update_state.js';
 import { isReleaseTag, isNewer } from '../src/features/updates/semver.js';
 import { visionOverview, applyVisionCapabilities } from '../src/features/vision/vision_cli.js';
+import { capabilityReport } from '../src/platform/capabilities.js';
 
 const command = process.argv[2] ?? 'serve';
 const NEWLINE = '\n';
@@ -145,11 +146,39 @@ async function doctor() {
         ? { name: 'ffmpeg', ok: false, detail: media.error.message }
         : { name: 'ffmpeg', ok: true, detail: `${media.value.ffmpeg.version} at ${media.value.ffmpeg.path}` });
 
-    process.stdout.write('\n');
+    process.stdout.write(NEWLINE);
     for (const check of checks) {
-        process.stdout.write(`  ${check.ok ? 'PASS' : 'FAIL'}  ${check.name.padEnd(10)} ${check.detail}\n`);
+        process.stdout.write(`  ${check.ok ? 'PASS' : 'FAIL'}  ${check.name.padEnd(10)} ${check.detail}${NEWLINE}`);
     }
-    process.stdout.write('\n');
+
+    const report = await capabilityReport(config).catch(() => null);
+
+    if (report) {
+        const lines = [
+            '',
+            '  Capacita di questa macchina',
+            `    processore      ${report.cpu.model} · ${report.cpu.logicalCores} core ${report.cpu.arch}`,
+            report.platform.model ? `    macchina        ${report.platform.model}` : null,
+            `    acceleratori    compilati: ${report.video.accelerators.compiled.join(', ') || 'nessuno'}`,
+            `                    usabili:    ${report.video.accelerators.usable.join(', ') || 'nessuno'}`,
+            `    encoder         ${report.video.encoders.usable.join(', ') || 'nessuno'}`,
+            `    inferenza       ${report.ai.available ? (report.ai.providers.join(', ') || 'nessun provider') : `non disponibile (${report.ai.reason})`}`,
+            `    analisi         ${report.analysis.suggestedFps} fotogrammi al secondo consigliati`,
+            report.thermal.available ? `    temperatura     ${report.thermal.hottest.celsius} gradi` : null,
+            ''
+        ].filter((line) => line !== null);
+
+        for (const entry of report.suggestions) {
+            lines.push(`  [${entry.severity.toUpperCase()}] ${entry.title}`);
+            lines.push(`    ${entry.detail}`);
+            if (entry.command) lines.push(`    $ ${entry.command}`);
+            lines.push('');
+        }
+
+        process.stdout.write(lines.join(NEWLINE) + NEWLINE);
+    } else {
+        process.stdout.write(NEWLINE);
+    }
 
     process.exit(checks.every((check) => check.ok) ? 0 : 1);
 }

@@ -657,3 +657,12 @@
 .vision-row__name { font-size: 0.9rem; }
 .vision-row .spec-grid { padding: 0; }
 .vision-row__error { display: flex; align-items: flex-start; gap: var(--gap-2); margin: 0; padding: 0.5rem 0.65rem; border-radius: var(--radius-sm); background: var(--bad-soft); color: var(--bad); font-family: var(--mono); font-size: 0.72rem; line-height: 1.4; overflow-wrap: anywhere; }
+
+.cap-suggestion { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.7rem 0.85rem; border: 1px solid var(--rule); border-left-width: 3px; border-radius: var(--radius); background: var(--surface); }
+.cap-suggestion--warning { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn-soft) 35%, var(--surface)); }
+.cap-suggestion--opportunity { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
+.cap-suggestion--info { border-left-color: var(--muted); }
+.cap-suggestion__head { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.cap-suggestion__detail { margin: 0; font-size: 0.79rem; color: var(--muted); line-height: 1.5; }
+.cap-command { display: flex; align-items: center; gap: var(--gap-2); padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); background: var(--void); }
+.cap-command__text { flex: 1; font-family: var(--mono); font-size: 0.74rem; color: #9fe6c0; overflow-x: auto; white-space: nowrap; }

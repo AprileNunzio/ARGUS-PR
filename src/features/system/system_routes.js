@@ -6,6 +6,7 @@ import { queryAudit, recordAudit } from '../../security/audit.js';
 import { Permission } from '../../security/rbac.js';
 import { readPackageVersion } from '../../platform/version.js';
 import { getHardwareProfile } from '../../platform/hardware.js';
+import { capabilityReport } from '../../platform/capabilities.js';
 import { sanitizePerformanceSettings, applySqlitePerformance, DEFAULT_PERFORMANCE_SETTINGS } from '../settings/performance_tuning.js';
 import { getSetting, setSetting } from '../settings/settings_repository.js';
 
@@ -79,6 +80,10 @@ export function registerSystemRoutes(router) {
     router.get('/api/system/hardware', async () => ({
         body: { hardware: getHardwareProfile() }
     }), { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/system/capabilities', async (ctx) => ({
+        body: await capabilityReport(ctx.config)
+    }), { permission: Permission.SYSTEM_MANAGE });
 
     router.get('/api/system/performance', async () => {
         const hardware = getHardwareProfile();

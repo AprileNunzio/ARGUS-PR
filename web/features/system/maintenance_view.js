@@ -1,6 +1,7 @@
 import { el, chip, notice, confirmPanel, pageHead, formatBytes, formatDuration } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, optionRow, metricTile } from '/assets/ui.js';
+import { capabilitiesBody } from './capabilities_card.js';
 
 const CACHE_SCOPES = [
     { id: 'runtime', label: 'Cache applicative', hint: 'Impostazioni in memoria, esito dei controlli di aggiornamento, sessioni scadute e blocchi di accesso', icon: 'refresh' },
@@ -24,10 +25,12 @@ export async function renderMaintenance({ api }) {
     const confirmHost = el('div', {});
 
     let data = await api.get('/api/system/maintenance').catch((error) => ({ failure: error }));
+    let capabilities = await api.get('/api/system/capabilities').catch(() => null);
     const selectedScopes = new Set(['runtime', 'temporary']);
 
     const refresh = async () => {
         data = await api.get('/api/system/maintenance').catch((error) => ({ failure: error }));
+        capabilities = await api.get('/api/system/capabilities').catch(() => capabilities);
         render();
     };
 
@@ -63,6 +66,19 @@ export async function renderMaintenance({ api }) {
                     ])
                 ])
             ]
+        });
+    };
+
+    const capabilitiesCard = () => {
+        const count = capabilities?.suggestions?.length ?? 0;
+
+        return card({
+            title: 'Capacita di questa macchina',
+            subtitle: 'Cosa il tuo hardware mette a disposizione e cosa puoi decidere di abilitare',
+            iconName: 'cpu',
+            tone: count > 0 ? 'amber' : 'emerald',
+            badge: chip(count > 0 ? `${count} suggerimenti` : 'Tutto sfruttato', count > 0 ? 'warn' : 'ok'),
+            body: capabilitiesBody(capabilities)
         });
     };
 
@@ -224,6 +240,7 @@ export async function renderMaintenance({ api }) {
             confirmHost,
             el('div', { className: 'xstack' }, [
                 machineCard(),
+                capabilitiesCard(),
                 servicesCard(),
                 cacheCard(),
                 powerCard()
