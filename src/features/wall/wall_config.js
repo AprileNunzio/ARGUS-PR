@@ -41,6 +41,9 @@ export const OVERLAY_CLASSES = Object.freeze([
 ]);
 
 const MAX_TILES = 64;
+const EMPTY_TILE = 'none';
+
+export const DEFAULT_SCREEN_ID = 'principale';
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const OUTPUT_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
 
@@ -52,8 +55,6 @@ export const DEFAULT_WALL_CONFIG = Object.freeze({
     tiles: [],
     excluded: [],
     quality: {},
-    outputs: [],
-    primaryOutput: null,
     clock: Object.freeze({
         format: '24h',
         showSeconds: true,
@@ -112,15 +113,59 @@ function sanitiseTiles(raw) {
         if (!entry || typeof entry !== 'object') continue;
 
         const index = Number.parseInt(entry.index, 10);
-        const cameraId = cleanId(entry.cameraId);
-        if (!Number.isInteger(index) || index < 0 || index >= MAX_TILES) continue;
-        if (!cameraId || seen.has(index)) continue;
+        if (!Number.isInteger(index) || index < 0 || index >= MAX_TILES || seen.has(index)) continue;
+
+        const cameraId = entry.cameraId === EMPTY_TILE ? EMPTY_TILE : cleanId(entry.cameraId);
+        if (!cameraId) continue;
 
         seen.add(index);
         tiles.push({ index, cameraId });
     }
 
     return tiles.sort((a, b) => a.index - b.index);
+}
+
+export function sanitiseScreen(raw, fallbackId) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const id = cleanOutput(source.id) ?? fallbackId;
+
+    return {
+        id,
+        label: typeof source.label === 'string' && source.label.trim().length > 0
+            ? source.label.trim().slice(0, 60)
+            : id,
+        enabled: source.enabled !== false,
+        layout: LAYOUT_PRESETS.includes(source.layout) ? source.layout : 'auto',
+        defaultQuality: STREAM_QUALITIES.includes(source.defaultQuality) ? source.defaultQuality : 'sub',
+        tiles: sanitiseTiles(source.tiles),
+        excluded: Array.isArray(source.excluded)
+            ? [...new Set(source.excluded.map(cleanId).filter(Boolean))].slice(0, MAX_TILES)
+            : [],
+        quality: sanitiseQuality(source.quality)
+    };
+}
+
+function sanitiseScreens(source) {
+    const raw = Array.isArray(source.screens) ? source.screens : null;
+
+    if (raw && raw.length > 0) {
+        const screens = [];
+        for (const entry of raw.slice(0, 8)) {
+            const screen = sanitiseScreen(entry, `schermo-${screens.length + 1}`);
+            if (!screens.some((item) => item.id === screen.id)) screens.push(screen);
+        }
+        if (screens.length > 0) return screens;
+    }
+
+    return [sanitiseScreen({
+        id: DEFAULT_SCREEN_ID,
+        label: 'Schermo principale',
+        layout: source.layout,
+        defaultQuality: source.defaultQuality,
+        tiles: source.tiles,
+        excluded: source.excluded,
+        quality: source.quality
+    }, DEFAULT_SCREEN_ID)];
 }
 
 function sanitiseQuality(raw) {
@@ -132,19 +177,6 @@ function sanitiseQuality(raw) {
         if (cameraId && STREAM_QUALITIES.includes(value)) map[cameraId] = value;
     }
     return map;
-}
-
-function sanitiseOutputs(raw) {
-    if (!Array.isArray(raw)) return [];
-
-    const outputs = [];
-    for (const entry of raw.slice(0, 16)) {
-        if (!entry || typeof entry !== 'object') continue;
-        const id = cleanOutput(entry.id);
-        if (!id || outputs.some((item) => item.id === id)) continue;
-        outputs.push({ id, enabled: entry.enabled !== false });
-    }
-    return outputs;
 }
 
 function sanitiseClock(raw) {
@@ -194,18 +226,14 @@ export function sanitiseWallConfig(raw) {
     const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     const rotate = Number.parseInt(source.rotateSeconds, 10);
 
+    const screens = sanitiseScreens(source);
+    const primary = cleanOutput(source.primaryScreen);
+
     return {
-        layout: LAYOUT_PRESETS.includes(source.layout) ? source.layout : DEFAULT_WALL_CONFIG.layout,
-        defaultQuality: STREAM_QUALITIES.includes(source.defaultQuality) ? source.defaultQuality : DEFAULT_WALL_CONFIG.defaultQuality,
+        screens,
+        primaryScreen: screens.some((screen) => screen.id === primary) ? primary : screens[0].id,
         rotateSeconds: Number.isInteger(rotate) && rotate >= 0 && rotate <= 3600 ? rotate : 0,
         showOfflineTiles: source.showOfflineTiles !== false,
-        tiles: sanitiseTiles(source.tiles),
-        excluded: Array.isArray(source.excluded)
-            ? [...new Set(source.excluded.map(cleanId).filter(Boolean))].slice(0, MAX_TILES)
-            : [],
-        quality: sanitiseQuality(source.quality),
-        outputs: sanitiseOutputs(source.outputs),
-        primaryOutput: cleanOutput(source.primaryOutput),
         clock: sanitiseClock(source.clock),
         statusbar: sanitiseParts(source.statusbar, STATUSBAR_PARTS, ['visible']),
         tile: sanitiseParts(source.tile, TILE_PARTS),
@@ -227,16 +255,29 @@ export function saveWallConfig(patch) {
     return next;
 }
 
-export function qualityForCamera(config, cameraId) {
-    return config.quality[cameraId] ?? config.defaultQuality;
+export function qualityForCamera(screen, cameraId) {
+    return screen.quality[cameraId] ?? screen.defaultQuality;
 }
 
-export function wallCameraPlan(config, cameras) {
-    const active = cameras.filter((camera) => camera.enabled && !config.excluded.includes(camera.id));
-    const byId = new Map(active.map((camera) => [camera.id, camera]));
-    const placed = new Map();
+export function screenFor(config, screenId) {
+    return config.screens.find((screen) => screen.id === screenId)
+        ?? config.screens.find((screen) => screen.id === config.primaryScreen)
+        ?? config.screens[0];
+}
 
-    for (const tile of config.tiles) {
+export function wallCameraPlan(config, cameras, screenId = null) {
+    const screen = screenFor(config, screenId);
+    const active = cameras.filter((camera) => camera.enabled && !screen.excluded.includes(camera.id));
+    const byId = new Map(active.map((camera) => [camera.id, camera]));
+
+    const placed = new Map();
+    const blocked = new Set();
+
+    for (const tile of screen.tiles) {
+        if (tile.cameraId === EMPTY_TILE) {
+            blocked.add(tile.index);
+            continue;
+        }
         const camera = byId.get(tile.cameraId);
         if (camera && !placed.has(tile.index)) placed.set(tile.index, camera);
     }
@@ -246,7 +287,7 @@ export function wallCameraPlan(config, cameras) {
 
     let cursor = 0;
     for (const camera of remaining) {
-        while (placed.has(cursor)) cursor += 1;
+        while (placed.has(cursor) || blocked.has(cursor)) cursor += 1;
         if (cursor >= MAX_TILES) break;
         placed.set(cursor, camera);
     }
@@ -257,6 +298,6 @@ export function wallCameraPlan(config, cameras) {
             index,
             id: camera.id,
             name: camera.name,
-            quality: qualityForCamera(config, camera.id)
+            quality: qualityForCamera(screen, camera.id)
         }));
 }

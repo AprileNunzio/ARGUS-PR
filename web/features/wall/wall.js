@@ -338,8 +338,11 @@ async function boot() {
         return false;
     };
 
+    const screenId = new URLSearchParams(location.search).get('screen');
+
     const applyConfig = async () => {
-        const payload = await request('/api/wall/config').catch(() => null);
+        const query = screenId ? `?screen=${encodeURIComponent(screenId)}` : '';
+        const payload = await request(`/api/wall/config${query}`).catch(() => null);
         if (!payload) return;
 
         plan = payload.plan ?? [];
@@ -350,11 +353,9 @@ async function boot() {
             grid.setOverlay(payload.config.overlay);
             grid.setTileParts(payload.config.tile);
             bar.setParts(payload.config.statusbar);
-            bar.setLayout(payload.config.layout);
-            grid.setLayout(presetById(payload.config.layout));
+            bar.setLayout(payload.screen.layout);
+            grid.setLayout(presetById(payload.screen.layout));
 
-            const enabledOutputs = (payload.config.outputs ?? []).filter((output) => output.enabled).map((output) => output.id);
-            bar.setOutputs(enabledOutputs);
         }
 
         if (plan.length > 0) grid.render(plan);

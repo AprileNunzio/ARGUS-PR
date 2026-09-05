@@ -148,10 +148,6 @@ export function createStatusBar(onLayoutChange) {
                 button.classList.toggle('wall-layout-btn--active', button.dataset.layout === layoutId);
             }
         },
-        setOutputs(outputs) {
-            if (!Array.isArray(outputs) || outputs.length === 0) return;
-            displayInfo.textContent = outputs.join(', ');
-        },
         update(status) {
             const primary = status.addresses[0];
             const host = primary ? primary.address : 'localhost';

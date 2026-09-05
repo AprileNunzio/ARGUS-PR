@@ -1,59 +1,6 @@
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
-import { segmented, toggle, optionRow } from '/assets/ui.js';
-
-const SHAPES = {
-    '1': [1, 1],
-    '4': [2, 2],
-    '9': [3, 3],
-    '16': [4, 4],
-    '25': [5, 5],
-    '36': [6, 6],
-    '64': [8, 8]
-};
-
-export function shapeFor(layout, cameraCount) {
-    if (SHAPES[layout]) return SHAPES[layout];
-    const columns = Math.max(1, Math.ceil(Math.sqrt(Math.max(cameraCount, 1))));
-    return [columns, Math.max(1, Math.ceil(Math.max(cameraCount, 1) / columns))];
-}
-
-export function tileCount(layout, cameraCount) {
-    const [columns, rows] = shapeFor(layout, cameraCount);
-    return columns * rows;
-}
-
-export function renderTileBoard({ layout, cameras, config, onAssign }) {
-    const available = cameras.filter((camera) => camera.enabled && !config.excluded.includes(camera.id));
-    const [columns] = shapeFor(layout, available.length);
-    const total = tileCount(layout, available.length);
-    const board = el('div', { className: 'tile-board' });
-    board.style.setProperty('grid-template-columns', `repeat(${columns}, minmax(0, 1fr))`);
-
-    const assignment = new Map(config.tiles.map((tile) => [tile.index, tile.cameraId]));
-
-    for (let index = 0; index < total; index += 1) {
-        const cameraId = assignment.get(index) ?? '';
-        const camera = available.find((entry) => entry.id === cameraId) ?? null;
-
-        const select = el('select', { className: 'tile-cell__select' });
-        select.append(el('option', { value: '', textContent: 'Automatico' }));
-        for (const entry of available) {
-            const option = el('option', { value: entry.id, textContent: entry.name });
-            if (entry.id === cameraId) option.selected = true;
-            select.append(option);
-        }
-        select.addEventListener('change', () => onAssign(index, select.value));
-
-        board.append(el('div', { className: camera ? 'tile-cell tile-cell--filled' : 'tile-cell' }, [
-            el('span', { className: 'tile-cell__index', textContent: String(index + 1) }),
-            el('span', { className: 'tile-cell__icon' }, [icon(camera ? 'camera' : 'crop')]),
-            select
-        ]));
-    }
-
-    return board;
-}
+import { segmented, toggle } from '/assets/ui.js';
 
 export function renderCameraRoster({ cameras, config, onExclude, onQuality }) {
     if (cameras.length === 0) {
@@ -94,39 +41,5 @@ export function renderCameraRoster({ cameras, config, onExclude, onQuality }) {
                 el('span', { textContent: 'Questa telecamera non espone un sub-stream: il muro usera il flusso principale, con piu carico su CPU e rete.' })
             ]) : null
         ]);
-    }));
-}
-
-export function renderOutputBoard({ displays, config, onToggle, onPrimary }) {
-    if (displays.length === 0) {
-        return el('div', { className: 'empty' }, [
-            icon('monitor', { className: 'icon--xl' }),
-            el('p', { textContent: 'Nessuna uscita video rilevata su questo server.' })
-        ]);
-    }
-
-    const states = new Map(config.outputs.map((output) => [output.id, output.enabled]));
-
-    return el('div', { className: 'stack stack--tight' }, displays.map((display) => {
-        const enabled = states.get(display.id) ?? display.connected;
-        const isPrimary = config.primaryOutput === display.id;
-
-        const primaryButton = el('button', {
-            type: 'button',
-            className: isPrimary ? 'btn btn--sm btn--primary' : 'btn btn--sm',
-            textContent: isPrimary ? 'Uscita principale' : 'Imposta principale',
-            onclick: () => onPrimary(display.id)
-        });
-
-        return optionRow({
-            title: display.label,
-            hint: `${display.connector} · ${display.connected ? 'monitor collegato' : 'nessun segnale rilevato'}`,
-            iconName: 'monitor',
-            tone: display.connected ? null : 'muted',
-            control: el('div', { className: 'row row--tight row--nowrap' }, [
-                primaryButton,
-                toggle(enabled, (value) => onToggle(display.id, value), ['Abilitata', 'Disabilitata'])
-            ])
-        });
     }));
 }

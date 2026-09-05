@@ -580,3 +580,106 @@
 .view--tight .view__title { font-size: 1.15rem; }
 .view--tight .panel__head { padding-block: 0.5rem; }
 .view--tight .tabs { gap: 3px; }
+
+.subapp-grid { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+
+.subapp-card {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color var(--speed) var(--ease), transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
+}
+
+.subapp-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: color-mix(in srgb, var(--card-tone, var(--accent)) 45%, var(--rule)); }
+.subapp-card--blue { --card-tone: var(--tone-blue); }
+.subapp-card--purple { --card-tone: var(--tone-purple); }
+.subapp-card--cyan { --card-tone: var(--tone-cyan); }
+.subapp-card--amber { --card-tone: var(--tone-amber); }
+.subapp-card--emerald { --card-tone: var(--tone-emerald); }
+
+.subapp-card__icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius);
+    color: #fff;
+    background: linear-gradient(135deg, var(--card-tone, var(--accent)), color-mix(in srgb, var(--card-tone, var(--accent)) 55%, var(--cyan)));
+}
+
+.subapp-card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.subapp-card__title { font-size: 0.92rem; }
+.subapp-card__desc { font-size: 0.77rem; color: var(--muted); line-height: 1.4; text-wrap: pretty; }
+
+.screen-frame { display: flex; flex-direction: column; gap: var(--gap-3); }
+.screen-frame__head { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.screen-frame__head .icon { color: var(--cyan); }
+.screen-frame__hint { margin: 0; font-size: 0.77rem; color: var(--muted); line-height: 1.45; }
+
+.screen-bezel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(0.6rem, 1.4vw, 1.1rem);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, #1b2436, #0b1120);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), var(--shadow-md);
+}
+
+.screen-bezel__stand { width: 22%; height: 6px; margin-top: 0.7rem; border-radius: 0 0 8px 8px; background: linear-gradient(180deg, #2a3550, #151d2e); }
+
+.screen-board { display: grid; gap: 5px; width: 100%; aspect-ratio: 16 / 9; }
+
+.screen-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    min-height: 0;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,.07);
+    background: #070b12;
+    overflow: hidden;
+    transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.screen-tile:hover { border-color: rgba(56,189,248,.55); }
+.screen-tile--camera { background: linear-gradient(160deg, rgba(124,92,240,.28), rgba(7,11,18,.9)); border-color: rgba(124,92,240,.5); }
+.screen-tile--empty { background: repeating-linear-gradient(45deg, #0a0f19, #0a0f19 6px, #0d1422 6px, #0d1422 12px); }
+.screen-tile--auto { background: linear-gradient(160deg, rgba(56,189,248,.14), rgba(7,11,18,.9)); }
+
+.screen-tile__index { position: absolute; top: 3px; left: 5px; font-family: var(--mono); font-size: 0.58rem; font-weight: 700; color: rgba(255,255,255,.35); }
+.screen-tile__icon { color: rgba(255,255,255,.55); }
+.screen-tile--camera .screen-tile__icon { color: #c4b5fd; }
+.screen-tile--auto .screen-tile__icon { color: #7dd3fc; }
+.screen-tile__caption { font-size: 0.6rem; color: rgba(255,255,255,.6); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+.screen-tile__select {
+    width: 100%;
+    max-width: 100%;
+    padding: 2px 3px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 4px;
+    background: rgba(7,11,18,.9);
+    color: #cbd9ea;
+    font: inherit;
+    font-size: 0.6rem;
+    cursor: pointer;
+}
+
+@media (max-width: 700px) {
+    .screen-tile__caption { display: none; }
+}
