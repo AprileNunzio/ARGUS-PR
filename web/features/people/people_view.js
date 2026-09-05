@@ -128,13 +128,13 @@ export async function renderPeopleView({ api, session }) {
             let personBadge = chip('Sconosciuto', 'warn');
             if (person) {
                 const roleConfig = ROLE_CHIPS[person.role] ?? { label: person.role, variant: 'ok' };
-                personBadge = chip(`${person.name} (${roleConfig.label})`, roleConfig.variant);
+                personBadge = chip(person.name, roleConfig.variant);
             }
 
             const correctBtn = canManage ? el('button', {
-                className: 'btn btn--sm btn--ghost',
+                className: 'btn btn--sm btn--ghost btn--full',
                 type: 'button',
-                textContent: 'Correggi Riconoscimento',
+                textContent: 'Associa/Correggi',
                 onclick: () => {
                     const selectPerson = el('select', { className: 'input select' }, [
                         el('option', { value: '', textContent: '– Segna come Sconosciuto –' }),
@@ -163,9 +163,9 @@ export async function renderPeopleView({ api, session }) {
             }) : null;
 
             const addPersonBtn = (!person && canManage && log.snapshotPath) ? el('button', {
-                className: 'btn btn--sm btn--primary',
+                className: 'btn btn--sm btn--primary btn--full',
                 type: 'button',
-                textContent: 'Crea Nuova Persona',
+                textContent: 'Nuova Persona',
                 onclick: async () => {
                     try {
                         const response = await fetch(log.snapshotPath);
@@ -191,24 +191,34 @@ export async function renderPeopleView({ api, session }) {
                 }
             }) : null;
 
-            return el('div', { className: 'device-row row--space' }, [
-                el('div', { className: 'stack' }, [
-                    el('div', { className: 'row row--wrap row--tight' }, [
-                        personBadge,
-                        log.isVerified ? chip('Verificato', 'ok') : null,
-                        log.pose3d?.pose ? renderBiometricBadge(log.pose3d) : null,
-                        el('strong', { textContent: `Telecamera: ${log.cameraName ?? log.cameraId}` }),
-                        el('span', { className: 'section__hint mono', textContent: dateStr })
+            const imgEl = log.snapshotPath 
+                ? el('img', { className: 'face-card__img', src: log.snapshotPath })
+                : el('div', { className: 'face-card__img', style: 'display:grid;place-items:center;color:#444' }, [icon('eye-off')]);
+
+            return el('article', { className: 'face-card' }, [
+                el('div', { style: 'position:relative' }, [
+                    imgEl,
+                    el('div', { className: 'face-card__overlay' }, [
+                        log.isVerified ? chip('V', 'ok') : null,
+                        log.pose3d?.pose ? chip('3D', 'info') : null
                     ]),
-                    el('div', { className: 'row row--wrap row--tight' }, [
-                        el('span', { className: 'section__hint', textContent: `Confidenza: ${confPct}` }),
-                        log.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${log.box.map(b => Number(b).toFixed(2)).join(', ')}]` }) : null
-                    ])
+                    el('div', { className: 'face-card__confidence' }, [el('span', { textContent: `MATCH ${confPct}` })])
                 ]),
-                el('div', { className: 'row row--tight' }, [correctBtn, addPersonBtn])
+                el('div', { className: 'face-card__body' }, [
+                    el('div', { className: 'stack stack--tight' }, [
+                        personBadge,
+                        el('div', { className: 'section__hint mono', style: 'font-size:0.7rem' }, [
+                            el('div', { textContent: `ID: ${log.id.split('-')[0].toUpperCase()}` }),
+                            el('div', { textContent: dateStr }),
+                            el('div', { textContent: `Cam: ${log.cameraName ?? log.cameraId}` })
+                        ])
+                    ]),
+                    el('div', { className: 'stack stack--tight' }, [addPersonBtn, correctBtn].filter(Boolean))
+                ])
             ]);
         });
 
+        logsHost.className = 'faces-grid';
         logsHost.replaceChildren(...rows);
     }
 
