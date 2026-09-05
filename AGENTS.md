@@ -120,6 +120,12 @@ src/
                           le capacita del dispositivo e mette in cache profilo e
                           XAddr per cinque minuti. Il muro mostra la crociera solo
                           alle telecamere che dichiarano davvero il servizio PTZ
+  features/audio/         rtsp_backchannel.js parla il dialetto RTSP del canale
+                          audio in ingresso ONVIF (DESCRIBE con Require, SETUP
+                          interleaved su TCP, RECORD, RTP G.711 a pacchetti di
+                          venti millisecondi). clip_library.js conserva i messaggi
+                          preregistrati, talk_socket.js porta il microfono del
+                          browser sulla stessa strada convertendo PCM in mu-law
   features/alarm/         panic_service.js: allarme manuale da un riquadro del muro,
                           propagato a tutti i canali di automazione configurati e
                           rientrato da solo alla scadenza della tenuta
@@ -687,6 +693,14 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/ptz/:id/presets` | `camera.manage` |
 | POST | `/api/ptz/:id/presets/:preset` | `alarm.acknowledge` |
 | DELETE | `/api/ptz/:id` | `camera.manage` |
+| GET | `/api/audio/clips` | `live.view` |
+| POST | `/api/audio/clips` | `system.manage`, rate limit 20/1h |
+| PUT/DELETE | `/api/audio/clips/:id` | `system.manage` |
+| GET | `/api/audio/talkback` | `live.view` |
+| GET | `/api/audio/talkback/:id` | `live.view` |
+| POST | `/api/audio/talkback/:id/clip` | `alarm.acknowledge`, rate limit 60/10min |
+| DELETE | `/api/audio/talkback/:id` | `alarm.acknowledge` |
+| WS | `/api/audio/talk/:id` (microfono) | `alarm.acknowledge`, mai da internet |
 | GET | `/api/alarm/panic` | `live.view` |
 | GET | `/api/alarm/panic/:id` | `live.view` |
 | POST | `/api/alarm/panic/:id` | `alarm.acknowledge`, rate limit 30/10min |

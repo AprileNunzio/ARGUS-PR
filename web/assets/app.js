@@ -18,6 +18,7 @@ import { renderUpdatesView } from '/features/updates/updates_view.js';
 import { renderWallSettings } from '/features/wall/wall_settings.js';
 import { renderMaintenance } from '/features/system/maintenance_view.js';
 import { renderDateTime } from '/features/system/datetime_view.js';
+import { renderAudioLibrary } from '/features/system/audio_view.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
 import { startVersionWatch } from './version_watch.js';
@@ -37,7 +38,8 @@ const ROUTES = {
     system: { label: 'Telemetria', icon: 'activity', render: renderSystem, permission: 'system.manage' },
     updates: { label: 'Aggiornamenti', icon: 'download', render: renderUpdatesView, permission: 'system.manage' },
     maintenance: { label: 'Gestione Macchina', icon: 'power', render: renderMaintenance, permission: 'system.manage' },
-    datetime: { label: 'Data & Ora', icon: 'clock', render: renderDateTime, permission: 'system.manage' }
+    datetime: { label: 'Data & Ora', icon: 'clock', render: renderDateTime, permission: 'system.manage' },
+    audio: { label: 'Audio & Messaggi', icon: 'speaker', render: renderAudioLibrary, permission: 'system.manage' }
 };
 
 

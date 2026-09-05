@@ -32,6 +32,8 @@ import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { registerWallRoutes } from './features/wall/wall_routes.js';
 import { registerPtzRoutes } from './features/ptz/ptz_routes.js';
 import { registerAlarmRoutes } from './features/alarm/alarm_routes.js';
+import { registerAudioRoutes } from './features/audio/audio_routes.js';
+import { initClipLibrary } from './features/audio/clip_library.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
 import { installUpdateWatchdog, onPeriodicCheck } from './features/updates/update_service.js';
@@ -73,6 +75,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerWallRoutes(router);
     registerPtzRoutes(router);
     registerAlarmRoutes(router);
+    registerAudioRoutes(router);
     registerExportRoutes(router);
     registerUpdateRoutes(router);
     registerSchedulingRoutes(router);
@@ -141,6 +144,7 @@ export async function bootstrap(overrides = {}) {
 
     startSessionJanitor();
     initLocalCapture(config);
+    initClipLibrary(config);
     installStreamHub();
     installRecordingHub(config);
     installMotionHub(config);

@@ -10,6 +10,7 @@ import { classify, isTrustedZone, Zone } from '../security/net_zones.js';
 import { emitSecurityEvent, SecurityEvent } from '../security/security_events.js';
 import { remoteAccessEnabled, trustedNetworksFor } from '../features/settings/settings_service.js';
 import { isStreamPath, cameraIdFromPath, qualityFromQuery, authoriseStream, attachStreamViewer } from '../features/streaming/stream_socket.js';
+import { isTalkPath, cameraIdFromTalkPath, authoriseTalk, attachTalkSession } from '../features/audio/talk_socket.js';
 
 const log = createLogger('websocket');
 const HEARTBEAT_MS = 30000;
@@ -44,6 +45,7 @@ function reject(socket, status, message) {
 export function attachEventSocket(server, config) {
     const events = new WebSocketServer({ noServer: true });
     const streams = new WebSocketServer({ noServer: true });
+    const talk = new WebSocketServer({ noServer: true });
     const clients = new Set();
 
     server.on('upgrade', (req, socket, head) => {
@@ -91,6 +93,19 @@ export function attachEventSocket(server, config) {
 
             streams.handleUpgrade(req, socket, head, (ws) => {
                 attachStreamViewer(ws, actor, cameraIdFromPath(url.pathname), qualityFromQuery(url.searchParams.get('quality')));
+            });
+            return;
+        }
+
+        if (isTalkPath(url.pathname)) {
+            if (!authoriseTalk(actor) || zone === Zone.WAN) {
+                reject(socket, actor ? 403 : 401, actor ? 'Forbidden' : 'Unauthorized');
+                return;
+            }
+
+            talk.handleUpgrade(req, socket, head, (ws) => {
+                attachTalkSession(ws, actor, cameraIdFromTalkPath(url.pathname))
+                    .catch((error) => log.warn('talk session failed', { message: error.message }));
             });
             return;
         }

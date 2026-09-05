@@ -11,6 +11,7 @@ import cameraAnalytics from './010_camera_analytics.js';
 import automation from './011_automation.js';
 import storagePools from './012_storage_pools.js';
 import storagePolicies from './013_storage_policies.js';
+import audioClips from './014_audio_clips.js';
 
 export const migrations = [
     core,
@@ -25,5 +26,6 @@ export const migrations = [
     cameraAnalytics,
     automation,
     storagePools,
-    storagePolicies
+    storagePolicies,
+    audioClips
 ].sort((a, b) => a.version - b.version);

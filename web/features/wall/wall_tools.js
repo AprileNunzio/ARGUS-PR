@@ -1,5 +1,6 @@
 import { icon } from '/assets/icons.js';
 import { createPtzPad } from './wall_ptz.js';
+import { createClipMenu, createMicrophone } from './wall_talk.js';
 
 const PLAYBACK_WINDOW_MS = 5 * 60 * 1000;
 
@@ -102,6 +103,15 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         request: (path, payload) => send(path, payload)
     });
 
+    const clips = createClipMenu({
+        cameraId: camera.id,
+        onNotice,
+        listClips: () => request('/api/audio/clips').then((payload) => payload.clips ?? []),
+        sendClip: (id, clipId) => send(`/api/audio/talkback/${encodeURIComponent(id)}/clip`, { clipId })
+    });
+
+    const microphone = createMicrophone({ cameraId: camera.id, onNotice });
+
     make('playback', 'Ultimi 5 minuti', 'timeline', async () => {
         const segment = await latestSegment(camera.id);
         if (!segment) throw new Error('nessuna registrazione recente');
@@ -137,6 +147,23 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
     ptzButton.hidden = true;
 
     separator();
+
+    const clipButton = make('clip', 'Messaggio preregistrato', 'speaker', async () => {
+        const open = await clips.toggle();
+        clipButton.classList.toggle('console__tool-btn--active', open);
+        if (open) ptz.hide();
+    }, { toggle: true });
+
+    clipButton.hidden = true;
+
+    const micButton = make('mic', 'Parla alla telecamera', 'mic', async () => {
+        const open = await microphone.toggle();
+        micButton.classList.toggle('console__tool-btn--active', open);
+        micButton.title = open ? 'Chiudi il microfono' : 'Parla alla telecamera';
+        onNotice(open ? 'Microfono aperto verso la telecamera' : 'Microfono chiuso');
+    }, { toggle: true });
+
+    micButton.hidden = true;
 
     const alarmButton = make('alarm', 'Avvia allarme', 'alarm', async (button) => {
         const active = button.classList.contains('console__tool-btn--active');
@@ -207,9 +234,21 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         const capabilities = await request(`/api/ptz/${encodeURIComponent(camera.id)}`).catch(() => null);
         ptzButton.hidden = capabilities?.supported !== true;
         if (ptzButton.hidden) ptz.hide();
+
+        const talkback = await request(`/api/audio/talkback/${encodeURIComponent(camera.id)}`).catch(() => null);
+        const canTalk = talkback?.supported === true;
+        clipButton.hidden = !canTalk;
+        micButton.hidden = !canTalk;
+        if (!canTalk) clips.hide();
     };
 
     syncState();
 
-    return { element, ptzPad: ptz.element, qualityButton, syncState };
+    const teardown = () => {
+        microphone.stop();
+        ptz.hide();
+        clips.hide();
+    };
+
+    return { element, ptzPad: ptz.element, clipMenu: clips.element, qualityButton, syncState, teardown };
 }

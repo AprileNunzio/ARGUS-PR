@@ -61,11 +61,14 @@ function createGrid() {
     let cameraList = [];
     let spotlightCameraId = null;
     let selectedLayout = presetById('auto');
+    const toolbars = [];
 
     const teardown = () => {
         for (const player of players) player.destroy();
         for (const overlay of overlays.values()) overlay.destroy();
+        for (const close of toolbars) close();
         players = [];
+        toolbars.length = 0;
         overlays.clear();
     };
 
@@ -193,7 +196,9 @@ function createGrid() {
         const cell = el('div', {
             className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
             ondblclick: () => toggleSpotlight(camera.id)
-        }, [video, overlay.element, tag, banner, toolbar.ptzPad, toolbar.element]);
+        }, [video, overlay.element, tag, banner, toolbar.ptzPad, toolbar.clipMenu, toolbar.element]);
+
+        toolbars.push(toolbar.teardown);
 
         attachLive(camera.quality);
 
