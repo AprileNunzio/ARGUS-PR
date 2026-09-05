@@ -101,7 +101,15 @@ Un vecchio PC con un Core i5 di seconda generazione e 4 GB di RAM gestisce senza
 
 ### Windows — installazione autonoma (consigliata)
 
-Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-v0.15.0-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
+Scarica il programma di installazione guidata ufficiale **`.exe`** da **[GitHub Releases](https://github.com/AprileNunzio/ARGUS-PR/releases/latest)** (`ARGUS-PR-vX.Y.Z-Setup.exe`) e fai **doppio clic** per completare il setup guidato.
+
+Verifica l'impronta prima di eseguirlo, confrontandola con `SHA256SUMS.txt` allegato alla stessa release:
+
+```powershell
+Get-FileHash ARGUS-PR-vX.Y.Z-Setup.exe -Algorithm SHA256
+```
+
+L'eseguibile non e' firmato con un certificato commerciale: SmartScreen mostra un avviso alla prima esecuzione. Confronta l'impronta invece di fidarti del solo nome del file.
 
 Al termine trovi sul desktop e nel menu Start l'icona **ARGUS-PR**. E' un eseguibile vero (`ARGUS-PR.exe`), non un collegamento a una pagina web: all'avvio verifica il servizio `ArgusPR`, lo avvia se e' fermo, attende che risponda e apre la console in una finestra applicativa dedicata, senza barra degli indirizzi. Se il servizio non parte mostra un messaggio con il percorso del registro, invece di lasciare il browser su "connessione rifiutata".
 
@@ -121,6 +129,18 @@ Se vuoi solo testarlo senza creare il servizio di sistema:
 2. Fai **doppio clic** su `deploy\windows\quick-start.bat`
 
 
+### Installazione offline, senza accesso a internet
+
+Ogni release allega un pacchetto `git bundle` (`argus-pr-vX.Y.Z.bundle`) che contiene l'intera cronologia del progetto. Copialo su una chiavetta USB o su una share SMB gia' montata, poi aprilo da **Aggiornamenti & Manutenzione › Installazione manuale da USB, SMB o FTP**: il sistema cerca i pacchetti in `/media`, `/mnt` e `/run/media`, ne verifica il contenuto e l'impronta SHA-256, e applica l'aggiornamento con lo stesso watchdog di ripristino della procedura online.
+
+Lo stesso pacchetto si importa da riga di comando:
+
+```bash
+argus update v0.30.0
+systemctl restart argus-pr
+```
+
+---
 ### Linux — installazione automatica (consigliata)
 
 Un solo comando. Non fa domande e non chiede conferme: riconosce la distribuzione, installa quello che manca, registra il servizio e ti restituisce l'indirizzo a cui collegarti.
