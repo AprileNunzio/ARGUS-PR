@@ -50,6 +50,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             accepted: acceptedClasses(entries),
             faceThreshold: faceMatchThreshold(entries) ?? SFACE_COSINE_THRESHOLD,
             recognizeFaces: entries.some((entry) => entry.capability === Capability.FACE_RECOGNIZE && entry.enabled),
+            detectFaces: entries.some((entry) => entry.capability === Capability.FACE_DETECT && entry.enabled),
             readPlates: entries.some((entry) => entry.capability === Capability.PLATE && entry.enabled),
             signature: JSON.stringify(workerProfile)
         };
@@ -154,14 +155,19 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
     }
 
     function recordFaces(cameraId, plan, detections, timestamp) {
-        if (!plan.recognizeFaces) return;
+        if (!plan.detectFaces && !plan.recognizeFaces) return;
 
-        const people = getPeople();
+        const people = plan.recognizeFaces ? getPeople() : [];
         for (const detection of detections) {
-            if (detection.className !== 'face' || !detection.faceEmbedding) continue;
+            if (detection.className !== 'face') continue;
 
-            const match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
-            const pose3d = estimateFacePose3D(detection.landmarks);
+            const pose3d = detection.landmarks ? estimateFacePose3D(detection.landmarks) : {};
+            let match = null;
+
+            if (plan.recognizeFaces && detection.faceEmbedding) {
+                match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
+            }
+
             const personId = match ? match.person.id : null;
             const cooldownKey = `${cameraId}:${personId ?? 'unknown'}`;
             const lastLog = lastFaceLogs.get(cooldownKey);
@@ -178,6 +184,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
                 confidence: detection.confidence,
                 box: detection.box,
                 pose3d,
+                snapshotPath: detection.snapshotBase64 || null,
                 createdAt: new Date(timestamp).toISOString()
             });
 

@@ -248,12 +248,28 @@ class VisionEngine:
                 for i in range(4, 14, 2):
                     landmarks.append([round(float(face[i]) / w, 4), round(float(face[i+1]) / h, 4)])
 
+            snapshot_b64 = None
+            try:
+                margin = int(max(fw, fh) * 0.3)
+                crop_x1 = max(0, int(fx) - margin)
+                crop_y1 = max(0, int(fy) - margin)
+                crop_x2 = min(w, int(fx + fw) + margin)
+                crop_y2 = min(h, int(fy + fh) + margin)
+                face_crop = frame[crop_y1:crop_y2, crop_x1:crop_x2]
+                if face_crop.size > 0:
+                    _, buf = cv2.imencode('.jpg', face_crop, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    import base64
+                    snapshot_b64 = "data:image/jpeg;base64," + base64.b64encode(buf).decode('utf-8')
+            except Exception:
+                pass
+
             results.append({
                 'className': 'face',
-                'confidence': round(float(score), 3),
+                'confidence': round(score, 3),
                 'box': [round(float(norm_x), 4), round(float(norm_y), 4), round(float(norm_w), 4), round(float(norm_h), 4)],
                 'faceEmbedding': embedding,
-                'landmarks': landmarks if landmarks else None
+                'landmarks': landmarks if landmarks else None,
+                'snapshotBase64': snapshot_b64
             })
         return results
 
