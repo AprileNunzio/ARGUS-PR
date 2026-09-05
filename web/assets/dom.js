@@ -71,18 +71,20 @@ export function pageHead({ title, hint, actions = [], back = null }) {
     ]);
 }
 
-export function confirmPanel({ title, message, confirmLabel = 'Conferma', cancelLabel = 'Annulla', onConfirm, onCancel }) {
+export function confirmPanel({ title, message, body = null, confirmLabel = 'Conferma', cancelLabel = 'Annulla', onConfirm, onCancel }) {
     const confirmButton = el('button', { className: 'btn btn--danger', type: 'button', textContent: confirmLabel });
 
     confirmButton.addEventListener('click', async () => {
         confirmButton.disabled = true;
         await onConfirm();
+        if (confirmButton.isConnected) confirmButton.disabled = false;
     });
 
     return el('section', { className: 'panel confirm-panel rise' }, [
         el('div', { className: 'panel__body stack stack--tight' }, [
             el('strong', { textContent: title }),
             el('span', { className: 'section__hint', textContent: message }),
+            body,
             el('div', { className: 'row row--end' }, [
                 el('button', { className: 'btn', type: 'button', textContent: cancelLabel, onclick: onCancel }),
                 confirmButton

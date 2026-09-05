@@ -69,7 +69,7 @@ export class Tracker {
             }
 
             if (det.faceEmbedding || det.snapshotBase64) {
-                track.faceEmbeddings.push({ embedding: det.faceEmbedding, confidence: det.confidence, snapshotBase64: det.snapshotBase64 });
+                track.faceEmbeddings.push({ embedding: det.faceEmbedding, confidence: det.confidence, snapshotBase64: det.snapshotBase64, landmarks: det.landmarks ?? null });
             }
 
             if (det.upperColor && !track.upperColor) {
@@ -97,7 +97,7 @@ export class Tracker {
                 misses: 0,
                 isConfirmed: this.minHits <= 1,
                 plateReadings: det.plateText ? [{ text: det.plateText, confidence: det.confidence }] : [],
-                faceEmbeddings: (det.faceEmbedding || det.snapshotBase64) ? [{ embedding: det.faceEmbedding, confidence: det.confidence, snapshotBase64: det.snapshotBase64 }] : [],
+                faceEmbeddings: (det.faceEmbedding || det.snapshotBase64) ? [{ embedding: det.faceEmbedding, confidence: det.confidence, snapshotBase64: det.snapshotBase64, landmarks: det.landmarks ?? null }] : [],
                 upperColor: det.upperColor ?? null
             };
 

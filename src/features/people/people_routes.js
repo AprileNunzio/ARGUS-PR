@@ -1,17 +1,72 @@
-import { join } from 'node:path';
-import { writeFile, unlink } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { requireId, requireString, optionalString, requireEmbedding } from '../../security/guards.js';
-import { notFound, validationError } from '../../kernel/errors.js';
+import { notFound } from '../../kernel/errors.js';
 import { Permission } from '../../security/rbac.js';
 import { recordAudit } from '../../security/audit.js';
-import { findBestMatch } from '../vision/face_matcher.js';
-import { resolvePythonBin } from '../vision/vision_process.js';
+import { findBestMatch, updateMovingCentroid } from '../vision/face_matcher.js';
+import { blendFaceGeometry } from '../vision/face_geometry.js';
+import { createFaceEnrollService } from './face_enroll_service.js';
 
-const execFileAsync = promisify(execFile);
+const CORRECTION_LEARNING_WEIGHT = 0.7;
+
+function learnFromCorrectedLog(peopleRepository, personId, log) {
+    if (!personId || !log || !Array.isArray(log.embedding) || log.embedding.length === 0) return false;
+    const person = peopleRepository.getPerson(personId);
+    if (!person) return false;
+
+    const current = Array.isArray(person.embedding) ? person.embedding : [];
+    const embedding = current.length === log.embedding.length
+        ? updateMovingCentroid(current, log.embedding, CORRECTION_LEARNING_WEIGHT)
+        : log.embedding;
+
+    const gallery = Array.isArray(person.gallery) ? person.gallery.slice(0, 3) : [];
+    if (log.snapshotPath && gallery.length < 3 && !gallery.includes(log.snapshotPath)) {
+        gallery.push(log.snapshotPath);
+    }
+
+    const changes = {
+        embedding,
+        gallery,
+        sampleCount: (person.sampleCount || 1) + 1,
+        photoPath: person.photoPath ?? log.snapshotPath ?? null
+    };
+
+    const geometry = blendFaceGeometry(person.face3dParams ?? {}, {
+        biometrics: log.pose3d?.biometrics,
+        pose: log.pose3d ?? {},
+        confidence: log.confidence ?? 0
+    });
+    if (geometry) changes.face3dParams = geometry;
+
+    peopleRepository.updatePerson(personId, changes);
+    return true;
+}
 
 export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
+    const faceEnrollService = createFaceEnrollService({ config });
+
+    router.delete('/api/people/all', async (ctx) => {
+        const removed = peopleRepository.deleteAllPeople();
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
+            action: 'people.purge_all',
+            target: 'people',
+            detail: { removed }
+        });
+        return { body: { ok: true, removed } };
+    }, { permission: Permission.CAMERA_MANAGE });
+
+    router.delete('/api/people/logs/all', async (ctx) => {
+        const removed = peopleRepository.deleteAllFaceLogs();
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
+            action: 'people.purge_all_logs',
+            target: 'face_logs',
+            detail: { removed }
+        });
+        return { body: { ok: true, removed } };
+    }, { permission: Permission.CAMERA_MANAGE });
     router.get('/api/people', async () => {
         const people = peopleRepository.listPeople();
         return { body: { people } };
@@ -154,21 +209,31 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         return { body: { faceLogs } };
     }, { permission: Permission.LIVE_VIEW });
 
+    router.get('/api/people/logs/:id', async (ctx) => {
+        const logId = requireId(ctx.params.id, 'id');
+        const faceLog = peopleRepository.getFaceLog(logId);
+        if (!faceLog) throw notFound('Face log not found');
+        return { body: { faceLog } };
+    }, { permission: Permission.LIVE_VIEW });
+
     router.post('/api/people/logs/:id/correct', async (ctx) => {
         const logId = requireId(ctx.params.id, 'id');
         const newPersonId = ctx.body?.personId ? requireId(ctx.body.personId, 'personId') : null;
 
-        const updated = peopleRepository.correctFaceLog(logId, newPersonId);
-        if (!updated) throw notFound('Face log not found');
+        const log = peopleRepository.getFaceLog(logId);
+        if (!log) throw notFound('Face log not found');
+
+        peopleRepository.correctFaceLog(logId, newPersonId);
+        const learned = learnFromCorrectedLog(peopleRepository, newPersonId, log);
 
         recordAudit({
             actorId: ctx.actor?.id,
             actorName: ctx.actor?.username,
             action: 'people.correct_log',
             target: logId,
-            detail: { correctedPersonId: newPersonId }
+            detail: { correctedPersonId: newPersonId, learned }
         });
-        return { body: { ok: true, logId, correctedPersonId: newPersonId } };
+        return { body: { ok: true, logId, correctedPersonId: newPersonId, learned } };
     }, { permission: Permission.CAMERA_MANAGE });
 
     router.delete('/api/people/logs/:id', async (ctx) => {
@@ -188,26 +253,7 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
 
     router.post('/api/people/extract-face', async (ctx) => {
         const imageBase64 = requireString(ctx.body?.imageBase64, 'imageBase64', { min: 10, max: 15000000 });
-        const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9.+]+;base64,/, '');
-        const dataDir = config?.dataDir ?? process.env.ARGUS_DATA_DIR ?? join(process.cwd(), 'data');
-        const tempPath = join(dataDir, `face_enroll_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
-        await writeFile(tempPath, Buffer.from(cleanBase64, 'base64'));
-
-        const pythonBin = resolvePythonBin(dataDir);
-        const workerScript = join(process.cwd(), 'vision', 'worker.py');
-        const modelsDir = join(dataDir, 'models');
-
-        try {
-            const { stdout } = await execFileAsync(pythonBin, [
-                workerScript,
-                '--models-dir', modelsDir,
-                '--enroll', tempPath
-            ]);
-            const res = JSON.parse(stdout);
-            if (!res.ok) throw validationError(res.error ?? 'Rilevamento volto non riuscito');
-            return { body: res };
-        } finally {
-            try { await unlink(tempPath); } catch {}
-        }
+        const result = await faceEnrollService.extractFromBase64(imageBase64);
+        return { body: result };
     }, { permission: Permission.CAMERA_MANAGE });
 }

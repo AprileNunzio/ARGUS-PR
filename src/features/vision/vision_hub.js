@@ -3,6 +3,7 @@ import { publish, subscribe, Topic } from '../../kernel/event_bus.js';
 import { Tracker } from './tracking.js';
 import { voteOnPlate } from './plates.js';
 import { findBestMatch, estimateFacePose3D, updateMovingCentroid, SFACE_COSINE_THRESHOLD } from './face_matcher.js';
+import { deriveBiometrics, blendFaceGeometry } from './face_geometry.js';
 import { evaluateAccess } from '../access/access_rules.js';
 import { createVisionProcess } from './vision_process.js';
 import { profileFor } from './analytics_repository.js';
@@ -145,6 +146,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
 
     let cachedPeople = null;
     let cachedPeopleAt = 0;
+    const lastLearnAt = new Map();
 
     function getPeople() {
         const now = Date.now();
@@ -152,6 +154,25 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         cachedPeople = peopleRepository.listPeople();
         cachedPeopleAt = now;
         return cachedPeople;
+    }
+
+    const LEARNING_MIN_SCORE = 0.55;
+    const LEARNING_INTERVAL_MS = 3000;
+
+    function pickBestFaceSample(samples) {
+        if (!Array.isArray(samples) || samples.length === 0) return null;
+        let best = null;
+        for (const sample of samples) {
+            if (!sample) continue;
+            const hasEmbedding = Array.isArray(sample.embedding) && sample.embedding.length > 0;
+            if (best && hasEmbedding === (Array.isArray(best.embedding) && best.embedding.length > 0)) {
+                if ((sample.confidence ?? 0) <= (best.confidence ?? 0)) continue;
+            } else if (best && !hasEmbedding) {
+                continue;
+            }
+            best = sample;
+        }
+        return best;
     }
 
     function recordFaces(cameraId, plan, tracker, detections, timestamp) {
@@ -167,11 +188,9 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             if (track.hasBeenLogged) continue;
             track.hasBeenLogged = true;
 
-            const bestDet = track.faceEmbeddings?.length > 0 
-                ? track.faceEmbeddings[track.faceEmbeddings.length - 1] 
-                : null;
-            
-            const embedding = bestDet ? bestDet.embedding : null;
+            const bestDet = pickBestFaceSample(track.faceEmbeddings);
+
+            const embedding = bestDet?.embedding ?? null;
             let match = null;
 
             if (plan.recognizeFaces && embedding) {
@@ -179,30 +198,46 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
             }
 
             const personId = match ? match.person.id : null;
-            
+
             peopleRepository.recordFaceLog({
                 cameraId,
                 personId,
                 confidence: track.maxConfidence,
                 box: track.bestBox,
-                pose3d: {}, 
-                snapshotPath: bestDet && bestDet.snapshotBase64 ? bestDet.snapshotBase64 : null,
+                pose3d: bestDet?.landmarks ? {
+                    ...estimateFacePose3D(bestDet.landmarks),
+                    biometrics: deriveBiometrics(bestDet.landmarks, track.bestBox)
+                } : {},
+                embedding: Array.isArray(embedding) ? embedding : [],
+                snapshotPath: bestDet?.snapshotBase64 ?? null,
                 createdAt: new Date(timestamp).toISOString()
             });
         }
 
-        // Update enrolled person embeddings continuously using live detections
         if (plan.recognizeFaces) {
             for (const detection of detections) {
                 if (detection.className !== 'face' || !detection.faceEmbedding) continue;
                 const match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
-                if (match && match.score >= 0.55 && match.person.embedding?.length > 0) {
-                    const updatedEmb = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
-                    peopleRepository.updatePerson(match.person.id, {
-                        embedding: updatedEmb,
-                        sampleCount: (match.person.sampleCount || 1) + 1
+                if (!match || match.score < LEARNING_MIN_SCORE || !(match.person.embedding?.length > 0)) continue;
+                if (timestamp - (lastLearnAt.get(match.person.id) ?? 0) < LEARNING_INTERVAL_MS) continue;
+                lastLearnAt.set(match.person.id, timestamp);
+
+                const embedding = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
+                const sampleCount = (match.person.sampleCount || 1) + 1;
+                const changes = { embedding, sampleCount };
+
+                const biometrics = deriveBiometrics(detection.landmarks ?? [], detection.box ?? [0, 0, 1, 1]);
+                if (biometrics) {
+                    const geometry = blendFaceGeometry(match.person.face3dParams ?? {}, {
+                        biometrics,
+                        pose: estimateFacePose3D(detection.landmarks ?? []),
+                        confidence: detection.confidence ?? 0
                     });
+                    if (geometry) changes.face3dParams = geometry;
                 }
+
+                peopleRepository.updatePerson(match.person.id, changes);
+                Object.assign(match.person, changes);
             }
         }
     }

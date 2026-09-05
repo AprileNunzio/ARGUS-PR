@@ -18,6 +18,7 @@ import floorPlansAndBarriers from './017_floor_plans_and_barriers.js';
 import analyticsAttributesAndStats from './018_analytics_attributes_and_stats.js';
 import automationEnterpriseVariables from './019_automation_enterprise_variables.js';
 import faceCatalogAndBiometrics from './020_face_catalog_and_biometrics.js';
+import faceLogEmbeddings from './021_face_log_embeddings.js';
 
 export const migrations = [
     core,
@@ -39,5 +40,6 @@ export const migrations = [
     floorPlansAndBarriers,
     analyticsAttributesAndStats,
     automationEnterpriseVariables,
-    faceCatalogAndBiometrics
+    faceCatalogAndBiometrics,
+    faceLogEmbeddings
 ].sort((a, b) => a.version - b.version);

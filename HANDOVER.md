@@ -9,6 +9,14 @@ Ultimo blocco consegnato: **F7.3 — Automazioni**: regole evento-azione con ema
 
 ---
 
+## Pendenza aperta dalla v0.44.0 — modello di landmark densi
+
+`vision/vision_landmarks.py` sa gia' usare un modello ONNX di landmark facciali densi, atteso come `face_landmarks_478.onnx` nella cartella dei modelli: se il file c'e', l'arruolamento restituisce `pose3d.mesh` con i punti 3D reali del volto e il visualizzatore li sovrappone al busto. **Il file non e' ancora pubblicato** e non e' nel `vision/models_catalog.json`, perche' una voce di catalogo richiede uno SHA-256 reale: mettere un segnaposto indebolirebbe la verifica di integrita' dei modelli. Passi per chiudere: scegliere la conversione ONNX di MediaPipe Face Mesh (Apache-2.0), pubblicarla sul mirror delle release, calcolarne lo SHA-256 e aggiungere la voce al catalogo. Finche' manca, il sistema usa i cinque punti di YuNet e la geometria si affina comunque a ogni avvistamento tramite `src/features/vision/face_geometry.js`.
+
+Restano nel catalogo due voci con SHA-256 segnaposto (`scrfd_500m`, `mobilefacenet`): i motori sono dichiarati `planned` e non scaricabili, ma i segnaposto vanno sostituiti o le voci rimosse.
+
+---
+
 ## 0. I Vincoli del Progetto (Non Negoziabili)
 
 1. **La sicurezza viene prima di tutto (§0 di AGENTS.md)**: Se sicurezza ed eleganza o comodità sono in conflitto, vince sempre la sicurezza.

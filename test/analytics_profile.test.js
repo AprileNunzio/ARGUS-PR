@@ -15,7 +15,9 @@ const MODEL_FILES = {
     yolox_tiny: 'yolox_tiny.onnx',
     face_detection_yunet: 'face_detection_yunet_2023mar.onnx',
     face_recognition_sface: 'face_recognition_sface_2021dec.onnx',
-    text_recognition_crnn_en: 'text_recognition_CRNN_EN_2021sep.onnx'
+    text_recognition_crnn_en: 'text_recognition_CRNN_EN_2021sep.onnx',
+    face_detection_scrfd: 'scrfd_500m.onnx',
+    face_recognition_mobilefacenet: 'mobilefacenet.onnx'
 };
 
 function profileOf(entries) {

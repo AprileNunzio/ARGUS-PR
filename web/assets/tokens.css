@@ -53,9 +53,15 @@
     --shadow-lg: 0 8px 20px -10px rgba(13, 21, 34, .28), 0 30px 60px -35px rgba(13, 21, 34, .55);
     --glow-accent: 0 0 0 1px var(--accent-line), 0 8px 24px -12px rgba(26, 127, 189, .65);
 
+    --foreground: var(--ink);
+    --surface-1: var(--surface-2);
+    --danger: var(--bad);
+    --good: var(--ok);
+
     --radius-xs: 6px;
     --radius-sm: 9px;
     --radius: 13px;
+    --radius-md: 13px;
     --radius-lg: 18px;
     --radius-pill: 999px;
 

@@ -42,6 +42,7 @@ function mapFaceLog(row) {
         pose3d: parseJsonSafe(row.pose_3d, {}),
         isVerified: Boolean(row.is_verified),
         correctedPersonId: row.corrected_person_id ?? null,
+        hasEmbedding: parseJsonSafe(row.embedding, []).length > 0,
         snapshotPath: row.snapshot_path,
         createdAt: row.created_at
     };
@@ -73,8 +74,8 @@ export function createPeopleRepository(db) {
     const deletePersonLogsStmt = db.prepare('DELETE FROM face_logs WHERE person_id = ?');
 
     const insertFaceLogStmt = db.prepare(`
-        INSERT INTO face_logs (id, camera_id, person_id, confidence, box_x, box_y, box_w, box_h, pose_3d, is_verified, corrected_person_id, snapshot_path, created_at)
-        VALUES (@id, @cameraId, @personId, @confidence, @boxX, @boxY, @boxW, @boxH, @pose3d, @isVerified, @correctedPersonId, @snapshotPath, @createdAt)
+        INSERT INTO face_logs (id, camera_id, person_id, confidence, box_x, box_y, box_w, box_h, pose_3d, is_verified, corrected_person_id, snapshot_path, embedding, created_at)
+        VALUES (@id, @cameraId, @personId, @confidence, @boxX, @boxY, @boxW, @boxH, @pose3d, @isVerified, @correctedPersonId, @snapshotPath, @embedding, @createdAt)
     `);
     const listFaceLogsStmt = db.prepare(`
         SELECT f.*, c.name AS camera_name, p.name AS person_name, p.role AS person_role
@@ -109,7 +110,12 @@ export function createPeopleRepository(db) {
         SET person_id = @targetId
         WHERE person_id = @sourceId
     `);
+    const getFaceLogStmt = db.prepare('SELECT * FROM face_logs WHERE id = ?');
     const deleteFaceLogStmt = db.prepare('DELETE FROM face_logs WHERE id = ?');
+    const deleteAllFaceLogsStmt = db.prepare('DELETE FROM face_logs');
+    const deleteAllPeopleStmt = db.prepare('DELETE FROM people');
+    const countPeopleStmt = db.prepare('SELECT COUNT(*) AS total FROM people');
+    const countFaceLogsStmt = db.prepare('SELECT COUNT(*) AS total FROM face_logs');
 
     return {
         listPeople() {
@@ -167,7 +173,7 @@ export function createPeopleRepository(db) {
             const result = purge();
             return result.changes > 0;
         },
-        recordFaceLog({ cameraId, personId = null, confidence, box = [0, 0, 0, 0], pose3d = {}, isVerified = 0, correctedPersonId = null, snapshotPath = null, createdAt = new Date().toISOString() }) {
+        recordFaceLog({ cameraId, personId = null, confidence, box = [0, 0, 0, 0], pose3d = {}, isVerified = 0, correctedPersonId = null, snapshotPath = null, embedding = [], createdAt = new Date().toISOString() }) {
             const log = {
                 id: randomUUID(),
                 cameraId,
@@ -181,6 +187,7 @@ export function createPeopleRepository(db) {
                 isVerified: isVerified ? 1 : 0,
                 correctedPersonId,
                 snapshotPath,
+                embedding: JSON.stringify(Array.isArray(embedding) ? embedding : []),
                 createdAt
             };
             insertFaceLogStmt.run(log);
@@ -197,6 +204,11 @@ export function createPeopleRepository(db) {
                 createdAt: log.createdAt
             };
         },
+        getFaceLog(id) {
+            const row = getFaceLogStmt.get(id);
+            if (!row) return null;
+            return { ...mapFaceLog(row), embedding: parseJsonSafe(row.embedding, []) };
+        },
         correctFaceLog(id, correctedPersonId) {
             const result = correctFaceLogStmt.run({ id, correctedPersonId });
             return result.changes > 0;
@@ -204,6 +216,19 @@ export function createPeopleRepository(db) {
         deleteFaceLog(id) {
             const result = deleteFaceLogStmt.run(id);
             return result.changes > 0;
+        },
+        deleteAllFaceLogs() {
+            const total = countFaceLogsStmt.get().total;
+            deleteAllFaceLogsStmt.run();
+            return total;
+        },
+        deleteAllPeople() {
+            const total = countPeopleStmt.get().total;
+            db.transaction(() => {
+                deleteAllFaceLogsStmt.run();
+                deleteAllPeopleStmt.run();
+            })();
+            return total;
         },
         mergePerson(sourceId, targetId) {
             db.transaction(() => {

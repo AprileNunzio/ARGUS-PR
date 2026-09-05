@@ -25,7 +25,7 @@ const ICONS = Object.freeze({
     animal: 'sparkles'
 });
 
-function capabilityCard({ capability, entry, onChange }) {
+function capabilityCard({ capability, entry, onChange, register, requestPrerequisite }) {
     const engines = capability.engines ?? [];
     const ready = engines.filter((engine) => engine.status === 'ready');
     const isEnabled = Boolean(entry.enabled);
@@ -67,17 +67,29 @@ function capabilityCard({ capability, entry, onChange }) {
         });
     };
 
-    toggle.addEventListener('change', () => {
-        const active = toggle.checked;
+    const paint = (active) => {
         toggleLabel.textContent = active ? 'Attivo' : 'Disattivo';
-        if (active) {
-            card.classList.add('cap-card--active');
-            avatar.classList.add('cap-card__avatar--active');
-        } else {
-            card.classList.remove('cap-card--active');
-            avatar.classList.remove('cap-card__avatar--active');
-        }
+        card.classList.toggle('cap-card--active', active);
+        avatar.classList.toggle('cap-card__avatar--active', active);
+    };
+
+    toggle.addEventListener('change', () => {
+        paint(toggle.checked);
+        if (toggle.checked && capability.requires) requestPrerequisite(capability.requires, capability.label);
+        if (!toggle.checked) requestPrerequisite(null, capability.label);
         emit();
+    });
+
+    register(capability.id, {
+        label: capability.label,
+        enable() {
+            if (toggle.checked) return false;
+            toggle.checked = true;
+            paint(true);
+            emit();
+            return true;
+        },
+        isEnabled: () => toggle.checked
     });
 
     engineSelect.addEventListener('change', () => {
@@ -176,10 +188,31 @@ export function renderCameraAnalytics({ api, camera, session }) {
             await refresh();
         });
 
+        const controllers = new Map();
+        const dependencyHint = el('div', { hidden: 'hidden' });
+
+        const requestPrerequisite = (requiredId, childLabel) => {
+            if (!requiredId) {
+                dependencyHint.setAttribute('hidden', 'hidden');
+                return;
+            }
+            const parent = controllers.get(requiredId);
+            if (!parent) return;
+            if (parent.isEnabled()) {
+                dependencyHint.setAttribute('hidden', 'hidden');
+                return;
+            }
+            parent.enable();
+            dependencyHint.replaceChildren(notice('warn', `${childLabel} richiede ${parent.label}: l ho attivata anche io, altrimenti il server la disabilita al salvataggio.`));
+            dependencyHint.removeAttribute('hidden');
+        };
+
         const cards = catalog.capabilities.map((capability) => capabilityCard({
             capability,
             entry: draft.get(capability.id) ?? { enabled: false, engineId: capability.defaultEngine, threshold: capability.defaultThreshold },
-            onChange: (value) => draft.set(value.capability, { ...draft.get(value.capability), ...value })
+            onChange: (value) => draft.set(value.capability, { ...draft.get(value.capability), ...value }),
+            register: (id, controller) => controllers.set(id, controller),
+            requestPrerequisite
         }));
 
         const missing = profile.missingModels ?? [];
@@ -213,6 +246,7 @@ export function renderCameraAnalytics({ api, camera, session }) {
                 ])
                 : null,
             cards.length === 0 ? empty('Nessuna capacita disponibile.') : el('div', { className: 'stack' }, cards),
+            dependencyHint,
             feedback,
             el('div', { className: 'row row--end' }, [saveButton])
         );

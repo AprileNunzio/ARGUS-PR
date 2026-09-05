@@ -508,3 +508,54 @@
 @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 .nerd-overlay-scanline { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 50%, rgba(56,189,248,0.1) 51%, transparent 100%); background-size: 100% 4px; pointer-events: none; z-index: 3; opacity: 0.5; }
 
+
+.people-toolbar { margin-bottom: var(--gap-2); align-items: center; }
+.person-card__avatar--empty { color: var(--muted); }
+.person-card__notes { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.person-picker { width: 100%; }
+.picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--surface); padding: 4px; }
+.picker-list__more { padding: var(--gap-2); text-align: center; }
+.picker-row { display: flex; align-items: center; gap: var(--gap-2); width: 100%; padding: var(--gap-2); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.picker-row:hover { background: var(--surface-2); border-color: var(--rule); }
+.picker-row--on { background: var(--accent-soft); border-color: var(--accent-line); }
+.picker-row--none { border-style: dashed; border-color: var(--rule); }
+.picker-row__avatar { width: 38px; height: 38px; border-radius: var(--radius-sm); object-fit: cover; flex-shrink: 0; background: var(--surface-3); }
+.picker-row__avatar--empty { display: grid; place-items: center; color: var(--muted); }
+.picker-row__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.picker-row__name { font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picker-row__check { color: var(--ok); flex-shrink: 0; }
+
+.person-hero__row { display: flex; align-items: flex-start; gap: var(--gap-3); flex-wrap: wrap; width: 100%; }
+.person-hero__identity { flex: 1; min-width: 220px; }
+.person-hero__actions { margin-left: auto; }
+.person-hero__avatar { width: 104px; height: 104px; border-radius: var(--radius-lg); object-fit: cover; background: var(--surface-2); border: 1px solid var(--rule); flex-shrink: 0; }
+.person-hero__avatar--empty { display: grid; place-items: center; color: var(--muted); }
+
+.person-stats { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.person-stat { display: flex; flex-direction: column; gap: 2px; padding: var(--gap-3); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow-xs); }
+.person-stat__value { font-size: 1.25rem; font-weight: 750; color: var(--ink); line-height: 1.15; word-break: break-word; }
+.person-stat__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 650; }
+.person-stat__hint { font-size: 0.7rem; color: var(--muted); }
+
+.person-layout { display: flex; flex-wrap: wrap; gap: var(--gap-3); align-items: flex-start; }
+.person-layout__side { width: 500px; max-width: 100%; flex-shrink: 0; }
+.person-layout__main { flex: 1; min-width: 320px; }
+.person-model { align-items: stretch; }
+.person-notes { margin: 0; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; }
+.person-raw > summary { list-style: none; }
+.person-raw > summary::-webkit-details-marker { display: none; }
+
+.person-facts { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: var(--gap-1) var(--gap-3); margin: 0; }
+.person-facts dt { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 650; align-self: center; }
+.person-facts dd { margin: 0; color: var(--ink); word-break: break-word; font-size: 0.85rem; }
+
+.face3d-viewer { width: 100%; }
+.face3d-stage { display: flex; justify-content: center; background: var(--void); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+.face3d-canvas--viewer { width: 100%; height: auto; touch-action: none; cursor: grab; }
+.face3d-canvas--viewer:active { cursor: grabbing; }
+.face3d-toolbar { justify-content: center; }
+
+.details-side--scanner { flex: 1.4; min-width: 340px; }
+.panel__head-action { margin-left: auto; position: relative; }
+.scanner-body { align-items: center; }

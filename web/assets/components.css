@@ -222,3 +222,10 @@ td.right { text-align: right; white-space: nowrap; }
 .avatar-preview--active { display: block; border-color: var(--ok); }
 .avatar-preview--warn { display: block; border-color: var(--bad); }
 
+.chip--good { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+.btn--full { width: 100%; justify-content: center; }
+.btn--on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--brand-700); }
+.input--lg { font-size: 1.15rem; font-weight: 550; }
+.input--file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.select--full { width: 100%; }
+.row--center { justify-content: center; }
