@@ -1,4 +1,6 @@
-import { countUsers, createUser } from '../auth/auth_service.js';
+import { countUsers } from '../auth/auth_service.js';
+import { createUser } from '../users/user_repository.js';
+import { readDeviceIdentity, renameDevice } from '../system/device_identity.js';
 import { Role } from '../../security/rbac.js';
 import { AppError, ErrorCode } from '../../kernel/errors.js';
 import { createLogger } from '../../kernel/logger.js';
@@ -25,17 +27,22 @@ export function assertSetupOpen() {
     }
 }
 
-export async function claimInstance({ username, password }) {
+export async function claimInstance({ username, password, profile = {}, deviceLabel = null }) {
     assertSetupOpen();
 
     const admin = await createUser({
+        ...profile,
         username,
         password,
         role: Role.ADMIN,
+        active: true,
         mustChangePassword: false
     });
 
-    log.warn('setup completed', { username: admin.username });
+    if (deviceLabel) renameDevice(deviceLabel);
+    else readDeviceIdentity();
+
+    log.warn('setup completed', { username: admin.username, completeness: admin.completeness });
 
     return admin;
 }

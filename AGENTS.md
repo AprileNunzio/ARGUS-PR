@@ -120,6 +120,17 @@ src/
                           le capacita del dispositivo e mette in cache profilo e
                           XAddr per cinque minuti. Il muro mostra la crociera solo
                           alle telecamere che dichiarano davvero il servizio PTZ
+  features/users/         user_profile.js valida ogni campo dell'anagrafica,
+                          user_repository.js e' l'unico punto che scrive sulla
+                          tabella users e impedisce di restare senza amministratori.
+                          I dati personali escono solo a chi ha user.manage
+  features/auth/          recovery_mailer.js tiene un SMTP separato da quello delle
+                          automazioni, con password cifrata nel vault.
+                          password_reset.js emette gettoni casuali conservati solo
+                          come impronta, validi trenta minuti, spendibili una volta,
+                          che chiudono tutte le sessioni dell'utente e non aggirano
+                          mai il secondo fattore. La richiesta non rivela mai se un
+                          indirizzo esista davvero
   features/audio/         rtsp_backchannel.js parla il dialetto RTSP del canale
                           audio in ingresso ONVIF (DESCRIBE con Require, SETUP
                           interleaved su TCP, RECORD, RTP G.711 a pacchetti di
@@ -693,6 +704,20 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/ptz/:id/presets` | `camera.manage` |
 | POST | `/api/ptz/:id/presets/:preset` | `alarm.acknowledge` |
 | DELETE | `/api/ptz/:id` | `camera.manage` |
+| GET | `/api/users` | `user.manage` |
+| GET | `/api/users/roles` | `user.manage` |
+| GET | `/api/users/:id` | `user.manage` |
+| POST | `/api/users` | `user.manage`, rate limit 20/1h |
+| PUT | `/api/users/:id` | `user.manage` |
+| PUT | `/api/users/:id/access` | `user.manage` |
+| POST | `/api/users/:id/password` | `user.manage`, rate limit 20/1h |
+| DELETE | `/api/users/:id` | `user.manage` |
+| GET/PUT | `/api/system/device` | `system.manage` |
+| GET/PUT | `/api/auth/recovery/settings` | `system.manage` |
+| POST | `/api/auth/recovery/settings/test` | `system.manage`, rate limit 5/30min |
+| POST | `/api/auth/recovery/request` | anonima, pubblica, rate limit 5/15min |
+| GET | `/api/auth/recovery/:token` | anonima, pubblica, rate limit 20/15min |
+| POST | `/api/auth/recovery/:token` | anonima, pubblica, rate limit 10/15min |
 | GET | `/api/audio/clips` | `live.view` |
 | POST | `/api/audio/clips` | `system.manage`, rate limit 20/1h |
 | PUT/DELETE | `/api/audio/clips/:id` | `system.manage` |

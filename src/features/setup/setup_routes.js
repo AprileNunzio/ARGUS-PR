@@ -65,7 +65,12 @@ export function registerSetupRoutes(router) {
         const problems = assessPassword(password);
         if (problems.length > 0) throw validationError('Password troppo debole', { problems });
 
-        await claimInstance({ username, password });
+        await claimInstance({
+            username,
+            password,
+            profile: ctx.body.profile ?? {},
+            deviceLabel: ctx.body.deviceLabel ?? null
+        });
 
         const result = await login({
             username,

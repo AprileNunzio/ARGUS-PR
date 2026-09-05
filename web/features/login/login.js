@@ -2,7 +2,7 @@ import { api } from '/assets/api.js';
 import { el, field } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
-export function renderLogin({ message, onSuccess }) {
+export function renderLogin({ message, onSuccess, onRecovery }) {
     const cardContent = el('div', { className: 'stack' });
 
     const card = el('div', { className: 'login__card' }, [
@@ -62,7 +62,13 @@ export function renderLogin({ message, onSuccess }) {
             field('Utente', username),
             field('Password', password),
             feedback,
-            submit
+            submit,
+            el('button', {
+                className: 'btn btn--ghost btn--block',
+                type: 'button',
+                textContent: 'Ho dimenticato la password',
+                onclick: () => onRecovery?.()
+            })
         ]);
 
         cardContent.replaceChildren(form);

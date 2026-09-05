@@ -33,6 +33,8 @@ import { registerWallRoutes } from './features/wall/wall_routes.js';
 import { registerPtzRoutes } from './features/ptz/ptz_routes.js';
 import { registerAlarmRoutes } from './features/alarm/alarm_routes.js';
 import { registerAudioRoutes } from './features/audio/audio_routes.js';
+import { registerUserRoutes } from './features/users/user_routes.js';
+import { registerRecoveryRoutes } from './features/auth/recovery_routes.js';
 import { initClipLibrary } from './features/audio/clip_library.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
@@ -76,6 +78,8 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerPtzRoutes(router);
     registerAlarmRoutes(router);
     registerAudioRoutes(router);
+    registerUserRoutes(router);
+    registerRecoveryRoutes(router);
     registerExportRoutes(router);
     registerUpdateRoutes(router);
     registerSchedulingRoutes(router);

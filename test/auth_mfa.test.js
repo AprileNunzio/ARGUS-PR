@@ -42,7 +42,8 @@ test('flusso completo MFA: setup, conferma, login e codici di recupero', async (
 
     const setup = await setupMfa(user.id);
     assert.ok(setup.secret.length >= 32);
-    assert.ok(setup.uri.startsWith('otpauth://totp/ARGUS-PR:mfa_user_1?'));
+    assert.ok(setup.uri.startsWith('otpauth://totp/ARGUS-PR:mfa_user_1%20('));
+    assert.match(decodeURIComponent(setup.uri), /ARGUS-PR:mfa_user_1 \([A-Z0-9]{6}\)\?/);
 
     const dbRow = getDatabase().prepare('SELECT totp_secret, totp_enabled FROM users WHERE id = ?').get(user.id);
     assert.notEqual(dbRow.totp_secret, setup.secret);

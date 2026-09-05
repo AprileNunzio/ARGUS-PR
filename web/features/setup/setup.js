@@ -2,12 +2,15 @@ import { api } from '/assets/api.js';
 import { el, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { welcomeStep, accountStep, mediaStep, storageStep, reviewStep } from './setup_steps.js';
+import { profileStep } from './profile_step.js';
 
 export function renderSetup({ status, onComplete }) {
     const state = {
         username: 'admin',
         password: '',
         passwordConfirm: '',
+        profile: { language: 'it', notifyEmail: true, notifyAlarm: true, notifySystem: true, notifyDigest: false },
+        deviceLabel: '',
         media: status.media
     };
 
@@ -23,6 +26,7 @@ export function renderSetup({ status, onComplete }) {
     const steps = [
         welcomeStep({ status }),
         accountStep({ state }),
+        profileStep({ state }),
         mediaStep({ state, onStatusChange: () => renderRail() }),
         storageStep({ status }),
         reviewStep({ state, status })
@@ -80,7 +84,9 @@ export function renderSetup({ status, onComplete }) {
         const outcome = await api.post('/api/setup/claim', {
             username: state.username,
             password: state.password,
-            passwordConfirm: state.passwordConfirm
+            passwordConfirm: state.passwordConfirm,
+            profile: state.profile,
+            deviceLabel: state.deviceLabel.trim() || null
         }).then(() => null).catch((error) => error);
 
         next.disabled = false;

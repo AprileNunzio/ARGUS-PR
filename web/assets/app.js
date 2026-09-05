@@ -1,5 +1,6 @@
 import { api, ApiError, connectEvents } from './api.js';
 import { renderLogin } from '/features/login/login.js';
+import { renderRecoveryRequest, renderRecoveryComplete } from '/features/login/recovery.js';
 import { renderSetup } from '/features/setup/setup.js';
 import { renderChangePassword } from '/features/account/change_password.js';
 import { renderMfaEnrollment } from '/features/account/mfa_enrollment.js';
@@ -19,6 +20,7 @@ import { renderWallSettings } from '/features/wall/wall_settings.js';
 import { renderMaintenance } from '/features/system/maintenance_view.js';
 import { renderDateTime } from '/features/system/datetime_view.js';
 import { renderAudioLibrary } from '/features/system/audio_view.js';
+import { renderUsers } from '/features/system/users_view.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
 import { startVersionWatch } from './version_watch.js';
@@ -39,7 +41,8 @@ const ROUTES = {
     updates: { label: 'Aggiornamenti', icon: 'download', render: renderUpdatesView, permission: 'system.manage' },
     maintenance: { label: 'Gestione Macchina', icon: 'power', render: renderMaintenance, permission: 'system.manage' },
     datetime: { label: 'Data & Ora', icon: 'clock', render: renderDateTime, permission: 'system.manage' },
-    audio: { label: 'Audio & Messaggi', icon: 'speaker', render: renderAudioLibrary, permission: 'system.manage' }
+    audio: { label: 'Audio & Messaggi', icon: 'speaker', render: renderAudioLibrary, permission: 'system.manage' },
+    users: { label: 'Utenti & Accessi', icon: 'users', render: renderUsers, permission: 'user.manage' }
 };
 
 
@@ -110,7 +113,22 @@ async function showLogin(message) {
     state.disconnect?.();
     root.replaceChildren(renderLogin({
         message,
-        onSuccess: async () => { await start(); }
+        onSuccess: async () => { await start(); },
+        onRecovery: () => showRecoveryRequest()
+    }));
+}
+
+function showRecoveryRequest() {
+    state.disconnect?.();
+    root.replaceChildren(renderRecoveryRequest({ onCancel: () => showLogin(null) }));
+}
+
+async function showRecoveryComplete(token) {
+    state.disconnect?.();
+    root.replaceChildren(await renderRecoveryComplete({
+        token,
+        onDone: () => showLogin('Password reimpostata: entra con quella nuova.'),
+        onCancel: () => showLogin(null)
     }));
 }
 
@@ -152,6 +170,12 @@ async function start() {
     });
 
     if (!session) {
+        const location = parseLocation();
+        if (location.name === 'recovery' && location.params[0]) {
+            await showRecoveryComplete(location.params[0]);
+            return;
+        }
+
         await showLogin(null);
         return;
     }

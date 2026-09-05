@@ -12,6 +12,7 @@ import automation from './011_automation.js';
 import storagePools from './012_storage_pools.js';
 import storagePolicies from './013_storage_policies.js';
 import audioClips from './014_audio_clips.js';
+import userProfiles from './015_user_profiles.js';
 
 export const migrations = [
     core,
@@ -27,5 +28,6 @@ export const migrations = [
     automation,
     storagePools,
     storagePolicies,
-    audioClips
+    audioClips,
+    userProfiles
 ].sort((a, b) => a.version - b.version);

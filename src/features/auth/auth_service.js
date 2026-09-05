@@ -11,6 +11,7 @@ import { Zone } from '../../security/net_zones.js';
 import { validationError, unauthenticated, notFound, conflict, forbidden } from '../../kernel/errors.js';
 import { createLogger } from '../../kernel/logger.js';
 import { generateSecret, verifyCode, otpauthUri } from '../../security/totp.js';
+import { deviceTag } from '../system/device_identity.js';
 import { encryptSecret, decryptSecret } from '../../security/vault.js';
 
 const log = createLogger('auth');
@@ -307,8 +308,12 @@ export async function changePassword({ actor, currentPassword, newPassword, remo
     return true;
 }
 
+function mfaAccountName(user) {
+    return user.email ?? user.username;
+}
+
 export async function setupMfa(actorId) {
-    const user = getDatabase().prepare('SELECT id, username, totp_enabled FROM users WHERE id = ?').get(actorId);
+    const user = getDatabase().prepare('SELECT id, username, email, totp_enabled FROM users WHERE id = ?').get(actorId);
     if (!user) throw notFound('User');
 
     if (user.totp_enabled === 1) {
@@ -324,7 +329,7 @@ export async function setupMfa(actorId) {
 
     return {
         secret,
-        uri: otpauthUri(secret, user.username, 'ARGUS-PR')
+        uri: otpauthUri(secret, mfaAccountName(user), 'ARGUS-PR', deviceTag())
     };
 }
 

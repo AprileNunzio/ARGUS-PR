@@ -108,8 +108,14 @@ export function verifyCode(secret, code, now = Date.now(), userId = null) {
     return { valid: false, step: null };
 }
 
-export function otpauthUri(secret, username, issuer = 'ARGUS-PR') {
-    const safeUser = encodeURIComponent(username);
+export function accountLabel(identity, device) {
+    const account = String(identity ?? '').trim();
+    const tag = String(device ?? '').trim();
+    return tag.length > 0 ? `${account} (${tag})` : account;
+}
+
+export function otpauthUri(secret, username, issuer = 'ARGUS-PR', device = '') {
+    const safeUser = encodeURIComponent(accountLabel(username, device));
     const safeIssuer = encodeURIComponent(issuer);
     return `otpauth://totp/${safeIssuer}:${safeUser}?secret=${secret}&issuer=${safeIssuer}&algorithm=SHA1&digits=6&period=30`;
 }
