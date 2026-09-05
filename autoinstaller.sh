@@ -328,6 +328,38 @@ UNITEOF
     systemctl enable --now argus-pr.service
 }
 
+grant_maintenance_rights() {
+    log "Concessione dei diritti di spegnimento e riavvio a $SERVICE_USER"
+
+    local sudoers_source="${INSTALL_DIR}/deploy/linux/argus-maintenance.sudoers"
+    local polkit_source="${INSTALL_DIR}/deploy/linux/argus-maintenance.rules"
+    local sudoers_target=/etc/sudoers.d/argus-maintenance
+
+    if [ -f "$sudoers_source" ]; then
+        sed "s/^argus /${SERVICE_USER} /" "$sudoers_source" > "${sudoers_target}.new"
+        chmod 0440 "${sudoers_target}.new"
+
+        if visudo -cqf "${sudoers_target}.new" 2>/dev/null; then
+            mv "${sudoers_target}.new" "$sudoers_target"
+            log "Regola sudo installata in $sudoers_target"
+        else
+            rm -f "${sudoers_target}.new"
+            warn "La regola sudo non ha superato visudo: riavvio e spegnimento resteranno manuali"
+        fi
+    fi
+
+    if [ -f "$polkit_source" ] && [ -d /etc/polkit-1 ]; then
+        mkdir -p /etc/polkit-1/rules.d
+        sed "s/\"argus\"/\"${SERVICE_USER}\"/" "$polkit_source" > /etc/polkit-1/rules.d/49-argus-maintenance.rules
+        chmod 0644 /etc/polkit-1/rules.d/49-argus-maintenance.rules
+        log "Regola polkit installata in /etc/polkit-1/rules.d/49-argus-maintenance.rules"
+    fi
+
+    if ! sudo -n -u root true 2>/dev/null && ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo non e installato: il riavvio dall interfaccia potrebbe non funzionare"
+    fi
+}
+
 want_shield() {
     case "$SHIELD_MODE" in
         yes) return 0 ;;
@@ -634,6 +666,7 @@ main() {
     write_environment
     setup_vision
     write_service
+    grant_maintenance_rights
     open_firewall
     if want_shield; then install_shield; else log "ARGUS-SHIELD non richiesto"; fi
     if want_kiosk; then install_kiosk; else log "Muro video locale non richiesto"; fi

@@ -120,6 +120,11 @@ src/
                           le capacita del dispositivo e mette in cache profilo e
                           XAddr per cinque minuti. Il muro mostra la crociera solo
                           alle telecamere che dichiarano davvero il servizio PTZ
+  deploy/linux/           argus-maintenance.sudoers e argus-maintenance.rules
+                          concedono a un servizio non privilegiato il solo diritto
+                          di riavviare la macchina e i due servizi ARGUS. Senza uno
+                          dei due, polkit rifiuta con "Interactive authentication
+                          required" e il riavvio dall'interfaccia non funziona
   features/users/         user_profile.js valida ogni campo dell'anagrafica,
                           user_repository.js e' l'unico punto che scrive sulla
                           tabella users e impedisce di restare senza amministratori.

@@ -102,30 +102,70 @@ export async function restartService(serviceId) {
     return { service: serviceId, restarting: true, method: 'systemctl' };
 }
 
+const SYSTEMCTL_PATHS = Object.freeze(['systemctl', '/bin/systemctl', '/usr/bin/systemctl']);
+const SHUTDOWN_PATHS = Object.freeze(['/sbin/shutdown', '/usr/sbin/shutdown', 'shutdown']);
+const SUDO = '/usr/bin/sudo';
+
+export const POWER_REMEDY = 'installa la regola sudo deploy/linux/argus-maintenance.sudoers in /etc/sudoers.d/argus-maintenance, '
+    + 'oppure la regola polkit deploy/linux/argus-maintenance.rules in /etc/polkit-1/rules.d/, '
+    + 'oppure riavvia dal terminale.';
+
+const NOISE = /^(Failed to set wall message, ignoring:.*|Call to \w+ failed:.*)$/;
+
+export function cleanFailure(message) {
+    const lines = String(message ?? '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !NOISE.test(line));
+
+    if (lines.length > 0) return lines.join(' ').slice(0, 240);
+
+    const raw = String(message ?? '').trim();
+    return raw.length > 0 ? raw.slice(0, 240) : 'nessun dettaglio';
+}
+
+export function powerAttempts(action) {
+    const verb = action === 'reboot' ? 'reboot' : 'poweroff';
+    const flag = action === 'reboot' ? '-r' : '-h';
+    const attempts = [];
+
+    for (const binary of SYSTEMCTL_PATHS) attempts.push([binary, ['--no-block', verb]]);
+    for (const binary of SYSTEMCTL_PATHS) attempts.push([binary, ['--force', '--no-block', verb]]);
+    for (const binary of SHUTDOWN_PATHS) attempts.push([binary, [flag, 'now']]);
+
+    attempts.push([SUDO, ['-n', '/bin/systemctl', '--no-block', verb]]);
+    attempts.push([SUDO, ['-n', '/usr/bin/systemctl', '--no-block', verb]]);
+    attempts.push([SUDO, ['-n', '/sbin/shutdown', flag, 'now']]);
+    attempts.push([SUDO, ['-n', '/usr/sbin/shutdown', flag, 'now']]);
+
+    attempts.push([`/sbin/${verb}`, ['--force']]);
+    attempts.push([`/sbin/${verb}`, []]);
+
+    return attempts;
+}
+
 export async function powerAction(action) {
     if (!POWER_ACTIONS.includes(action)) {
         throw new AppError(ErrorCode.VALIDATION, 'Azione di alimentazione non ammessa');
     }
 
     if (process.platform === 'linux') {
-        const attempts = action === 'reboot'
-            ? [['systemctl', ['--no-block', 'reboot']], ['shutdown', ['-r', 'now']], ['/sbin/reboot', []]]
-            : [['systemctl', ['--no-block', 'poweroff']], ['shutdown', ['-h', 'now']], ['/sbin/poweroff', []]];
-
         const failures = [];
 
-        for (const [command, args] of attempts) {
+        for (const [command, args] of powerAttempts(action)) {
             const result = await shell(command, args, 10000);
             if (result.ok) {
-                log.warn('power action accepted', { action, command });
-                return { action, accepted: true, command };
+                log.warn('power action accepted', { action, command, args: args.join(' ') });
+                return { action, accepted: true, command: [command, ...args].join(' ') };
             }
-            failures.push(`${command}: ${String(result.error).slice(0, 120)}`);
+            failures.push(`${[command, ...args].join(' ')}: ${cleanFailure(result.error)}`);
         }
+
+        log.error('every power method was refused', { action, attempts: failures.length });
 
         throw new AppError(
             ErrorCode.FORBIDDEN,
-            `Nessun metodo di ${action} disponibile. Su alcune distribuzioni systemd-logind non risponde: installa la regola polkit argus-maintenance.rules oppure esegui shutdown dal terminale. Dettagli: ${failures.join(' | ')}`,
+            `Nessun metodo di ${action} ha funzionato. Il servizio gira come utente non privilegiato: ${POWER_REMEDY} Dettagli: ${failures.join(' | ')}`,
             { exposable: true }
         );
     }

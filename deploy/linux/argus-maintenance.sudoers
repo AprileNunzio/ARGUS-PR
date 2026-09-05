@@ -1,0 +1,22 @@
+Cmnd_Alias ARGUS_POWER = /bin/systemctl --no-block reboot, \
+                         /bin/systemctl --no-block poweroff, \
+                         /bin/systemctl --force --no-block reboot, \
+                         /bin/systemctl --force --no-block poweroff, \
+                         /usr/bin/systemctl --no-block reboot, \
+                         /usr/bin/systemctl --no-block poweroff, \
+                         /usr/bin/systemctl --force --no-block reboot, \
+                         /usr/bin/systemctl --force --no-block poweroff, \
+                         /sbin/shutdown -r now, \
+                         /sbin/shutdown -h now, \
+                         /usr/sbin/shutdown -r now, \
+                         /usr/sbin/shutdown -h now
+
+Cmnd_Alias ARGUS_UNITS = /bin/systemctl restart argus-pr.service, \
+                         /bin/systemctl restart argus-kiosk.service, \
+                         /usr/bin/systemctl restart argus-pr.service, \
+                         /usr/bin/systemctl restart argus-kiosk.service
+
+Defaults!ARGUS_POWER !requiretty
+Defaults!ARGUS_UNITS !requiretty
+
+argus ALL=(root) NOPASSWD: ARGUS_POWER, ARGUS_UNITS
