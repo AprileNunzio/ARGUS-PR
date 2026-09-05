@@ -160,6 +160,18 @@ export async function renderPersonDetailsView({ api, session, personId }) {
                 ? el('img', { className: 'face-card__img', src: log.snapshotPath })
                 : el('div', { className: 'face-card__img face-card__img--empty' }, [icon('eye-off')]);
 
+            const deleteLogBtn = canManage ? el('button', {
+                className: 'btn btn--sm btn--danger btn--full',
+                type: 'button',
+                textContent: 'Elimina',
+                onclick: async () => {
+                    if (confirm('Sei sicuro di voler eliminare questo transito?')) {
+                        await api.remove(`/api/people/logs/${log.id}`).catch(() => undefined);
+                        go('people', personId); // reload view
+                    }
+                }
+            }) : null;
+
             return el('article', { className: 'face-card' }, [
                 el('div', { className: 'face-card__img-wrapper' }, [
                     logImgEl,
@@ -169,12 +181,13 @@ export async function renderPersonDetailsView({ api, session, personId }) {
                     ]),
                     el('div', { className: 'face-card__confidence' }, [el('span', { textContent: `MATCH ${confPct}` })])
                 ]),
-                el('div', { className: 'face-card__body' }, [
+                el('div', { className: 'face-card__body stack stack--tight' }, [
                     el('div', { className: 'section__hint mono face-card__details' }, [
                         el('div', { textContent: `ID: ${log.id.split('-')[0].toUpperCase()}` }),
                         el('div', { textContent: logDateStr }),
                         el('div', { textContent: `Cam: ${log.cameraName ?? log.cameraId}` })
-                    ])
+                    ]),
+                    deleteLogBtn
                 ])
             ]);
         };

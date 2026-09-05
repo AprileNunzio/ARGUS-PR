@@ -109,6 +109,7 @@ export function createPeopleRepository(db) {
         SET person_id = @targetId
         WHERE person_id = @sourceId
     `);
+    const deleteFaceLogStmt = db.prepare('DELETE FROM face_logs WHERE id = ?');
 
     return {
         listPeople() {
@@ -196,9 +197,13 @@ export function createPeopleRepository(db) {
                 createdAt: log.createdAt
             };
         },
-        correctFaceLog(logId, newPersonId) {
-            correctFaceLogStmt.run({ id: logId, correctedPersonId: newPersonId || null });
-            return true;
+        correctFaceLog(id, correctedPersonId) {
+            const result = correctFaceLogStmt.run({ id, correctedPersonId });
+            return result.changes > 0;
+        },
+        deleteFaceLog(id) {
+            const result = deleteFaceLogStmt.run(id);
+            return result.changes > 0;
         },
         mergePerson(sourceId, targetId) {
             db.transaction(() => {

@@ -1,6 +1,7 @@
 import { el, chip, empty, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { createFace3DCanvas, renderBiometricBadge } from './people_face3d.js';
+import { go } from '/assets/router.js';
 
 const ROLE_CHIPS = {
     dipendente: { label: 'Dipendente', variant: 'ok' },
@@ -228,6 +229,18 @@ export async function renderPeopleView({ api, session, params }) {
                 ? el('img', { className: 'face-card__img', src: log.snapshotPath })
                 : el('div', { className: 'face-card__img face-card__img--empty' }, [icon('eye-off')]);
 
+            const deleteLogBtn = canManage ? el('button', {
+                className: 'btn btn--sm btn--danger btn--full',
+                type: 'button',
+                textContent: 'Elimina',
+                onclick: async () => {
+                    if (confirm('Sei sicuro di voler eliminare questo transito?')) {
+                        await api.remove(`/api/people/logs/${log.id}`).catch(() => undefined);
+                        await loadLogs();
+                    }
+                }
+            }) : null;
+
             return el('article', { className: 'face-card' }, [
                 el('div', { className: 'face-card__img-wrapper' }, [
                     imgEl,
@@ -246,7 +259,7 @@ export async function renderPeopleView({ api, session, params }) {
                             el('div', { textContent: `Cam: ${log.cameraName ?? log.cameraId}` })
                         ])
                     ]),
-                    el('div', { className: 'stack stack--tight' }, [addPersonBtn, correctBtn].filter(Boolean))
+                    el('div', { className: 'stack stack--tight' }, [addPersonBtn, correctBtn, deleteLogBtn].filter(Boolean))
                 ])
             ]);
         });

@@ -171,6 +171,21 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         return { body: { ok: true, logId, correctedPersonId: newPersonId } };
     }, { permission: Permission.CAMERA_MANAGE });
 
+    router.delete('/api/people/logs/:id', async (ctx) => {
+        const logId = requireId(ctx.params.id, 'id');
+        const deleted = peopleRepository.deleteFaceLog(logId);
+        if (!deleted) throw notFound('Face log not found');
+
+        recordAudit({
+            actorId: ctx.actor?.id,
+            actorName: ctx.actor?.username,
+            action: 'people.delete_log',
+            target: logId,
+            detail: {}
+        });
+        return { body: { ok: true, purged: true } };
+    }, { permission: Permission.CAMERA_MANAGE });
+
     router.post('/api/people/extract-face', async (ctx) => {
         const imageBase64 = requireString(ctx.body?.imageBase64, 'imageBase64', { min: 10, max: 15000000 });
         const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9.+]+;base64,/, '');
