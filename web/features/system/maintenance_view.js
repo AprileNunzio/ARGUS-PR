@@ -19,6 +19,32 @@ const SERVICE_TONES = {
     unmanaged: 'info'
 };
 
+function remedyBlock(command) {
+    const code = el('code', { className: 'remedy__code', textContent: command });
+
+    const copy = el('button', { className: 'btn btn--sm', type: 'button' }, [
+        icon('archive'),
+        el('span', { textContent: 'Copia il comando' })
+    ]);
+
+    copy.addEventListener('click', async () => {
+        const done = await navigator.clipboard?.writeText(command).then(() => true).catch(() => false);
+        copy.replaceChildren(
+            icon(done ? 'check' : 'warning'),
+            el('span', { textContent: done ? 'Copiato' : 'Selezionalo a mano' })
+        );
+    });
+
+    return el('div', { className: 'remedy' }, [
+        el('div', { className: 'remedy__head' }, [
+            icon('shield'),
+            el('span', { textContent: 'Esegui una volta sola, come root, sulla macchina' })
+        ]),
+        code,
+        el('div', { className: 'row row--end' }, [copy])
+    ]);
+}
+
 export async function renderMaintenance({ api }) {
     const root = el('div', { className: 'view maintenance-view' });
     const feedback = el('div', {});
@@ -141,19 +167,27 @@ export async function renderMaintenance({ api }) {
             }
         }, [icon(iconName), el('span', { textContent: label })]);
 
+        const rights = data.powerRights ?? { ready: true, grant: 'root', detail: null, remedy: null };
+
         return card({
             title: 'Alimentazione della macchina',
             subtitle: 'Riavvio e spegnimento ordinato del server, con arresto pulito dei registratori',
             iconName: 'power',
-            tone: 'amber',
-            badge: chip(data.machine.powerSupported ? 'Disponibile' : 'Non supportato', data.machine.powerSupported ? 'ok' : 'warn'),
+            tone: rights.ready ? 'amber' : 'red',
+            badge: chip(
+                rights.ready ? `Permessi via ${rights.grant}` : 'Permessi mancanti',
+                rights.ready ? 'ok' : 'bad'
+            ),
             body: [
-                notice('warn', 'Queste operazioni interrompono la videosorveglianza. Su Linux il servizio deve avere la regola polkit argus-maintenance.rules, altrimenti il comando viene rifiutato.'),
+                rights.ready
+                    ? notice('warn', 'Queste operazioni interrompono la videosorveglianza.')
+                    : notice('error', rights.detail ?? 'Il servizio non ha il diritto di riavviare la macchina.'),
+                rights.remedy ? remedyBlock(rights.remedy) : null,
                 el('div', { className: 'row row--tight' }, [
                     powerButton('reboot', 'Riavvia la macchina', 'Il sistema operativo verra riavviato completamente.', 'refresh', 'btn'),
                     powerButton('poweroff', 'Spegni la macchina', 'Il server verra arrestato e dovra essere riacceso manualmente.', 'power', 'btn btn--danger')
                 ])
-            ]
+            ].filter(Boolean)
         });
     };
 

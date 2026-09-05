@@ -10,6 +10,7 @@ import { invalidateSettings } from '../settings/settings_repository.js';
 import { clearUpdateCache } from '../updates/update_service.js';
 import { createLogger } from '../../kernel/logger.js';
 import { AppError, ErrorCode } from '../../kernel/errors.js';
+import { powerRights, sudoersRecipe } from './power_rights.js';
 
 const run = promisify(execFile);
 const log = createLogger('maintenance');
@@ -178,11 +179,16 @@ export async function powerAction(action) {
             failures.push(`${[command, ...args].join(' ')}: ${cleanFailure(result.error)}`);
         }
 
-        log.error('every power method was refused', { action, attempts: failures.length });
+        const rights = await powerRights();
+        log.error('every power method was refused', { action, attempts: failures.length, grant: rights.grant });
+
+        const cause = rights.ready
+            ? `I permessi risultano concessi (${rights.grant}), quindi il rifiuto arriva dal sistema.`
+            : `${rights.detail} Concedili una volta sola, da root: ${sudoersRecipe(rights.account)}`;
 
         throw new AppError(
             ErrorCode.FORBIDDEN,
-            `Nessun metodo di ${action} ha funzionato. Il servizio gira come utente non privilegiato: ${POWER_REMEDY} Dettagli: ${failures.join(' | ')}`,
+            `Nessun metodo di ${action} ha funzionato. ${cause} Dettagli: ${failures.join(' | ')}`,
             { exposable: true }
         );
     }

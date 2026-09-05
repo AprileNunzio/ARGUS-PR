@@ -120,6 +120,11 @@ src/
                           le capacita del dispositivo e mette in cache profilo e
                           XAddr per cinque minuti. Il muro mostra la crociera solo
                           alle telecamere che dichiarano davvero il servizio PTZ
+  features/system/        power_rights.js dice se il servizio puo davvero riavviare
+                          la macchina (root, sudo senza password, oppure polkit con
+                          logind attivo) e, quando non puo, genera il comando esatto
+                          da eseguire una volta come root. L'interfaccia lo mostra
+                          prima che l'operatore prema il pulsante
   deploy/linux/           argus-maintenance.sudoers e argus-maintenance.rules
                           concedono al servizio i permessi di riavvio e gestione
                           della macchina e dei servizi gestiti se eseguito come utente
@@ -695,6 +700,7 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/updates/offline/download` | `system.manage`, rate limit 5/30min |
 | POST | `/api/updates/offline/apply` | `system.manage`, rate limit 5/1h |
 | GET | `/api/system/maintenance` | `system.manage` |
+| | risponde anche con `powerRights`: permessi reali e rimedio | |
 | POST | `/api/system/maintenance/service/:id/restart` | `system.manage`, rate limit 10/10min |
 | POST | `/api/system/maintenance/power` | `system.manage`, rate limit 5/10min |
 | POST | `/api/system/maintenance/cache` | `system.manage`, rate limit 20/10min |

@@ -13,6 +13,7 @@ import {
     POWER_ACTIONS,
     CACHE_SCOPES
 } from './maintenance_service.js';
+import { powerRights } from './power_rights.js';
 
 function requireScopes(raw) {
     if (raw === undefined || raw === null) return [];
@@ -30,6 +31,7 @@ export function registerMaintenanceRoutes(router) {
         body: {
             machine: machineSnapshot(ctx.config),
             services: await serviceStates(),
+            powerRights: await powerRights(),
             powerActions: POWER_ACTIONS,
             cacheScopes: CACHE_SCOPES
         }

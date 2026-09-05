@@ -49,3 +49,21 @@ test('il rimedio indica file che esistono davvero nel repository', () => {
     assert.match(POWER_REMEDY, /argus-maintenance\.sudoers/);
     assert.match(POWER_REMEDY, /argus-maintenance\.rules/);
 });
+
+test('il rimedio nomina l utente reale del servizio e passa per visudo', async () => {
+    const { sudoersRecipe } = await import('../src/features/system/power_rights.js');
+    const recipe = sudoersRecipe('argus');
+
+    assert.ok(recipe.startsWith('printf \'argus ALL=(root) NOPASSWD:'));
+    assert.ok(recipe.includes('/etc/sudoers.d/argus-maintenance'));
+    assert.ok(recipe.includes('chmod 0440'));
+    assert.ok(recipe.includes('visudo -cqf'));
+});
+
+test('un utente diverso da argus finisce davvero nella regola', async () => {
+    const { sudoersRecipe } = await import('../src/features/system/power_rights.js');
+    const recipe = sudoersRecipe('videosorveglianza');
+
+    assert.ok(recipe.includes('videosorveglianza ALL=(root)'));
+    assert.ok(!recipe.includes('argus ALL=(root)'));
+});
