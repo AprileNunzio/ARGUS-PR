@@ -9,6 +9,7 @@ test('la catena di riavvio prova anche le varianti forzate e i percorsi assoluti
     assert.ok(attempts.includes('/usr/bin/systemctl --force --no-block reboot'));
     assert.ok(attempts.includes('/sbin/shutdown -r now'));
     assert.ok(attempts.includes('/usr/bin/sudo -n /sbin/shutdown -r now'));
+    assert.ok(attempts.includes('/usr/bin/sudo -n /bin/systemctl --force --no-block reboot'));
     assert.ok(attempts.includes('/sbin/reboot --force'));
 });
 

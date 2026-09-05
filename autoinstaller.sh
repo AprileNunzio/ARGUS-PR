@@ -5,7 +5,7 @@ REPO_URL="${ARGUS_REPO_URL:-https://github.com/AprileNunzio/ARGUS-PR.git}"
 INSTALL_DIR="${ARGUS_INSTALL_DIR:-/opt/argus-pr}"
 DATA_DIR="${ARGUS_DATA_DIR:-/var/lib/argus-pr}"
 ENV_FILE="${ARGUS_ENV_FILE:-/etc/argus-pr/argus.env}"
-SERVICE_USER="${ARGUS_SERVICE_USER:-argus}"
+SERVICE_USER="${ARGUS_SERVICE_USER:-root}"
 KIOSK_USER="${ARGUS_KIOSK_USER:-argus-kiosk}"
 KIOSK_HOME="/home/argus-kiosk"
 HELPER_DIR="/usr/local/lib/argus-pr"
@@ -128,11 +128,11 @@ install_base_packages() {
     log "Installazione prerequisiti di sistema"
     pkg_refresh
     case "$PKG" in
-        apt-get) pkg_install ca-certificates curl git xz-utils python3 python3-pip python3-venv build-essential procps iproute2 || true ;;
-        dnf|yum) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute || true ;;
-        pacman) pkg_install ca-certificates curl git xz python python-pip base-devel iproute2 || true ;;
-        zypper) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute2 || true ;;
-        apk) pkg_install ca-certificates curl git xz python3 py3-pip build-base iproute2 bash || true ;;
+        apt-get) pkg_install ca-certificates curl git xz-utils python3 python3-pip python3-venv build-essential procps iproute2 sudo dbus systemd || true ;;
+        dnf|yum) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute sudo dbus systemd || true ;;
+        pacman) pkg_install ca-certificates curl git xz python python-pip base-devel iproute2 sudo dbus systemd || true ;;
+        zypper) pkg_install ca-certificates curl git xz python3 python3-pip gcc-c++ make iproute2 sudo dbus systemd || true ;;
+        apk) pkg_install ca-certificates curl git xz python3 py3-pip build-base iproute2 bash sudo dbus || true ;;
     esac
     pkg_try ffmpeg ffmpeg-free || warn "ffmpeg assente nei repository: ARGUS-PR lo scarichera' da solo al primo avvio."
 }
@@ -283,7 +283,7 @@ Environment=ARGUS_INSTALL_DIR=${INSTALL_DIR}
 Environment=ARGUS_SERVICE_USER=${SERVICE_USER}
 Environment=ARGUS_NODE_BIN=${NODE_BIN}
 Environment=ARGUS_NPM_BIN=${NPM_BIN}
-Environment="PATH=${DATA_DIR}/vision/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=${DATA_DIR}/vision/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStartPre=+${HELPER_DIR}/pre-start.sh
 ExecStart=${NODE_BIN} ${INSTALL_DIR}/bin/argus.js serve
 Restart=always
@@ -292,29 +292,9 @@ SuccessExitStatus=75
 KillSignal=SIGTERM
 TimeoutStopSec=20
 
-
-NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-RestrictSUIDSGID=true
-RestrictRealtime=true
-LockPersonality=true
-ReadWritePaths=${DATA_DIR} ${INSTALL_DIR}/vendor
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
-SystemCallArchitectures=native
 MemoryDenyWriteExecute=false
 PrivateDevices=false
-ProtectClock=true
-ProtectHostname=true
-ProtectProc=invisible
-RemoveIPC=true
-UMask=0027
 
 StandardOutput=journal
 StandardError=journal
@@ -329,6 +309,7 @@ UNITEOF
 }
 
 grant_maintenance_rights() {
+    [[ "$SERVICE_USER" == "root" ]] && return 0
     log "Concessione dei diritti di spegnimento e riavvio a $SERVICE_USER"
 
     local sudoers_source="${INSTALL_DIR}/deploy/linux/argus-maintenance.sudoers"

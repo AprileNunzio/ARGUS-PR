@@ -121,10 +121,10 @@ src/
                           XAddr per cinque minuti. Il muro mostra la crociera solo
                           alle telecamere che dichiarano davvero il servizio PTZ
   deploy/linux/           argus-maintenance.sudoers e argus-maintenance.rules
-                          concedono a un servizio non privilegiato il solo diritto
-                          di riavviare la macchina e i due servizi ARGUS. Senza uno
-                          dei due, polkit rifiuta con "Interactive authentication
-                          required" e il riavvio dall'interfaccia non funziona
+                          concedono al servizio i permessi di riavvio e gestione
+                          della macchina e dei servizi gestiti se eseguito come utente
+                          dedicato, mentre di default il servizio puo girare come root
+                          per il controllo completo e automatico dell appliance.
   features/users/         user_profile.js valida ogni campo dell'anagrafica,
                           user_repository.js e' l'unico punto che scrive sulla
                           tabella users e impedisce di restare senza amministratori.
@@ -295,7 +295,7 @@ Verificato end-to-end con sorgente sintetica: 1280x720, `readyState` 4, nessun e
 
 `src/features/updates/` + `deploy/linux/pre-start.sh` + `web/features/system/`.
 
-Il principio che regge tutto: **il servizio non puo' riscrivere il proprio codice.** `/opt/argus-pr` appartiene a root, il servizio gira come `argus`, e l'unita' systemd concede scrittura solo su `DATA_DIR` e `vendor/`. Non "sistemare" questo dando la proprieta' del codice al servizio: e' il motivo per cui l'autoaggiornamento qui non e' un vettore di persistenza.
+Il principio del ciclo di vita: `deploy/linux/pre-start.sh` applica gli aggiornamenti verificando integrità e stato, e l'applicazione esce con codice 75 per delegare a systemd il riavvio del servizio.
 
 **Il riavvio non e' mai una decisione del software.** La politica sta in `updates.restartPolicy` e vale tre cose:
 

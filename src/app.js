@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { loadConfig } from './kernel/config.js';
 import { setLogLevel, createLogger } from './kernel/logger.js';
 import { installProcessGuard, onShutdown } from './kernel/process_guard.js';
@@ -129,6 +130,16 @@ export async function bootstrap(overrides = {}) {
     const db = openDatabase(config);
 
     seedFromConfig(config);
+
+    if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() !== 0) {
+        try {
+            const unit = fs.readFileSync('/etc/systemd/system/argus-pr.service', 'utf8');
+            if (unit.includes('User=root')) {
+                log.warn('system unit upgraded to root, restarting to acquire privileges');
+                process.exit(75);
+            }
+        } catch {}
+    }
 
     if (process.platform === 'win32') {
         const { handleWindowsStartup } = await import('./features/updates/windows_updater.js');

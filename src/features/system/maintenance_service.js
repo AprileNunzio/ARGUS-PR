@@ -93,13 +93,26 @@ export async function restartService(serviceId) {
         throw new AppError(ErrorCode.CONFLICT, 'Il riavvio dei servizi e disponibile solo su Linux con systemd');
     }
 
-    const result = await shell('systemctl', ['restart', serviceId], 30000);
-    if (!result.ok) {
-        throw new AppError(ErrorCode.DEPENDENCY, `Riavvio di ${serviceId} non riuscito: ${result.error}`, { exposable: true });
+    const unit = `${serviceId}.service`;
+    const attempts = [
+        ['systemctl', ['restart', serviceId]],
+        ['/bin/systemctl', ['restart', serviceId]],
+        ['/usr/bin/systemctl', ['restart', serviceId]],
+        [SUDO, ['-n', '/bin/systemctl', 'restart', unit]],
+        [SUDO, ['-n', '/usr/bin/systemctl', 'restart', unit]]
+    ];
+
+    let lastError = '';
+    for (const [cmd, args] of attempts) {
+        const result = await shell(cmd, args, 30000);
+        if (result.ok) {
+            log.warn('service restarted by the operator', { service: serviceId, method: [cmd, ...args].join(' ') });
+            return { service: serviceId, restarting: true, method: cmd };
+        }
+        lastError = result.error;
     }
 
-    log.warn('service restarted by the operator', { service: serviceId });
-    return { service: serviceId, restarting: true, method: 'systemctl' };
+    throw new AppError(ErrorCode.DEPENDENCY, `Riavvio di ${serviceId} non riuscito: ${lastError}`, { exposable: true });
 }
 
 const SYSTEMCTL_PATHS = Object.freeze(['systemctl', '/bin/systemctl', '/usr/bin/systemctl']);
@@ -135,11 +148,15 @@ export function powerAttempts(action) {
 
     attempts.push([SUDO, ['-n', '/bin/systemctl', '--no-block', verb]]);
     attempts.push([SUDO, ['-n', '/usr/bin/systemctl', '--no-block', verb]]);
+    attempts.push([SUDO, ['-n', '/bin/systemctl', '--force', '--no-block', verb]]);
+    attempts.push([SUDO, ['-n', '/usr/bin/systemctl', '--force', '--no-block', verb]]);
     attempts.push([SUDO, ['-n', '/sbin/shutdown', flag, 'now']]);
     attempts.push([SUDO, ['-n', '/usr/sbin/shutdown', flag, 'now']]);
 
-    attempts.push([`/sbin/${verb}`, ['--force']]);
-    attempts.push([`/sbin/${verb}`, []]);
+    for (const prefix of ['/sbin', '/usr/sbin', '/bin', '/usr/bin']) {
+        attempts.push([`${prefix}/${verb}`, ['--force']]);
+        attempts.push([`${prefix}/${verb}`, []]);
+    }
 
     return attempts;
 }

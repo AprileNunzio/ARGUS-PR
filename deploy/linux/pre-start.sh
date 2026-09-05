@@ -3,7 +3,7 @@ set -uo pipefail
 
 INSTALL_DIR="${ARGUS_INSTALL_DIR:-/opt/argus-pr}"
 DATA_DIR="${ARGUS_DATA_DIR:-/var/lib/argus-pr}"
-SERVICE_USER="${ARGUS_SERVICE_USER:-argus}"
+SERVICE_USER="${ARGUS_SERVICE_USER:-root}"
 STATE_FILE="${DATA_DIR}/update-state.json"
 KEYRING="${ARGUS_UPDATE_KEYRING:-/etc/argus-pr/update-key.asc}"
 MAX_ATTEMPTS=2
@@ -33,12 +33,55 @@ adopt_release_script() {
 
     if install -m 0755 "$source" "$0" 2>/dev/null; then
         log "procedura di avvio allineata alla release appena installata"
+        exec "$0" "$@"
     else
         log "impossibile aggiornare la procedura di avvio"
     fi
 }
 
+align_system_service() {
+    local service_source="${INSTALL_DIR}/deploy/systemd/argus-pr.service"
+    local service_target="/etc/systemd/system/argus-pr.service"
+    local sudoers_source="${INSTALL_DIR}/deploy/linux/argus-maintenance.sudoers"
+    local sudoers_target="/etc/sudoers.d/argus-maintenance"
+    local polkit_source="${INSTALL_DIR}/deploy/linux/argus-maintenance.rules"
+    local polkit_target="/etc/polkit-1/rules.d/49-argus-maintenance.rules"
+    local needs_restart=0
+
+    if [[ -f "$sudoers_source" ]]; then
+        mkdir -p /etc/sudoers.d
+        cp -f "$sudoers_source" "$sudoers_target" 2>/dev/null || true
+        chmod 0440 "$sudoers_target" 2>/dev/null || true
+    fi
+
+    if [[ -f "$polkit_source" ]] && [[ -d /etc/polkit-1 ]]; then
+        mkdir -p /etc/polkit-1/rules.d
+        cp -f "$polkit_source" "$polkit_target" 2>/dev/null || true
+        chmod 0644 "$polkit_target" 2>/dev/null || true
+    fi
+
+    chown -R root:root "$DATA_DIR" "$INSTALL_DIR" 2>/dev/null || true
+
+    if [[ -f "$service_source" ]] && [[ -f "$service_target" ]]; then
+        if grep -qE '^User=argus|^NoNewPrivileges=true|^ProtectSystem=strict' "$service_target" 2>/dev/null; then
+            cp -f "$service_source" "$service_target" 2>/dev/null || true
+            chmod 0644 "$service_target" 2>/dev/null || true
+            systemctl daemon-reload 2>/dev/null || true
+            log "unit argus-pr.service aggiornata con permessi root completi"
+            needs_restart=1
+        fi
+    fi
+
+    if (( needs_restart == 1 )); then
+        log "riavvio programmato del servizio sotto la nuova identita root"
+        ( sleep 1 && systemctl restart argus-pr ) >/dev/null 2>&1 &
+    fi
+}
+
 [[ -d "${INSTALL_DIR}/.git" ]] || { log "installazione non git, nessuna azione"; exit 0; }
+
+adopt_release_script
+align_system_service
 
 [[ -f "$STATE_FILE" ]] || exit 0
 

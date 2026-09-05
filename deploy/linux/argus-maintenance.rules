@@ -12,7 +12,13 @@ polkit.addRule(function(action, subject) {
 
     if (action.id === "org.freedesktop.systemd1.manage-units") {
         var unit = action.lookup("unit");
-        if (unit !== "argus-pr.service" && unit !== "argus-kiosk.service") return polkit.Result.NOT_HANDLED;
+        var allowed = [
+            "argus-pr.service",
+            "argus-kiosk.service",
+            "argus-pr-kiosk.service",
+            "argus-shield.service"
+        ];
+        if (allowed.indexOf(unit) < 0) return polkit.Result.NOT_HANDLED;
     }
 
     return polkit.Result.YES;

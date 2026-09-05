@@ -13,8 +13,12 @@ Cmnd_Alias ARGUS_POWER = /bin/systemctl --no-block reboot, \
 
 Cmnd_Alias ARGUS_UNITS = /bin/systemctl restart argus-pr.service, \
                          /bin/systemctl restart argus-kiosk.service, \
+                         /bin/systemctl restart argus-pr-kiosk.service, \
+                         /bin/systemctl restart argus-shield.service, \
                          /usr/bin/systemctl restart argus-pr.service, \
-                         /usr/bin/systemctl restart argus-kiosk.service
+                         /usr/bin/systemctl restart argus-kiosk.service, \
+                         /usr/bin/systemctl restart argus-pr-kiosk.service, \
+                         /usr/bin/systemctl restart argus-shield.service
 
 Defaults!ARGUS_POWER !requiretty
 Defaults!ARGUS_UNITS !requiretty
