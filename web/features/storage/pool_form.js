@@ -1,6 +1,6 @@
-import { el, notice, formatBytes } from '/assets/dom.js';
+import { el, notice, formatBytes, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
-import { modal, segmented, toggle, tabsBar } from '/assets/ui.js';
+import { card, segmented, toggle, tabsBar } from '/assets/ui.js';
 import {
     QUOTA_UNITS,
     SMB_VERSIONS,
@@ -44,7 +44,8 @@ function initialDraft(pool) {
     };
 }
 
-export function openPoolForm({ api, host, detected, cameras, pool = null, onSaved }) {
+export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, onCancel }) {
+    const host = el('div', { className: 'view view--tight' });
     const draft = initialDraft(pool);
     const selectedCameras = new Set((pool?.assignedCameras ?? []).map((camera) => camera.id));
 
@@ -54,7 +55,7 @@ export function openPoolForm({ api, host, detected, cameras, pool = null, onSave
 
     const message = el('div', {});
     const bodyHost = el('div', { className: 'stack' });
-    const close = () => host.replaceChildren();
+    const close = () => onCancel();
 
     const totalForPath = () => {
         for (const disk of detected.disks ?? []) {
@@ -356,23 +357,34 @@ export function openPoolForm({ api, host, detected, cameras, pool = null, onSave
             onclick: submit
         }, [icon('check'), el('span', { textContent: busy ? 'Salvataggio…' : (pool ? 'Salva modifiche' : 'Crea storage pool') })]);
 
-        host.replaceChildren(modal({
-            title: pool ? `Modifica ${pool.name}` : 'Aggiungi nuovo storage pool',
-            subtitle: 'Destinazione, quote, ritenzione, telecamere instradate, parametri NAS e verifica delle prestazioni',
-            iconName: 'disk',
-            tone: 'amber',
-            wide: true,
-            body: [bodyHost],
-            footer: [
-                el('span', { className: 'section__hint', textContent: draft.path.trim().length > 0 ? draft.path.trim() : 'Nessuna destinazione selezionata' }),
-                el('div', { className: 'row row--tight' }, [
-                    el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: close }),
-                    saveButton
-                ])
-            ],
-            onClose: close
-        }));
+        host.replaceChildren(
+            pageHead({
+                title: pool ? `Modifica ${pool.name}` : 'Nuovo storage pool',
+                hint: 'Destinazione, quote, ritenzione, telecamere instradate, parametri NAS e verifica delle prestazioni',
+                back: el('button', {
+                    className: 'page-back',
+                    type: 'button',
+                    onclick: close
+                }, [icon('chevronLeft'), el('span', { textContent: 'Torna a Storage & Dischi' })]),
+                actions: [saveButton]
+            }),
+            card({
+                title: pool ? pool.name : 'Configurazione della destinazione',
+                subtitle: draft.path.trim().length > 0 ? draft.path.trim() : 'Nessuna destinazione selezionata',
+                iconName: 'disk',
+                tone: 'amber',
+                body: [bodyHost],
+                footer: [
+                    el('span', { className: 'section__hint', textContent: draft.path.trim().length > 0 ? draft.path.trim() : 'Scegli una destinazione nella scheda Destinazione' }),
+                    el('div', { className: 'row row--tight' }, [
+                        el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: close }),
+                        saveButton
+                    ])
+                ]
+            })
+        );
     };
 
     render();
+    return host;
 }

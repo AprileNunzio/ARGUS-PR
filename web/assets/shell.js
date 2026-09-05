@@ -5,6 +5,13 @@ import { findRouteInfo, MACRO_AREAS } from '/features/dashboard/hub_registry.js'
 let linkDot = null;
 let linkLabel = null;
 let breadcrumbNode = null;
+let detailLabel = null;
+
+export function setBreadcrumbDetail(label) {
+    detailLabel = typeof label === 'string' && label.length > 0 ? label : null;
+    const node = breadcrumbNode?.querySelector('.breadcrumb__detail');
+    if (node && detailLabel) node.textContent = detailLabel;
+}
 
 export function setLinkState(status) {
     if (!linkDot || !linkLabel) return;
@@ -16,6 +23,7 @@ export function setLinkState(status) {
 export function setActiveRoute(name, routes, params = []) {
     if (!breadcrumbNode) return;
     breadcrumbNode.replaceChildren();
+    detailLabel = null;
 
     if (name === 'dashboard') {
         const areaParam = params[0] === 'area' ? params[1] : null;
@@ -96,7 +104,7 @@ export function setActiveRoute(name, routes, params = []) {
             el('span', { className: 'breadcrumb__sep', textContent: '›' }),
             el('span', { className: 'breadcrumb__current' }, [
                 icon('chevronRight'),
-                el('span', { textContent: params.join(' / ') })
+                el('span', { className: 'breadcrumb__detail', textContent: detailLabel ?? params.join(' / ') })
             ])
         );
     } else {

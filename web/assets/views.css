@@ -440,11 +440,32 @@
 .cap-card__footer { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-2); font-size: 0.78rem; color: var(--muted); }
 
 .confirm-panel { border-color: #fecaca; background: #fff5f5; }
-.page-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; }
-.page-back:hover { color: var(--accent); }
-.page-back .icon { width: 1em; height: 1em; }
+.page-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    align-self: flex-start;
+    padding: 0.3rem 0.7rem 0.3rem 0.5rem;
+    margin-bottom: 0.15rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: border-color var(--speed) var(--ease), color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.page-back:hover { color: var(--accent); border-color: var(--accent-line); background: var(--surface); }
+.page-back .icon { width: 0.95em; height: 0.95em; }
 
 .zone-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #0b0f19; display: block; }
 .zone-canvas-wrapper .zone-canvas { position: absolute; inset: 0; z-index: 2; }
 .zone-preview__state { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: #9fb4cd; font-size: 0.85rem; pointer-events: none; background: rgba(11, 15, 25, .55); }
 .zone-preview__state[hidden] { display: none; }
+
+.zone-hint { margin: 0; padding: 0.5rem 0.7rem; border-radius: var(--radius-sm); background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--brand-700); font-size: 0.78rem; line-height: 1.45; }
+.zone-presets { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.zone-presets__label { font-size: 0.74rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }

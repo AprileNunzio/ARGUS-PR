@@ -1,7 +1,8 @@
 import { el, chip, notice, empty, pageHead, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, metricTile, optionRow } from '/assets/ui.js';
-import { openPoolForm } from './pool_form.js';
+import { renderPoolForm } from './pool_form.js';
+import { go } from '/assets/router.js';
 
 const POLICY_LABELS = {
     fifo: 'FIFO: elimina i piu vecchi',
@@ -119,13 +120,27 @@ function raidCard(array) {
     });
 }
 
-export async function renderStorageView({ api }) {
+export async function renderStorageView({ api, params = [] }) {
     const root = el('div', { className: 'view storage-view' });
     const feedback = el('div', {});
-    const modalHost = el('div', {});
 
     let data = await api.get('/api/storage/overview').catch((error) => ({ failure: error }));
     let cameras = await api.get('/api/cameras').then((payload) => payload.cameras ?? []).catch(() => []);
+
+    const editing = params[0] === 'new'
+        ? { pool: null }
+        : (params[1] === 'edit' ? { pool: (data.pools ?? []).find((entry) => entry.id === params[0]) ?? null } : null);
+
+    if (editing) {
+        return renderPoolForm({
+            api,
+            detected: data.detected ?? { disks: [], mounts: [] },
+            cameras,
+            pool: editing.pool,
+            onCancel: () => go('storage'),
+            onSaved: () => go('storage')
+        });
+    }
 
     const refresh = async () => {
         data = await api.get('/api/storage/overview').catch((error) => ({ failure: error }));
@@ -133,19 +148,7 @@ export async function renderStorageView({ api }) {
         render();
     };
 
-    const openForm = (pool) => openPoolForm({
-        api,
-        host: modalHost,
-        detected: data.detected ?? { disks: [], mounts: [] },
-        cameras,
-        pool,
-        onSaved: (saved, routed) => {
-            feedback.replaceChildren(notice('ok', routed.length > 0
-                ? `Storage pool "${saved.name}" salvato e ${routed.length} telecamere instradate.`
-                : `Storage pool "${saved.name}" salvato.`));
-            refresh();
-        }
-    });
+    const openForm = (pool) => (pool ? go('storage', pool.id, 'edit') : go('storage', 'new'));
 
     const removePool = async (pool) => {
         const result = await api.remove(`/api/storage/pools/${pool.id}`).catch((error) => ({ failure: error }));
@@ -179,7 +182,6 @@ export async function renderStorageView({ api }) {
                 ]
             }),
             feedback,
-            modalHost,
             el('div', { className: 'grid grid--stats rise' }, [
                 metricTile({ label: 'Destinazioni configurate', value: String(pools.length), iconName: 'disk', tone: 'blue' }),
                 metricTile({ label: 'Dischi fisici rilevati', value: String(disks.length), iconName: 'server', tone: 'cyan' }),

@@ -383,3 +383,42 @@
     .launchpad-card__icon-wrap { width: 50px; height: 50px; }
     .launchpad-card__icon-wrap .icon { width: 26px; height: 26px; }
 }
+
+.version-banner {
+    position: fixed;
+    left: 50%;
+    bottom: clamp(0.8rem, 3vh, 1.8rem);
+    z-index: 90;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    max-width: min(680px, calc(100vw - 2rem));
+    padding: 0.7rem 0.9rem;
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    border: 1px solid var(--accent-line);
+    box-shadow: var(--shadow-lg);
+    animation: rise .3s var(--ease) both;
+}
+
+.version-banner[hidden] { display: none !important; }
+
+.version-banner__icon {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--grad-brand);
+    color: #fff;
+}
+
+.version-banner__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.version-banner__title { font-size: 0.88rem; }
+.version-banner__detail { font-size: 0.76rem; color: var(--muted); line-height: 1.4; }
+
+@media (max-width: 620px) {
+    .version-banner__detail { display: none; }
+}

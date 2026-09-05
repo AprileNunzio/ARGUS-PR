@@ -20,6 +20,7 @@ import { renderMaintenance } from '/features/system/maintenance_view.js';
 import { renderDateTime } from '/features/system/datetime_view.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
+import { startVersionWatch } from './version_watch.js';
 
 const ROUTES = {
     dashboard: { label: 'Riepilogo', icon: 'gauge', render: renderDashboard },
@@ -43,7 +44,8 @@ const ROUTES = {
 const state = {
     session: null,
     route: 'dashboard',
-    disconnect: null
+    disconnect: null,
+    stopVersionWatch: null
 };
 
 const root = document.getElementById('app');
@@ -97,6 +99,8 @@ async function showApp() {
     }));
 
     startEventStream();
+    state.stopVersionWatch?.();
+    state.stopVersionWatch = startVersionWatch(api);
     await mountRoute();
 }
 

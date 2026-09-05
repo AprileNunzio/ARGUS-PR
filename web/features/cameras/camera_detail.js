@@ -1,8 +1,9 @@
 import { el, notice, chip, empty, pageHead, confirmPanel } from '/assets/dom.js';
+import { setBreadcrumbDetail } from '/assets/shell.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
 import { createCameraForm } from './camera_form.js';
-import { probeSummary, backLink } from './camera_wizard.js';
+import { probeSummary } from './camera_wizard.js';
 import { renderCameraAnalytics } from './camera_analytics.js';
 import { renderScheduleEditor } from '/features/scheduling/schedule_editor.js';
 import { renderZoneEditor } from '/features/motion/zone_editor.js';
@@ -189,11 +190,13 @@ export function renderCameraDetail({ api, session, camera, recorder, tab = 'gene
         onclick: () => go('cameras', camera.id, entry.id)
     }, [icon(entry.glyph), el('span', { textContent: entry.label })])));
 
-    return el('div', { className: 'view' }, [
+    const activeTab = TABS.find((entry) => entry.id === active);
+    setBreadcrumbDetail(activeTab ? `${camera.name} · ${activeTab.label}` : camera.name);
+
+    return el('div', { className: 'view view--tight' }, [
         pageHead({
             title: camera.name,
             hint: sourceLabel(camera),
-            back: backLink('Torna all elenco', 'cameras'),
             actions: [camera.enabled ? chip('attivo', 'ok') : chip('disattivo', 'warn')]
         }),
         el('section', { className: 'panel' }, [

@@ -19,6 +19,24 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
     let zones = [];
     let activeDrawingPoints = [];
     let selectedZoneIndex = -1;
+    let cursorPoint = null;
+
+    const hint = el('p', { className: 'zone-hint' });
+
+    const updateHint = () => {
+        const count = activeDrawingPoints.length;
+        if (count === 0) {
+            hint.textContent = 'Clicca sul video per posare il primo vertice della zona.';
+            return;
+        }
+        if (count < 3) {
+            hint.textContent = `${count} ${count === 1 ? 'vertice posato' : 'vertici posati'}: servono almeno tre punti per chiudere una zona.`;
+            return;
+        }
+        hint.textContent = `${count} vertici posati. Doppio clic per chiudere la zona, oppure continua ad aggiungere punti.`;
+    };
+
+    updateHint();
 
     const feedback = el('div', { hidden: 'hidden' });
     const saveBtn = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva zone' });
@@ -100,46 +118,103 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
             for (let i = 1; i < activeDrawingPoints.length; i += 1) {
                 ctx.lineTo(activeDrawingPoints[i][0] * w, activeDrawingPoints[i][1] * h);
             }
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 2;
-            ctx.stroke();
 
-            for (const [px, py] of activeDrawingPoints) {
+            if (cursorPoint) ctx.lineTo(cursorPoint[0] * w, cursorPoint[1] * h);
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.setLineDash(cursorPoint ? [7, 5] : []);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (activeDrawingPoints.length >= 3) {
                 ctx.beginPath();
-                ctx.arc(px * w, py * h, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#e74c3c';
+                ctx.moveTo(activeDrawingPoints[0][0] * w, activeDrawingPoints[0][1] * h);
+                for (let i = 1; i < activeDrawingPoints.length; i += 1) {
+                    ctx.lineTo(activeDrawingPoints[i][0] * w, activeDrawingPoints[i][1] * h);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
                 ctx.fill();
             }
+
+            activeDrawingPoints.forEach(([px, py], index) => {
+                ctx.beginPath();
+                ctx.arc(px * w, py * h, index === 0 ? 7 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = index === 0 ? '#0ea5e9' : '#38bdf8';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
         }
     }
 
-    canvas.addEventListener('click', (e) => {
+    const pointFrom = (event) => {
         const rect = canvas.getBoundingClientRect();
-        const normX = (e.clientX - rect.left) / rect.width;
-        const normY = (e.clientY - rect.top) / rect.height;
+        return [
+            Math.max(0, Math.min(1, Number(((event.clientX - rect.left) / rect.width).toFixed(3)))),
+            Math.max(0, Math.min(1, Number(((event.clientY - rect.top) / rect.height).toFixed(3))))
+        ];
+    };
 
-        activeDrawingPoints.push([
-            Math.max(0, Math.min(1, Number(normX.toFixed(3)))),
-            Math.max(0, Math.min(1, Number(normY.toFixed(3))))
-        ]);
+    canvas.addEventListener('click', (event) => {
+        activeDrawingPoints.push(pointFrom(event));
+        updateHint();
         redraw();
     });
+
+    canvas.addEventListener('mousemove', (event) => {
+        if (activeDrawingPoints.length === 0) {
+            cursorPoint = null;
+            return;
+        }
+        cursorPoint = pointFrom(event);
+        redraw();
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        cursorPoint = null;
+        redraw();
+    });
+
+    const addZone = (name, points) => {
+        zones.push({
+            name,
+            points,
+            sensitivity: 0.015,
+            cooldownSeconds: 15,
+            isActive: true
+        });
+        activeDrawingPoints = [];
+        cursorPoint = null;
+        selectedZoneIndex = zones.length - 1;
+        updateHint();
+        renderZonesControls();
+        redraw();
+    };
+
+    const PRESETS = [
+        { label: 'Tutta l inquadratura', points: [[0.02, 0.02], [0.98, 0.02], [0.98, 0.98], [0.02, 0.98]] },
+        { label: 'Meta superiore', points: [[0.02, 0.02], [0.98, 0.02], [0.98, 0.5], [0.02, 0.5]] },
+        { label: 'Meta inferiore', points: [[0.02, 0.5], [0.98, 0.5], [0.98, 0.98], [0.02, 0.98]] },
+        { label: 'Fascia centrale', points: [[0.02, 0.3], [0.98, 0.3], [0.98, 0.7], [0.02, 0.7]] }
+    ];
+
+    const presetBar = el('div', { className: 'zone-presets' }, [
+        el('span', { className: 'zone-presets__label', textContent: 'Preset rapidi:' }),
+        ...PRESETS.map((preset) => el('button', {
+            className: 'btn btn--sm',
+            type: 'button',
+            textContent: preset.label,
+            onclick: () => addZone(preset.label, preset.points.map((point) => [...point]))
+        }))
+    ]);
 
     canvas.addEventListener('dblclick', (e) => {
         e.preventDefault();
         if (activeDrawingPoints.length >= 3) {
-            const newIndex = zones.length + 1;
-            zones.push({
-                name: `Zona ${newIndex}`,
-                points: [...activeDrawingPoints],
-                sensitivity: 0.015,
-                cooldownSeconds: 15,
-                isActive: true
-            });
-            activeDrawingPoints = [];
-            selectedZoneIndex = zones.length - 1;
-            renderZonesControls();
-            redraw();
+            addZone(`Zona ${zones.length + 1}`, [...activeDrawingPoints]);
         }
     });
 
@@ -256,13 +331,19 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
         ]),
         el('div', { className: 'panel__body stack' }, [
             el('div', { className: 'zone-canvas-wrapper' }, [preview, canvas, previewState]),
-            el('div', { className: 'row' }, [
+            hint,
+            el('div', { className: 'row row--between' }, [
+                presetBar,
                 el('button', {
                     className: 'btn btn--sm',
                     type: 'button',
-                    textContent: 'Annulla vertici tracciati',
-                    onclick: () => { activeDrawingPoints = []; redraw(); }
-                })
+                    onclick: () => {
+                        activeDrawingPoints = [];
+                        cursorPoint = null;
+                        updateHint();
+                        redraw();
+                    }
+                }, [icon('close'), el('span', { textContent: 'Annulla vertici' })])
             ]),
             el('hr', { className: 'divider' }),
             el('div', { className: 'section__title' }, [icon('shield'), el('span', { textContent: 'Zone configurate' })]),

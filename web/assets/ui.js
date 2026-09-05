@@ -80,35 +80,6 @@ export function metricTile({ label, value, hint, iconName, tone = 'blue' }) {
     ]);
 }
 
-export function modal({ title, subtitle, iconName, tone = 'blue', body, footer, onClose, wide = false }) {
-    const overlay = el('div', { className: 'modal-overlay' });
-
-    const panel = el('div', { className: `modal-panel ${wide ? 'modal-panel--wide' : ''} rise` }, [
-        el('header', { className: `modal-panel__head modal-panel__head--${tone}` }, [
-            el('span', { className: 'modal-panel__icon' }, [icon(iconName ?? 'settings', { className: 'icon--lg' })]),
-            el('div', { className: 'modal-panel__titles' }, [
-                el('h2', { className: 'modal-panel__title', textContent: title }),
-                subtitle ? el('p', { className: 'modal-panel__subtitle', textContent: subtitle }) : null
-            ]),
-            el('button', {
-                type: 'button',
-                className: 'modal-panel__close',
-                title: 'Chiudi',
-                onclick: onClose
-            }, [icon('close')])
-        ]),
-        el('div', { className: 'modal-panel__body' }, body),
-        footer ? el('footer', { className: 'modal-panel__foot' }, footer) : null
-    ]);
-
-    overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) onClose();
-    });
-
-    overlay.append(panel);
-    return overlay;
-}
-
 export function statusDot(tone) {
     return el('span', { className: `xdot xdot--${tone}` });
 }
