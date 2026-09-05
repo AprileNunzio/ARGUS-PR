@@ -14,15 +14,18 @@ function todayKey() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-export async function renderArchive({ api, session }) {
+export async function renderArchive({ api, session, params = [] }) {
     const { cameras } = await api.get('/api/cameras');
 
     const video = el('video', { className: 'archive__video', controls: 'controls', preload: 'metadata' });
     const stats = el('div', { className: 'row row--tight' });
     const feedback = el('div', {});
 
+    const targetCameraId = params[0] || null;
+    const targetTimestamp = params[1] ? Number(params[1]) : null;
+
     const cameraSelect = el('select', { className: 'select' },
-        cameras.map((camera) => el('option', { value: camera.id, textContent: camera.name })));
+        cameras.map((camera) => el('option', { value: camera.id, textContent: camera.name, selected: camera.id === targetCameraId })));
 
     const daySelect = el('select', { className: 'select' });
 
@@ -136,9 +139,16 @@ export async function renderArchive({ api, session }) {
 
     if (cameras.length > 0) {
         queueMicrotask(async () => {
-            daySelect.value = await loadDays();
+            const initialDay = targetTimestamp
+                ? new Date(targetTimestamp).toISOString().slice(0, 10)
+                : await loadDays();
+            await loadDays();
+            daySelect.value = initialDay;
             await loadSegments();
             timeline.redraw();
+            if (targetTimestamp) {
+                playAt(targetTimestamp);
+            }
             await exportPanel.refresh();
         });
     }

@@ -5,8 +5,10 @@ import {
     listDetectionSources,
     deleteDetectionSource,
     insertDetectionEvent,
-    listDetectionEvents
+    listDetectionEvents,
+    getDetectionEventById
 } from './detections_repository.js';
+import { serveFile } from '../../http/static_files.js';
 import { Permission, can } from '../../security/rbac.js';
 import { unauthenticated, forbidden, notFound, validationError } from '../../kernel/errors.js';
 import {
@@ -124,6 +126,10 @@ export function registerDetectionRoutes(router) {
         const events = listDetectionEvents({
             cameraId: ctx.query.cameraId,
             className: ctx.query.className,
+            plate: ctx.query.plate,
+            personId: ctx.query.personId,
+            zoneId: ctx.query.zoneId,
+            minConfidence: ctx.query.minConfidence,
             from: ctx.query.from,
             to: ctx.query.to,
             limit: ctx.query.limit,
@@ -131,6 +137,16 @@ export function registerDetectionRoutes(router) {
         });
         return { body: { events } };
     }, { permission: Permission.LIVE_VIEW });
+
+    router.get('/api/detections/:id/snapshot', async (ctx) => {
+        const id = requireId(ctx.params.id, 'Event id');
+        const event = getDetectionEventById(id);
+        if (!event || !event.snapshotPath) throw notFound('Snapshot');
+
+        const served = serveFile(ctx.req, ctx.res, ctx.config.mediaDir, event.snapshotPath);
+        if (!served) throw notFound('Snapshot file');
+        return { handled: true };
+    }, { permission: Permission.ARCHIVE_VIEW });
 
     router.get('/api/detections/sources', async () => {
         return { body: { sources: listDetectionSources() } };

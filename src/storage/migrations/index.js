@@ -13,6 +13,8 @@ import storagePools from './012_storage_pools.js';
 import storagePolicies from './013_storage_policies.js';
 import audioClips from './014_audio_clips.js';
 import userProfiles from './015_user_profiles.js';
+import auditChain from './016_audit_chain.js';
+import floorPlansAndBarriers from './017_floor_plans_and_barriers.js';
 
 export const migrations = [
     core,
@@ -29,5 +31,7 @@ export const migrations = [
     storagePools,
     storagePolicies,
     audioClips,
-    userProfiles
+    userProfiles,
+    auditChain,
+    floorPlansAndBarriers
 ].sort((a, b) => a.version - b.version);

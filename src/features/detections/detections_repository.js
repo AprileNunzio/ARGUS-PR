@@ -121,6 +121,15 @@ export function recordMotionEvent(data) {
     return insertDetectionEvent(data);
 }
 
+export function getDetectionEventById(id) {
+    const row = getDatabase()
+        .prepare(`SELECT e.*, c.name AS camera_name FROM detection_events e
+                  LEFT JOIN cameras c ON c.id = e.camera_id
+                  WHERE e.id = ?`)
+        .get(id);
+    return toEvent(row);
+}
+
 export function listDetectionEvents(filters = {}) {
     const conditions = [];
     const params = [];
@@ -132,6 +141,22 @@ export function listDetectionEvents(filters = {}) {
     if (filters.className) {
         conditions.push('e.class_name = ?');
         params.push(filters.className);
+    }
+    if (filters.plate) {
+        conditions.push('e.plate_text LIKE ?');
+        params.push(`%${filters.plate.toUpperCase().trim()}%`);
+    }
+    if (filters.personId) {
+        conditions.push('e.person_id = ?');
+        params.push(filters.personId);
+    }
+    if (filters.zoneId) {
+        conditions.push('e.zone_id = ?');
+        params.push(filters.zoneId);
+    }
+    if (filters.minConfidence !== undefined && filters.minConfidence !== null) {
+        conditions.push('e.confidence >= ?');
+        params.push(Number(filters.minConfidence));
     }
     if (filters.from) {
         conditions.push('e.started_at >= ?');

@@ -109,8 +109,13 @@ export function runRetention(config) {
         }
 
         for (const [day, files] of removedByDay) {
-            const remaining = readDayRecords(config, camera.id, day).filter((item) => !files.has(item.file));
-            rewriteDay(config, camera.id, day, remaining);
+            const updated = readDayRecords(config, camera.id, day).map((item) => {
+                if (files.has(item.file)) {
+                    return { ...item, pruned: true };
+                }
+                return item;
+            });
+            rewriteDay(config, camera.id, day, updated);
         }
 
         pruneEmptyDirs(cameraSegmentDir(config, camera.id));

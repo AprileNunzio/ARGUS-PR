@@ -2,7 +2,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { mediaToolsStatus, provisionMediaTools } from '../../platform/media_tools.js';
 import { getDatabase } from '../../storage/database.js';
-import { queryAudit, recordAudit } from '../../security/audit.js';
+import { queryAudit, recordAudit, verifyAuditIntegrity } from '../../security/audit.js';
 import { Permission } from '../../security/rbac.js';
 import { readPackageVersion } from '../../platform/version.js';
 import { getHardwareProfile } from '../../platform/hardware.js';
@@ -68,6 +68,10 @@ export function registerSystemRoutes(router) {
 
     router.get('/api/system/audit', async (ctx) => ({
         body: { entries: queryAudit(ctx.query) }
+    }), { permission: Permission.AUDIT_VIEW });
+
+    router.get('/api/system/audit/integrity', async () => ({
+        body: verifyAuditIntegrity(getDatabase())
     }), { permission: Permission.AUDIT_VIEW });
 
     router.post('/api/system/dependencies/ffmpeg', async () => ({

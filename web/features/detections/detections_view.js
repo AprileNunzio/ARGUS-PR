@@ -1,5 +1,6 @@
 import { el, chip, empty, field, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { go } from '/assets/router.js';
 
 const CLASS_LABELS = {
     person: 'Persona',
@@ -28,15 +29,24 @@ const VEHICLE_CLASSES = new Set(['car', 'truck', 'bus', 'motorcycle', 'bicycle',
 export async function renderDetectionsView({ api, session }) {
     const outlet = el('div', { className: 'view' });
     let selectedFilter = 'all';
+    let plateFilter = '';
+    let minConfFilter = 0;
     const listHost = el('div', { className: 'stack' });
 
     async function loadEvents() {
-        let query = '';
+        const params = new URLSearchParams();
         if (selectedFilter !== 'all' && selectedFilter !== 'animals' && selectedFilter !== 'vehicles') {
-            query = `?className=${encodeURIComponent(selectedFilter)}`;
+            params.set('className', selectedFilter);
         }
-        
-        const data = await api.get(`/api/detections${query}`).catch(() => ({ events: [] }));
+        if (plateFilter.trim().length > 0) {
+            params.set('plate', plateFilter.trim());
+        }
+        if (minConfFilter > 0) {
+            params.set('minConfidence', String(minConfFilter / 100));
+        }
+
+        const queryStr = params.toString() ? `?${params.toString()}` : '';
+        const data = await api.get(`/api/detections${queryStr}`).catch(() => ({ events: [] }));
         let events = data.events ?? [];
 
         if (selectedFilter === 'animals') {
@@ -60,15 +70,33 @@ export async function renderDetectionsView({ api, session }) {
             else if (ev.className === 'plate') badgeKind = 'info';
             else if (ANIMAL_CLASSES.has(ev.className)) badgeKind = 'warn';
 
-            const plateBadge = ev.plateText 
-                ? el('span', { 
-                    className: 'plate-badge', 
-                    textContent: `🏷️ ${ev.plateText}` 
-                  }) 
+            const plateBadge = ev.plateText
+                ? el('span', {
+                    className: 'plate-badge',
+                    textContent: `🏷️ ${ev.plateText}`
+                })
+                : null;
+
+            const seekBtn = el('button', {
+                type: 'button',
+                className: 'btn btn--sm btn--primary',
+                onclick: () => {
+                    const atMs = new Date(ev.startedAt).getTime();
+                    go('archive', ev.cameraId, atMs);
+                }
+            }, [icon('play'), el('span', { textContent: 'Vedi nel Video' })]);
+
+            const snapshotImg = ev.snapshotPath
+                ? el('img', {
+                    src: `/api/detections/${encodeURIComponent(ev.id)}/snapshot`,
+                    className: 'detection-thumbnail',
+                    alt: 'Snapshot evento'
+                })
                 : null;
 
             return el('div', { className: 'device-row' }, [
-                el('div', { className: 'stack' }, [
+                snapshotImg,
+                el('div', { className: 'stack grow' }, [
                     el('div', { className: 'row' }, [
                         chip(label, badgeKind),
                         plateBadge,
@@ -80,7 +108,8 @@ export async function renderDetectionsView({ api, session }) {
                         ev.trackId ? el('span', { className: 'chip', textContent: `Track #${ev.trackId.slice(0, 8)}` }) : null,
                         ev.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${ev.box.map(b => Number(b).toFixed(2)).join(', ')}]` }) : null
                     ])
-                ])
+                ]),
+                seekBtn
             ]);
         });
 
@@ -111,6 +140,16 @@ export async function renderDetectionsView({ api, session }) {
         return btn;
     });
 
+    const plateInput = el('input', {
+        type: 'text',
+        className: 'input input--sm',
+        placeholder: 'Filtra targa (es. AB123CD)',
+        oninput: (e) => {
+            plateFilter = e.target.value;
+            loadEvents();
+        }
+    });
+
     const refreshBtn = el('button', {
         className: 'btn btn--sm',
         type: 'button',
@@ -119,8 +158,8 @@ export async function renderDetectionsView({ api, session }) {
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Rilevamenti' }),
-            el('div', { className: 'row row--tight' }, [refreshBtn])
+            el('h1', { className: 'view__title', textContent: 'Ricerca Forense & Rilevamenti' }),
+            el('div', { className: 'row row--tight' }, [plateInput, refreshBtn])
         ]),
         el('div', { className: 'row schedule-presets' }, filterButtons),
         el('section', { className: 'panel' }, [

@@ -12,6 +12,7 @@ import {
     ptzSavePreset,
     forgetPtz
 } from './ptz_service.js';
+import { startPtzTour, stopPtzTour, getPtzTourStatus } from './ptz_patrol.js';
 
 function trace(ctx, target, detail) {
     recordAudit({
@@ -76,4 +77,18 @@ export function registerPtzRoutes(router) {
         forgetPtz(ctx.params.id);
         return { body: await ptzStatus(ctx.params.id, { refresh: true }) };
     }, { permission: Permission.CAMERA_MANAGE, exposure: Exposure.PRIVATE });
+
+    router.get('/api/ptz/:id/tour', async (ctx) => ({
+        body: getPtzTourStatus(ctx.params.id)
+    }), { permission: Permission.LIVE_VIEW, exposure: Exposure.PRIVATE });
+
+    router.post('/api/ptz/:id/tour/start', async (ctx) => {
+        const stops = ctx.body?.stops || [];
+        const loop = ctx.body?.loop !== false;
+        return { body: startPtzTour(ctx.params.id, stops, { loop }) };
+    }, { permission: Permission.ALARM_ACKNOWLEDGE, exposure: Exposure.PRIVATE });
+
+    router.post('/api/ptz/:id/tour/stop', async (ctx) => ({
+        body: stopPtzTour(ctx.params.id)
+    }), { permission: Permission.ALARM_ACKNOWLEDGE, exposure: Exposure.PRIVATE });
 }

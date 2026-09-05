@@ -2,6 +2,7 @@ import { sendMail } from './smtp_client.js';
 import { publish as mqttPublish } from './mqtt_client.js';
 import { sendWebhook, sendTelegram, triggerGate } from './http_channels.js';
 import { operateRelay } from './onvif_relay.js';
+import { sendIpRelayPulse } from './ip_relay.js';
 import { publish, Topic } from '../../../kernel/event_bus.js';
 
 export const ChannelKind = Object.freeze({
@@ -11,7 +12,8 @@ export const ChannelKind = Object.freeze({
     WEBHOOK: 'webhook',
     MQTT: 'mqtt',
     GATE: 'gate',
-    ONVIF_RELAY: 'onvif_relay'
+    ONVIF_RELAY: 'onvif_relay',
+    IP_RELAY: 'ip_relay'
 });
 
 export const CHANNEL_KINDS = Object.freeze(Object.values(ChannelKind));
@@ -23,7 +25,8 @@ export const CHANNEL_LABELS = Object.freeze({
     webhook: 'Webhook',
     mqtt: 'MQTT',
     gate: 'Comando HTTP (cancello, rele, domotica)',
-    onvif_relay: 'Rele della telecamera (ONVIF)'
+    onvif_relay: 'Rele della telecamera (ONVIF)',
+    ip_relay: 'Rele Hardware IP / Ethernet (TCP)'
 });
 
 export const SECRET_LABELS = Object.freeze({
@@ -71,6 +74,7 @@ async function dispatch(channel, secret, message) {
     if (channel.kind === ChannelKind.WEBHOOK) return sendWebhook(config, secret, message);
     if (channel.kind === ChannelKind.GATE) return triggerGate(config, secret);
     if (channel.kind === ChannelKind.ONVIF_RELAY) return operateRelay(config, secret);
+    if (channel.kind === ChannelKind.IP_RELAY) return sendIpRelayPulse(config.host, config.port, config.command, config.durationMs);
 
     if (channel.kind === ChannelKind.MQTT) {
         return mqttPublish({

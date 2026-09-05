@@ -4,6 +4,7 @@ import { appendSegment } from './segment_index.js';
 import { parseSegmentStart, relativeSegmentPath, segmentPathFromName } from './segment_paths.js';
 import { hasRecentEvent } from '../detections/detections_repository.js';
 import { publish, Topic } from '../../kernel/event_bus.js';
+import { recordSegmentArrival } from './shortfall_watchdog.js';
 
 import { createLogger } from '../../kernel/logger.js';
 
@@ -91,6 +92,7 @@ export function createSegmentWatcher(config, cameraId, listingPath) {
 
             if (appendSegment(config, cameraId, record)) {
                 publish(Topic.SEGMENT_CLOSED, { cameraId, ...record });
+                recordSegmentArrival(cameraId, record);
             }
         }
 

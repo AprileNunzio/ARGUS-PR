@@ -53,6 +53,7 @@ import { installVisionHub } from './features/vision/vision_hub.js';
 import { registerAnalyticsRoutes } from './features/vision/analytics_routes.js';
 import { installAutomationHub } from './features/automation/automation_hub.js';
 import { registerAutomationRoutes } from './features/automation/automation_routes.js';
+import { registerFloorplanRoutes } from './features/automation/floorplan_routes.js';
 import { listCameras } from './features/cameras/camera_repository.js';
 import { insertDetectionEvent } from './features/detections/detections_repository.js';
 import { readPackageVersion } from './platform/version.js';
@@ -88,6 +89,7 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerDetectionRoutes(router);
     registerAnalyticsRoutes(router, { config, visionHub });
     registerAutomationRoutes(router, { hub: automationHub });
+    registerFloorplanRoutes(router);
     registerAccessRoutes({ router, accessRepository });
     registerPeopleRoutes({ router, peopleRepository, db, config });
 }

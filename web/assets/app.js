@@ -21,6 +21,7 @@ import { renderMaintenance } from '/features/system/maintenance_view.js';
 import { renderDateTime } from '/features/system/datetime_view.js';
 import { renderAudioLibrary } from '/features/system/audio_view.js';
 import { renderUsers } from '/features/system/users_view.js';
+import { renderFloorplanView } from '/features/floorplan/floorplan_view.js';
 import { renderShell, setLinkState, setActiveRoute } from './shell.js';
 import { parseLocation, go } from './router.js';
 import { startVersionWatch } from './version_watch.js';
@@ -35,6 +36,7 @@ const ROUTES = {
     access: { label: 'Targhe & Accessi', icon: 'shield', render: renderAccessView },
     people: { label: 'Persone', icon: 'users', render: renderPeopleView },
     automation: { label: 'Automazioni', icon: 'zap', render: renderAutomation, permission: 'alarm.manage' },
+    floorplan: { label: 'Mappa', icon: 'crop', render: renderFloorplanView },
     settings: { label: 'Impostazioni', icon: 'settings', render: renderSettings, permission: 'system.manage' },
     storage: { label: 'Storage & Dischi', icon: 'disk', render: renderStorageView, permission: 'system.manage' },
     system: { label: 'Telemetria', icon: 'activity', render: renderSystem, permission: 'system.manage' },

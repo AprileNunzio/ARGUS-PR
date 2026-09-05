@@ -1,6 +1,6 @@
 import { recordingStates, startRecording, stopRecording, applyRecordingPolicy } from './recording_hub.js';
 import { runRetention } from './retention_worker.js';
-import { querySegments, listIndexedDays } from './segment_index.js';
+import { querySegments, listIndexedDays, verifyDayIntegrity } from './segment_index.js';
 import { getSetting, setSetting, allSettings } from '../settings/settings_repository.js';
 import { Permission } from '../../security/rbac.js';
 import { requireId, requireBool } from '../../security/guards.js';
@@ -110,5 +110,12 @@ export function registerRecordingRoutes(router) {
                 segmentSeconds: getSetting('recording.segmentSeconds', 60)
             }
         };
+    }, { permission: Permission.ARCHIVE_VIEW });
+
+    router.get('/api/archive/:id/integrity', async (ctx) => {
+        const id = requireId(ctx.params.id, 'Camera id');
+        const day = ctx.query.day || new Date().toISOString().slice(0, 10);
+        const result = verifyDayIntegrity(ctx.config, id, day);
+        return { body: result };
     }, { permission: Permission.ARCHIVE_VIEW });
 }
