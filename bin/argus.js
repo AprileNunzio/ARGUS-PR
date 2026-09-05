@@ -6,6 +6,7 @@ import { installProcessGuard } from '../src/kernel/process_guard.js';
 import { initVault } from '../src/security/vault.js';
 import { openDatabase } from '../src/storage/database.js';
 import { discoverFfmpeg } from '../src/platform/ffmpeg.js';
+import { initMediaTools } from '../src/platform/media_tools.js';
 import { isFail } from '../src/kernel/result.js';
 import { generatePassword, hashPassword } from '../src/security/password.js';
 import { getDatabase } from '../src/storage/database.js';
@@ -145,6 +146,8 @@ async function doctor() {
     checks.push(isFail(media)
         ? { name: 'ffmpeg', ok: false, detail: media.error.message }
         : { name: 'ffmpeg', ok: true, detail: `${media.value.ffmpeg.version} at ${media.value.ffmpeg.path}` });
+
+    if (!isFail(media)) await initMediaTools(config);
 
     process.stdout.write(NEWLINE);
     for (const check of checks) {
