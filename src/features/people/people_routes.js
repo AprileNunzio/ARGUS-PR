@@ -33,7 +33,7 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         const gallery = Array.isArray(ctx.body?.gallery) ? ctx.body.gallery.slice(0, 3) : [];
         const notes = optionalString(ctx.body?.notes, 'notes', { max: 1000 }) ?? '';
         const embedding = ctx.body?.embedding ? requireEmbedding(ctx.body.embedding, 'embedding') : [];
-        const photoPath = optionalString(ctx.body?.photoPath, 'photoPath', { max: 500 });
+        const photoPath = optionalString(ctx.body?.photoPath, 'photoPath', { max: 500000 });
 
         const person = peopleRepository.createPerson({
             name,
@@ -85,7 +85,7 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
             changes.embedding = requireEmbedding(ctx.body.embedding, 'embedding');
         }
         if (ctx.body?.photoPath !== undefined) {
-            changes.photoPath = optionalString(ctx.body.photoPath, 'photoPath', { max: 500 });
+            changes.photoPath = optionalString(ctx.body.photoPath, 'photoPath', { max: 500000 });
         }
 
         const updated = peopleRepository.updatePerson(id, changes);

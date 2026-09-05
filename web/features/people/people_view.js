@@ -11,7 +11,13 @@ const ROLE_CHIPS = {
     speciale: { label: 'VIP / Speciale', variant: 'violet' }
 };
 
-export async function renderPeopleView({ api, session }) {
+import { renderPersonDetailsView } from './person_details_view.js';
+
+export async function renderPeopleView({ api, session, params }) {
+    if (params && params[0]) {
+        return renderPersonDetailsView({ api, session, personId: params[0] });
+    }
+
     const outlet = el('div', { className: 'view' });
     const canManage = session.permissions.includes('camera.manage');
     let currentTab = 'people';
@@ -104,7 +110,13 @@ export async function renderPeopleView({ api, session }) {
             }
         }) : null;
 
-        return el('article', { className: 'person-card' }, [
+        return el('article', { 
+            className: 'person-card person-card--clickable',
+            onclick: (e) => {
+                if (e.target.closest('button')) return;
+                go('people', p.id);
+            }
+        }, [
             el('header', { className: 'person-card__header' }, [
                 avatarEl,
                 el('div', { className: 'person-card__info' }, [

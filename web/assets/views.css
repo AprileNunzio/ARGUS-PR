@@ -481,6 +481,7 @@
 
 .people-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
 .person-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s; }
+.person-card--clickable { cursor: pointer; }
 .person-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-line); }
 .person-card__header { display: flex; gap: var(--gap-2); padding: var(--gap-3); border-bottom: 1px solid var(--rule-soft); align-items: flex-start; }
 .person-card__avatar { width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover; background: var(--surface-2); display: grid; place-items: center; flex-shrink: 0; color: var(--muted); }
@@ -491,3 +492,10 @@
 .person-card__3d-container { display: flex; justify-content: center; padding: var(--gap-2); background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--rule-soft); }
 .person-card__gallery { display: flex; gap: var(--gap-1); overflow-x: auto; padding-bottom: 4px; }
 .person-card__gallery-img { width: 40px; height: 40px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--rule-soft); }
+.gallery-img--lg { width: 120px; height: 120px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--rule-soft); }
+.person-card__avatar--lg { width: 96px; height: 96px; }
+.cursor-pointer { cursor: pointer; }
+.raw-json-box { white-space: pre-wrap; word-break: break-all; margin-top: 0.5rem; background: var(--surface-2); padding: 0.5rem; border-radius: var(--radius-sm); }
+.details-layout { display: flex; flex-wrap: wrap; gap: var(--gap-3); align-items: flex-start; }
+.details-main { flex: 1; min-width: 300px; }
+.details-side { width: 320px; max-width: 100%; }
