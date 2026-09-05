@@ -10,6 +10,9 @@ import { attachLocalConsumer } from '../cameras/local_capture.js';
 
 const log = createLogger('vision-process');
 
+const WORKER_FAILURE = /traceback|error|exception|failed|failure|cannot|could not|unable|warning|missing|unavailable|invalid|rejected|no such|not found/i;
+const WORKER_READY = /engine ready|loaded /i;
+
 export function resolvePythonBin(dataDir) {
     if (dataDir) {
         const winBin = join(dataDir, 'vision', 'venv', 'Scripts', 'python.exe');
@@ -155,10 +158,18 @@ export function createVisionProcess({ camera, ffmpegPath, pythonBin, dataDir, mo
             });
         }
 
-        workerChild.stderr.on('data', (d) => {
-            const message = d.toString().trim();
-            if (message.length > 0) stats.lastError = message.slice(-200);
-            log.debug('worker vision stderr', { msg: message });
+        workerChild.stderr.on('data', (chunk) => {
+            const message = chunk.toString().trim();
+            if (message.length === 0) return;
+
+            if (WORKER_FAILURE.test(message)) {
+                stats.lastError = message.slice(-200);
+                log.warn('vision worker error', { camera: camera.id, message: message.slice(-300) });
+                return;
+            }
+
+            if (WORKER_READY.test(message)) stats.lastError = null;
+            log.debug('worker vision stderr', { camera: camera.id, msg: message });
         });
 
         const rl = createInterface({ input: workerChild.stdout });
