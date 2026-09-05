@@ -22,6 +22,12 @@ export const DEFAULT_PERFORMANCE_SETTINGS = Object.freeze({
     performancePreset: 'max_performance'
 });
 
+export function suggestedAiThreads(profile = getHardwareProfile()) {
+    const cores = profile.cpu.logicalCores || 1;
+    if (cores <= 2) return 1;
+    return Math.max(1, Math.floor(cores / 2));
+}
+
 export function suggestedAnalysisFps(profile = getHardwareProfile()) {
     const cores = profile.cpu.logicalCores || 1;
     if (cores <= 2) return 1;
@@ -103,8 +109,13 @@ export function sanitizePerformanceSettings(input, profile = getHardwareProfile(
     const aiExecutionProvider = validAiProviders.includes(base.aiExecutionProvider) ? base.aiExecutionProvider : 'auto';
 
     const cpuThreads = Math.max(0, Math.min(logicalCores * 2, Number(base.cpuThreads) || 0));
-    const aiIntraThreads = Math.max(0, Math.min(logicalCores, Number(base.aiIntraThreads) || 0));
-    const aiInterThreads = Math.max(0, Math.min(logicalCores, Number(base.aiInterThreads) || 0));
+
+    const requestedIntra = Number(base.aiIntraThreads) || 0;
+    const aiIntraThreads = requestedIntra > 0
+        ? Math.min(logicalCores, Math.round(requestedIntra))
+        : suggestedAiThreads(profile);
+
+    const aiInterThreads = Math.max(1, Math.min(logicalCores, Number(base.aiInterThreads) || 1));
 
     const sqliteCacheSizeMb = Math.max(16, Math.min(2048, Number(base.sqliteCacheSizeMb) || 128));
     const sqliteMmapSizeMb = Math.max(0, Math.min(8192, Number(base.sqliteMmapSizeMb) || 512));
