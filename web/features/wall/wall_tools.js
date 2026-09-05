@@ -1,4 +1,5 @@
 import { icon } from '/assets/icons.js';
+import { createPtzPad } from './wall_ptz.js';
 
 const PLAYBACK_WINDOW_MS = 5 * 60 * 1000;
 
@@ -16,14 +17,14 @@ function el(tag, props = {}, children = []) {
     return node;
 }
 
-async function request(path, options = {}) {
+export async function request(path, options = {}) {
     const response = await fetch(path, { credentials: 'same-origin', ...options });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload?.error?.message ?? `${path} -> ${response.status}`);
     return payload;
 }
 
-function send(path, body) {
+export function send(path, body) {
     return request(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,11 +64,18 @@ export async function latestSegment(cameraId) {
 export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart, onNotice, onPlayback, isSpotlight }) {
     const buttons = [];
 
-    const make = (id, label, glyph, handler, { toggle = false } = {}) => {
+    const separator = () => {
+        const bar = el('span', { className: 'console__tool-sep' });
+        buttons.push(bar);
+        return bar;
+    };
+
+    const make = (id, label, glyph, handler, { toggle = false, danger = false } = {}) => {
         const button = el('button', {
             type: 'button',
             className: 'console__tool-btn',
             title: label,
+            'aria-label': label,
             onclick: async (event) => {
                 event.stopPropagation();
                 button.disabled = true;
@@ -83,9 +91,16 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
 
         button.dataset.tool = id;
         if (toggle) button.classList.add('console__tool-btn--toggle');
+        if (danger) button.classList.add('console__tool-btn--danger');
         buttons.push(button);
         return button;
     };
+
+    const ptz = createPtzPad({
+        cameraId: camera.id,
+        onNotice,
+        request: (path, payload) => send(path, payload)
+    });
 
     make('playback', 'Ultimi 5 minuti', 'timeline', async () => {
         const segment = await latestSegment(camera.id);
@@ -93,14 +108,7 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         onPlayback(segment);
     });
 
-    const qualityButton = make(
-        'quality',
-        camera.quality === 'main' ? 'Passa a Sub SD' : 'Passa a Main HD',
-        camera.quality === 'main' ? 'zap' : 'sparkles',
-        () => onQuality(camera.quality === 'main' ? 'sub' : 'main')
-    );
-
-    make('snapshot', 'Scatta foto', 'camera', () => {
+    make('snapshot', 'Scatta foto', 'image', () => {
         captureFrame(video, camera.name);
         onNotice('Fotogramma salvato');
     });
@@ -112,6 +120,44 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         onNotice(active ? 'Registrazione interrotta' : 'Registrazione avviata');
     }, { toggle: true });
 
+    separator();
+
+    const qualityButton = make(
+        'quality',
+        camera.quality === 'main' ? 'Passa a Sub SD' : 'Passa a Main HD',
+        camera.quality === 'main' ? 'zap' : 'sparkles',
+        () => onQuality(camera.quality === 'main' ? 'sub' : 'main')
+    );
+
+    const ptzButton = make('ptz', 'Comandi PTZ', 'move', () => {
+        const open = ptz.toggle();
+        ptzButton.classList.toggle('console__tool-btn--active', open);
+    }, { toggle: true });
+
+    ptzButton.hidden = true;
+
+    separator();
+
+    const alarmButton = make('alarm', 'Avvia allarme', 'alarm', async (button) => {
+        const active = button.classList.contains('console__tool-btn--active');
+
+        if (active) {
+            await request(`/api/alarm/panic/${encodeURIComponent(camera.id)}`, { method: 'DELETE' });
+            button.classList.remove('console__tool-btn--active');
+            button.title = 'Avvia allarme';
+            onNotice('Allarme rientrato');
+            return;
+        }
+
+        const outcome = await send(`/api/alarm/panic/${encodeURIComponent(camera.id)}`, {
+            reason: `Allarme manuale da ${camera.name}`
+        });
+
+        button.classList.add('console__tool-btn--active');
+        button.title = 'Interrompi allarme';
+        onNotice(`Allarme inviato a ${outcome.outcomes?.length ?? 0} canali`);
+    }, { toggle: true, danger: true });
+
     const automationButton = make('automation', 'Automazioni', 'zap', async (button) => {
         const active = button.classList.contains('console__tool-btn--active');
         const outcome = await send(`/api/automation/cameras/${encodeURIComponent(camera.id)}/enabled`, { enabled: !active });
@@ -119,11 +165,15 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         onNotice(`${outcome.rules} regole ${active ? 'disattivate' : 'attivate'}`);
     }, { toggle: true });
 
+    separator();
+
     make('restart', 'Riavvia il flusso', 'refresh', async () => {
         await request(`/api/streams/${encodeURIComponent(camera.id)}`, { method: 'DELETE' });
         onRestart();
         onNotice('Flusso riavviato');
     });
+
+    make('spotlight', isSpotlight ? 'Torna alla griglia' : 'Ingrandisci', 'crop', () => onSpotlight());
 
     make('fullscreen', 'Schermo intero', 'monitor', async (button) => {
         const cell = button.closest('.console__cell');
@@ -139,8 +189,6 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         window.open(`/#/archive/${encodeURIComponent(camera.id)}`, '_blank');
     });
 
-    make('spotlight', isSpotlight ? 'Torna alla griglia' : 'Ingrandisci', 'crop', () => onSpotlight());
-
     const element = el('div', { className: 'console__tools' }, buttons);
 
     const syncState = async () => {
@@ -151,9 +199,17 @@ export function createToolbar({ camera, video, onQuality, onSpotlight, onRestart
         const automation = await request(`/api/automation/cameras/${encodeURIComponent(camera.id)}`).catch(() => null);
         automationButton.classList.toggle('console__tool-btn--active', (automation?.enabled ?? 0) > 0);
         automationButton.hidden = (automation?.total ?? 0) === 0;
+
+        const panic = await request(`/api/alarm/panic/${encodeURIComponent(camera.id)}`).catch(() => null);
+        alarmButton.classList.toggle('console__tool-btn--active', panic?.active === true);
+        alarmButton.title = panic?.active === true ? 'Interrompi allarme' : 'Avvia allarme';
+
+        const capabilities = await request(`/api/ptz/${encodeURIComponent(camera.id)}`).catch(() => null);
+        ptzButton.hidden = capabilities?.supported !== true;
+        if (ptzButton.hidden) ptz.hide();
     };
 
     syncState();
 
-    return { element, qualityButton, syncState };
+    return { element, ptzPad: ptz.element, qualityButton, syncState };
 }

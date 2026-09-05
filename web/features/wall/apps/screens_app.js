@@ -1,7 +1,8 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow } from '/assets/ui.js';
 import { go } from '/assets/router.js';
+import { createAutoSaver, autosaveBar } from './autosave.js';
 import { tileCount } from '../wall_screen_board.js';
 
 const LAYOUT_OPTIONS = [
@@ -22,30 +23,22 @@ const QUALITY_OPTIONS = [
 
 export async function renderScreensApp({ api, payload }) {
     const host = el('div', { className: 'xstack' });
-    const feedback = el('div', {});
-
     let config = JSON.parse(JSON.stringify(payload.config));
     let displays = payload.displays ?? [];
     let cameras = payload.cameras ?? [];
-    let dirty = false;
 
-    const save = async () => {
-        const result = await api.put('/api/wall/config', config).catch((error) => ({ failure: error }));
-        if (result.failure) {
-            feedback.replaceChildren(notice('error', `Salvataggio non riuscito: ${result.failure.message}`));
-            return;
+    const saver = createAutoSaver({
+        api,
+        onApplied: (result) => {
+            config = JSON.parse(JSON.stringify(result.config));
+            displays = result.displays ?? displays;
+            cameras = result.cameras ?? cameras;
         }
-        config = JSON.parse(JSON.stringify(result.config));
-        displays = result.displays ?? displays;
-        cameras = result.cameras ?? cameras;
-        dirty = false;
-        feedback.replaceChildren(notice('ok', 'Schermi salvati e applicati immediatamente al muro.'));
-        render();
-    };
+    });
 
-    const touch = () => {
-        dirty = true;
-        render();
+    const touch = ({ redraw = true } = {}) => {
+        saver.save(config);
+        if (redraw) render();
     };
 
     const addScreen = (display) => {
@@ -74,7 +67,7 @@ export async function renderScreensApp({ api, payload }) {
         const nameInput = el('input', { className: 'input', value: screen.label });
         nameInput.addEventListener('input', () => {
             screen.label = nameInput.value;
-            dirty = true;
+            touch({ redraw: false });
         });
 
         return card({
@@ -166,7 +159,6 @@ export async function renderScreensApp({ api, payload }) {
         const unused = displays.filter((display) => !config.screens.some((screen) => screen.id === display.id));
 
         host.replaceChildren(
-            feedback,
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
                     el('span', { className: 'xrow__hint', textContent: 'Aggiungi uno schermo da un uscita rilevata:' }),
@@ -180,17 +172,14 @@ export async function renderScreensApp({ api, payload }) {
                         type: 'button',
                         onclick: () => addScreen(null)
                     }, [icon('plus'), el('span', { textContent: 'Schermo generico' })])
-                ]),
-                el('button', {
-                    className: dirty ? 'btn btn--primary' : 'btn',
-                    type: 'button',
-                    disabled: dirty ? null : 'disabled',
-                    onclick: save
-                }, [icon('check'), el('span', { textContent: dirty ? 'Salva schermi' : 'Nessuna modifica' })])
+                ])
             ]),
+            autosaveBar(saver.element),
             ...config.screens.map(screenCard)
         );
     };
+
+    host.addEventListener('argus:teardown', () => saver.stop());
 
     render();
     return host;

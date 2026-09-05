@@ -1,15 +1,13 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, toggle, optionRow } from '/assets/ui.js';
+import { createAutoSaver, autosaveBar } from './autosave.js';
 import { classPicker, engineTable, overlayControls } from '../wall_ai.js';
 import { visionStatusBody } from '../wall_vision_status.js';
 
 export async function renderVisionApp({ api, payload }) {
     const host = el('div', { className: 'xstack' });
-    const feedback = el('div', {});
-
     let config = JSON.parse(JSON.stringify(payload.config));
-    let dirty = false;
 
     let visionStatus = await api.get('/api/vision/status').catch(() => null);
     const engines = await api.get('/api/vision/engines')
@@ -19,21 +17,16 @@ export async function renderVisionApp({ api, payload }) {
         }))))
         .catch(() => []);
 
-    const save = async () => {
-        const result = await api.put('/api/wall/config', config).catch((error) => ({ failure: error }));
-        if (result.failure) {
-            feedback.replaceChildren(notice('error', `Salvataggio non riuscito: ${result.failure.message}`));
-            return;
+    const saver = createAutoSaver({
+        api,
+        onApplied: (result) => {
+            config = JSON.parse(JSON.stringify(result.config));
         }
-        config = JSON.parse(JSON.stringify(result.config));
-        dirty = false;
-        feedback.replaceChildren(notice('ok', 'Riconoscimento salvato e applicato immediatamente al muro.'));
-        render();
-    };
+    });
 
     const patchOverlay = (patch) => {
         config.overlay = { ...config.overlay, ...patch };
-        dirty = true;
+        saver.save(config);
     };
 
     const overlayCard = () => {
@@ -110,15 +103,7 @@ export async function renderVisionApp({ api, payload }) {
 
     const render = () => {
         host.replaceChildren(
-            feedback,
-            el('div', { className: 'row row--end' }, [
-                el('button', {
-                    className: dirty ? 'btn btn--primary' : 'btn',
-                    type: 'button',
-                    disabled: dirty ? null : 'disabled',
-                    onclick: save
-                }, [icon('check'), el('span', { textContent: dirty ? 'Salva riconoscimento' : 'Nessuna modifica' })])
-            ]),
+            autosaveBar(saver.element),
             overlayCard(),
             statusCard(),
             card({
@@ -137,6 +122,8 @@ export async function renderVisionApp({ api, payload }) {
             })
         );
     };
+
+    host.addEventListener('argus:teardown', () => saver.stop());
 
     render();
     return host;

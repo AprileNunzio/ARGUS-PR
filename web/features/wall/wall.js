@@ -77,7 +77,8 @@ function createGrid() {
         }
 
         if (selectedLayout.id === 'auto') {
-            const shape = autoGridShape(cameraList.length || 1);
+            const reserved = cameraList.reduce((top, camera) => Math.max(top, Number(camera.index) + 1 || 0), 0);
+            const shape = autoGridShape(Math.max(cameraList.length, reserved) || 1);
             element.style.setProperty('grid-template-columns', `repeat(${shape.columns}, 1fr)`);
             element.style.setProperty('grid-template-rows', `repeat(${shape.rows}, 1fr)`);
             return;
@@ -192,7 +193,7 @@ function createGrid() {
         const cell = el('div', {
             className: `console__cell ${isSpotlight ? 'console__cell--spotlight' : ''}`,
             ondblclick: () => toggleSpotlight(camera.id)
-        }, [video, overlay.element, tag, banner, toolbar.element]);
+        }, [video, overlay.element, tag, banner, toolbar.ptzPad, toolbar.element]);
 
         attachLive(camera.quality);
 
@@ -214,23 +215,41 @@ function createGrid() {
         teardown();
         updateShape();
 
-        let visible = cameraList;
-        let slots = visible.length;
-
         if (spotlightCameraId) {
-            visible = cameraList.filter((camera) => camera.id === spotlightCameraId);
-            if (visible.length === 0) {
-                spotlightCameraId = null;
-                visible = cameraList;
+            const focused = cameraList.filter((camera) => camera.id === spotlightCameraId);
+            if (focused.length > 0) {
+                element.replaceChildren(...focused.map(buildCell));
+                return;
             }
-            slots = visible.length;
-        } else if (selectedLayout.id !== 'auto') {
-            slots = selectedLayout.cols * selectedLayout.rows;
-            visible = cameraList.slice(0, slots);
+            spotlightCameraId = null;
         }
 
-        const cells = visible.map(buildCell);
-        for (let index = cells.length; index < slots; index += 1) cells.push(buildPlaceholder(index));
+        const highest = cameraList.reduce((top, camera) => Math.max(top, Number(camera.index) || 0), -1);
+        const slots = selectedLayout.id === 'auto'
+            ? Math.max(cameraList.length, highest + 1)
+            : selectedLayout.cols * selectedLayout.rows;
+
+        const seats = new Map();
+        const overflow = [];
+
+        for (const camera of cameraList) {
+            const seat = Number(camera.index);
+            if (Number.isInteger(seat) && seat >= 0 && seat < slots && !seats.has(seat)) seats.set(seat, camera);
+            else overflow.push(camera);
+        }
+
+        let cursor = 0;
+        for (const camera of overflow) {
+            while (cursor < slots && seats.has(cursor)) cursor += 1;
+            if (cursor >= slots) break;
+            seats.set(cursor, camera);
+        }
+
+        const cells = [];
+        for (let index = 0; index < slots; index += 1) {
+            const camera = seats.get(index);
+            cells.push(camera ? buildCell(camera) : buildPlaceholder(index));
+        }
 
         element.replaceChildren(...cells);
     };

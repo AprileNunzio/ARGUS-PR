@@ -683,3 +683,58 @@
 @media (max-width: 700px) {
     .screen-tile__caption { display: none; }
 }
+
+.autosave-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface));
+    box-shadow: 0 1px 2px rgba(13, 21, 34, 0.05);
+}
+
+.autosave-bar__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--ok-soft);
+    color: var(--ok);
+    flex: none;
+}
+
+.autosave {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-2);
+}
+
+.autosave__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex: none;
+    transition: background-color .18s ease, box-shadow .18s ease;
+}
+
+.autosave--busy .autosave__dot { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.autosave--ok .autosave__dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.autosave--error .autosave__dot { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-soft); }
+
+.autosave--busy .autosave__text { color: var(--amber); }
+.autosave--ok .autosave__text { color: var(--ok); }
+.autosave--error .autosave__text { color: var(--bad); }
+
+.autosave--busy ~ .spacer, .autosave-bar .spacer { flex: 1 1 auto; }
+
+@media (max-width: 700px) {
+    .autosave { font-size: 0.75rem; }
+}

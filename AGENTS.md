@@ -111,7 +111,18 @@ src/
                           qualita per canale, uscite video, orologio della statusbar).
                           Ogni salvataggio pubblica wall.config sul bus eventi e
                           l'overview espone una revisione: HDMI e Muro web applicano
-                          la stessa configurazione entro un istante, senza polling
+                          la stessa configurazione entro un istante, senza polling.
+                          wallCameraPlan assegna a ogni telecamera il proprio indice
+                          di riquadro e il muro impagina per indice, non in sequenza:
+                          un riquadro lasciato vuoto in Regia resta vuoto sul muro.
+                          Le sotto-app di Regia salvano in tempo reale, senza pulsante
+  features/ptz/           onvif_ptz.js costruisce le buste SOAP, ptz_service.js sonda
+                          le capacita del dispositivo e mette in cache profilo e
+                          XAddr per cinque minuti. Il muro mostra la crociera solo
+                          alle telecamere che dichiarano davvero il servizio PTZ
+  features/alarm/         panic_service.js: allarme manuale da un riquadro del muro,
+                          propagato a tutti i canali di automazione configurati e
+                          rientrato da solo alla scadenza della tenuta
   features/system/        time_service.js: fuso orario, ora legale, NTP e formato orario
                           maintenance_service.js: riavvio servizi, alimentazione
                           della macchina e pulizia delle cache
@@ -667,6 +678,19 @@ Variabili ARGUS-SHIELD: `ARGUS_SHIELD_CONFIG`, `ARGUS_SHIELD_EVENTS`, `ARGUS_SHI
 | POST | `/api/system/maintenance/cache` | `system.manage`, rate limit 20/10min |
 | GET | `/api/wall/config` | `live.view` |
 | PUT | `/api/wall/config` | `system.manage`, rate limit 60/10min |
+| GET | `/api/ptz` | `live.view` |
+| GET | `/api/ptz/:id` | `live.view` |
+| POST | `/api/ptz/:id/move` | `alarm.acknowledge` |
+| POST | `/api/ptz/:id/stop` | `alarm.acknowledge` |
+| POST | `/api/ptz/:id/home` | `alarm.acknowledge` |
+| GET | `/api/ptz/:id/presets` | `live.view` |
+| POST | `/api/ptz/:id/presets` | `camera.manage` |
+| POST | `/api/ptz/:id/presets/:preset` | `alarm.acknowledge` |
+| DELETE | `/api/ptz/:id` | `camera.manage` |
+| GET | `/api/alarm/panic` | `live.view` |
+| GET | `/api/alarm/panic/:id` | `live.view` |
+| POST | `/api/alarm/panic/:id` | `alarm.acknowledge`, rate limit 30/10min |
+| DELETE | `/api/alarm/panic/:id` | `alarm.acknowledge` |
 | WS | `vision.live` (su `/api/events`) | `live.view` |
 | GET | `/api/vision/status` | `live.view` |
 | GET | `/api/system/time` | `live.view` |

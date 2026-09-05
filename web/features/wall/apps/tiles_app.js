@@ -1,13 +1,12 @@
-import { el, chip, notice, empty } from '/assets/dom.js';
+import { el, chip, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented } from '/assets/ui.js';
 import { go } from '/assets/router.js';
+import { createAutoSaver, autosaveBar } from './autosave.js';
 import { renderScreenBoard, TILE_AUTO } from '../wall_screen_board.js';
 
 export async function renderTilesApp({ api, payload, params = [] }) {
     const host = el('div', { className: 'xstack' });
-    const feedback = el('div', {});
-
     let config = JSON.parse(JSON.stringify(payload.config));
     let plans = payload.plans ?? {};
     const cameras = payload.cameras ?? [];
@@ -16,20 +15,19 @@ export async function renderTilesApp({ api, payload, params = [] }) {
         ? params[0]
         : config.primaryScreen;
 
-    let dirty = false;
-
     const current = () => config.screens.find((screen) => screen.id === activeId) ?? config.screens[0];
 
-    const save = async () => {
-        const result = await api.put('/api/wall/config', config).catch((error) => ({ failure: error }));
-        if (result.failure) {
-            feedback.replaceChildren(notice('error', `Salvataggio non riuscito: ${result.failure.message}`));
-            return;
+    const saver = createAutoSaver({
+        api,
+        onApplied: (result) => {
+            config = JSON.parse(JSON.stringify(result.config));
+            plans = result.plans ?? plans;
+            render();
         }
-        config = JSON.parse(JSON.stringify(result.config));
-        plans = result.plans ?? plans;
-        dirty = false;
-        feedback.replaceChildren(notice('ok', 'Disposizione salvata e applicata immediatamente allo schermo.'));
+    });
+
+    const touch = () => {
+        saver.save(config);
         render();
     };
 
@@ -43,8 +41,7 @@ export async function renderTilesApp({ api, payload, params = [] }) {
         }
 
         screen.tiles.sort((a, b) => a.index - b.index);
-        dirty = true;
-        render();
+        touch();
     };
 
     const render = () => {
@@ -66,7 +63,6 @@ export async function renderTilesApp({ api, payload, params = [] }) {
         );
 
         host.replaceChildren(
-            feedback,
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
                     el('span', { className: 'xrow__hint', textContent: 'Schermo in configurazione:' }),
@@ -78,18 +74,12 @@ export async function renderTilesApp({ api, payload, params = [] }) {
                         type: 'button',
                         onclick: () => {
                             screen.tiles = [];
-                            dirty = true;
-                            render();
+                            touch();
                         }
-                    }, [icon('refresh'), el('span', { textContent: 'Tutto automatico' })]),
-                    el('button', {
-                        className: dirty ? 'btn btn--primary' : 'btn',
-                        type: 'button',
-                        disabled: dirty ? null : 'disabled',
-                        onclick: save
-                    }, [icon('check'), el('span', { textContent: dirty ? 'Salva disposizione' : 'Nessuna modifica' })])
+                    }, [icon('refresh'), el('span', { textContent: 'Tutto automatico' })])
                 ])
             ]),
+            autosaveBar(saver.element),
             card({
                 title: `Display di ${screen.label}`,
                 subtitle: 'Ogni casella riproduce un riquadro reale del muro: scegli cosa mostrarci dentro',
@@ -107,6 +97,8 @@ export async function renderTilesApp({ api, payload, params = [] }) {
             })
         );
     };
+
+    host.addEventListener('argus:teardown', () => saver.stop());
 
     render();
     return host;

@@ -30,6 +30,8 @@ import { initLocalCapture } from './features/cameras/local_capture.js';
 import { setRtspTimeoutOption } from './features/cameras/camera_input.js';
 import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
 import { registerWallRoutes } from './features/wall/wall_routes.js';
+import { registerPtzRoutes } from './features/ptz/ptz_routes.js';
+import { registerAlarmRoutes } from './features/alarm/alarm_routes.js';
 import { registerExportRoutes } from './features/export/export_routes.js';
 import { registerUpdateRoutes } from './features/updates/update_routes.js';
 import { installUpdateWatchdog, onPeriodicCheck } from './features/updates/update_service.js';
@@ -69,6 +71,8 @@ function registerRoutes(router, { db, accessRepository, peopleRepository, config
     registerStorageRoutes(router);
     registerKioskRoutes(router);
     registerWallRoutes(router);
+    registerPtzRoutes(router);
+    registerAlarmRoutes(router);
     registerExportRoutes(router);
     registerUpdateRoutes(router);
     registerSchedulingRoutes(router);

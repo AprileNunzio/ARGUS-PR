@@ -1,28 +1,27 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented } from '/assets/ui.js';
+import { createAutoSaver, autosaveBar } from './autosave.js';
 import { renderCameraRoster } from '../wall_tiles.js';
 
 export async function renderCamerasApp({ api, payload }) {
     const host = el('div', { className: 'xstack' });
-    const feedback = el('div', {});
-
     let config = JSON.parse(JSON.stringify(payload.config));
     const cameras = payload.cameras ?? [];
     let activeId = config.primaryScreen;
-    let dirty = false;
 
     const current = () => config.screens.find((screen) => screen.id === activeId) ?? config.screens[0];
 
-    const save = async () => {
-        const result = await api.put('/api/wall/config', config).catch((error) => ({ failure: error }));
-        if (result.failure) {
-            feedback.replaceChildren(notice('error', `Salvataggio non riuscito: ${result.failure.message}`));
-            return;
+    const saver = createAutoSaver({
+        api,
+        onApplied: (result) => {
+            config = JSON.parse(JSON.stringify(result.config));
+            render();
         }
-        config = JSON.parse(JSON.stringify(result.config));
-        dirty = false;
-        feedback.replaceChildren(notice('ok', 'Impostazioni dei canali salvate e applicate al muro.'));
+    });
+
+    const touch = () => {
+        saver.save(config);
         render();
     };
 
@@ -30,7 +29,6 @@ export async function renderCamerasApp({ api, payload }) {
         const screen = current();
 
         host.replaceChildren(
-            feedback,
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
                     el('span', { className: 'xrow__hint', textContent: 'Le scelte valgono per lo schermo:' }),
@@ -43,14 +41,9 @@ export async function renderCamerasApp({ api, payload }) {
                         },
                         { compact: true }
                     )
-                ]),
-                el('button', {
-                    className: dirty ? 'btn btn--primary' : 'btn',
-                    type: 'button',
-                    disabled: dirty ? null : 'disabled',
-                    onclick: save
-                }, [icon('check'), el('span', { textContent: dirty ? 'Salva canali' : 'Nessuna modifica' })])
+                ])
             ]),
+            autosaveBar(saver.element),
             card({
                 title: 'Telecamere e qualita del flusso',
                 subtitle: `Escludi i canali che non devono comparire su ${screen.label} e scegli Main HD o Sub SD per ognuno`,
@@ -67,19 +60,19 @@ export async function renderCamerasApp({ api, payload }) {
                                 screen.excluded.push(cameraId);
                                 screen.tiles = screen.tiles.filter((tile) => tile.cameraId !== cameraId);
                             }
-                            dirty = true;
-                            render();
+                            touch();
                         },
                         onQuality: (cameraId, quality) => {
                             screen.quality = { ...screen.quality, [cameraId]: quality };
-                            dirty = true;
-                            render();
+                            touch();
                         }
                     })
                 ]
             })
         );
     };
+
+    host.addEventListener('argus:teardown', () => saver.stop());
 
     render();
     return host;

@@ -1,7 +1,8 @@
-import { el, chip, notice } from '/assets/dom.js';
+import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow } from '/assets/ui.js';
 import { CLOCK_FORMAT_OPTIONS, DATE_STYLE_OPTIONS, formatWallTime, formatWallDate } from '../wall_clock.js';
+import { createAutoSaver, autosaveBar } from './autosave.js';
 
 const STATUSBAR_PARTS = [
     { id: 'brand', label: 'Marchio ARGUS-PR', hint: 'Logo e nome del software a sinistra', icon: 'shield' },
@@ -28,27 +29,19 @@ const TILE_PARTS = [
 
 export async function renderAppearanceApp({ api, payload }) {
     const host = el('div', { className: 'xstack' });
-    const feedback = el('div', {});
-
     let config = JSON.parse(JSON.stringify(payload.config));
-    let dirty = false;
     let timer = null;
 
-    const save = async () => {
-        const result = await api.put('/api/wall/config', config).catch((error) => ({ failure: error }));
-        if (result.failure) {
-            feedback.replaceChildren(notice('error', `Salvataggio non riuscito: ${result.failure.message}`));
-            return;
+    const saver = createAutoSaver({
+        api,
+        onApplied: (result) => {
+            config = JSON.parse(JSON.stringify(result.config));
         }
-        config = JSON.parse(JSON.stringify(result.config));
-        dirty = false;
-        feedback.replaceChildren(notice('ok', 'Aspetto salvato e applicato immediatamente al muro.'));
-        render();
-    };
+    });
 
-    const touch = () => {
-        dirty = true;
-        render();
+    const touch = ({ redraw = true } = {}) => {
+        saver.save(config);
+        if (redraw) render();
     };
 
     const partRows = (definitions, bucket) => definitions.map((entry) => optionRow({
@@ -57,7 +50,7 @@ export async function renderAppearanceApp({ api, payload }) {
         iconName: entry.icon,
         control: toggle(bucket[entry.id] !== false, (value) => {
             bucket[entry.id] = value;
-            dirty = true;
+            touch({ redraw: false });
         }, ['Visibile', 'Nascosto'])
     }));
 
@@ -130,15 +123,7 @@ export async function renderAppearanceApp({ api, payload }) {
         const visibleParts = STATUSBAR_PARTS.filter((entry) => config.statusbar[entry.id] !== false).length;
 
         host.replaceChildren(
-            feedback,
-            el('div', { className: 'row row--end' }, [
-                el('button', {
-                    className: dirty ? 'btn btn--primary' : 'btn',
-                    type: 'button',
-                    disabled: dirty ? null : 'disabled',
-                    onclick: save
-                }, [icon('check'), el('span', { textContent: dirty ? 'Salva aspetto' : 'Nessuna modifica' })])
-            ]),
+            autosaveBar(saver.element),
             card({
                 title: 'Barra di stato',
                 subtitle: 'Accendi o spegni ogni singola informazione mostrata in fondo al muro',
@@ -171,6 +156,7 @@ export async function renderAppearanceApp({ api, payload }) {
 
     host.addEventListener('argus:teardown', () => {
         if (timer) clearInterval(timer);
+        saver.stop();
     });
 
     render();
