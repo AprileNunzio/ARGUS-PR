@@ -24,6 +24,7 @@ function mapFaceLog(row) {
     return {
         id: row.id,
         cameraId: row.camera_id,
+        cameraName: row.camera_name ?? row.camera_id,
         personId: row.person_id,
         confidence: row.confidence,
         box: [row.box_x, row.box_y, row.box_w, row.box_h],
@@ -55,8 +56,8 @@ export function createPeopleRepository(db) {
         INSERT INTO face_logs (id, camera_id, person_id, confidence, box_x, box_y, box_w, box_h, snapshot_path, created_at)
         VALUES (@id, @cameraId, @personId, @confidence, @boxX, @boxY, @boxW, @boxH, @snapshotPath, @createdAt)
     `);
-    const listFaceLogsStmt = db.prepare('SELECT * FROM face_logs ORDER BY created_at DESC LIMIT ? OFFSET ?');
-    const listFaceLogsByPersonStmt = db.prepare('SELECT * FROM face_logs WHERE person_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const listFaceLogsStmt = db.prepare('SELECT f.*, c.name AS camera_name FROM face_logs f LEFT JOIN cameras c ON c.id = f.camera_id ORDER BY f.created_at DESC LIMIT ? OFFSET ?');
+    const listFaceLogsByPersonStmt = db.prepare('SELECT f.*, c.name AS camera_name FROM face_logs f LEFT JOIN cameras c ON c.id = f.camera_id WHERE f.person_id = ? ORDER BY f.created_at DESC LIMIT ? OFFSET ?');
 
     return {
         listPeople() {

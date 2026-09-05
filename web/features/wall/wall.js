@@ -146,22 +146,40 @@ function createGrid() {
         return cell;
     };
 
+    const buildPlaceholder = (index) => el('div', { className: 'console__cell console__cell--empty' }, [
+        el('div', { className: 'console__brand' }, [
+            el('span', { className: 'console__brand-mark' }, [
+                el('span', { className: 'console__brand-glyph', textContent: 'A' })
+            ]),
+            el('span', { className: 'console__brand-name', textContent: 'ARGUS-PR' }),
+            el('span', { className: 'console__brand-by', textContent: 'by NunzioTech' }),
+            el('span', { className: 'console__brand-slot', textContent: `Riquadro ${index + 1} · libero` })
+        ])
+    ]);
+
     const buildDom = () => {
         teardown();
         updateShape();
 
         let visible = cameraList;
+        let slots = visible.length;
+
         if (spotlightCameraId) {
             visible = cameraList.filter((camera) => camera.id === spotlightCameraId);
             if (visible.length === 0) {
                 spotlightCameraId = null;
                 visible = cameraList;
             }
+            slots = visible.length;
         } else if (selectedLayout.id !== 'auto') {
-            visible = cameraList.slice(0, selectedLayout.cols * selectedLayout.rows);
+            slots = selectedLayout.cols * selectedLayout.rows;
+            visible = cameraList.slice(0, slots);
         }
 
-        element.replaceChildren(...visible.map(buildCell));
+        const cells = visible.map(buildCell);
+        for (let index = cells.length; index < slots; index += 1) cells.push(buildPlaceholder(index));
+
+        element.replaceChildren(...cells);
     };
 
     return {

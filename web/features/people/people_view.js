@@ -187,7 +187,7 @@ export async function renderPeopleView({ api, session }) {
                 el('div', { className: 'stack' }, [
                     el('div', { className: 'row' }, [
                         person ? chip(person.name, 'ok') : chip('Sconosciuto', 'info'),
-                        el('strong', { textContent: `Telecamera: ${log.cameraId}` }),
+                        el('strong', { textContent: `Telecamera: ${log.cameraName ?? log.cameraId}` }),
                         el('span', { className: 'section__hint mono', textContent: dateStr })
                     ]),
                     el('div', { className: 'row' }, [

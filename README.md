@@ -49,7 +49,10 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Eventi in tempo reale** | Canale WebSocket autenticato che spinge gli eventi al browser senza interrogazioni continue |
 | **Interfaccia responsive** | Stessa interfaccia su desktop, tablet e telefono, senza app da installare |
 | **Diretta video** | Flussi RTSP riprodotti nel browser con latenza sotto il secondo, senza plugin e senza librerie esterne |
-| **Muro video** | Griglia adattiva 1/4/9 riquadri, riconnessione automatica, stato per canale |
+| **Muro video** | Griglia 1/4/9/16/25/36/64 riquadri o adattiva, assegnazione delle telecamere ai singoli riquadri, riconnessione automatica e marchio sui riquadri liberi |
+| **Regia del muro** | Layout, qualita Main HD o Sub SD per canale, uscite video HDMI/DP/VGA e formato dell'orologio, applicati **in tempo reale** su HDMI e su web tramite il bus eventi |
+| **Riquadri AI sul muro** | I contorni di persone, veicoli e animali compaiono sul video con etichetta, confidenza e colore per classe, in tre stili, riusando i track gia calcolati senza inferenza aggiuntiva |
+| **Telemetria del motore AI** | Per ogni canale: fotogrammi al secondo, latenza di inferenza reale, rilevamenti, fotogrammi scartati, riavvii, provider ONNX in uso e ultimo errore |
 | **Registrazione continua ed evento** | Segmenti MP4 senza ricodifica, con hash SHA-256 e marcatura eventi per conservazione selettiva |
 | **Pianificazione oraria** | Griglia settimanale 7×48 slot da mezz'ora per telecamera più eccezioni giornaliere di calendario |
 | **Rilevamento movimento con zone** | Modello di sfondo adattivo a 5 fps 160×90 in pura aritmetica pixel; zone poligonali su canvas, isteresi, guardia anti-abbagliamento e cooldown |
@@ -64,8 +67,15 @@ ARGUS-PR nasce per stare interamente sulla tua infrastruttura, funzionare su har
 | **Aggiornamento automatico** | Si aggiorna da GitHub con un clic. Se la nuova versione non parte, il sistema torna da solo alla precedente: il servizio non ha nemmeno i permessi per riscrivere il proprio codice |
 | **Esportazione forense** | Il video esce senza ricodifica, accompagnato da un manifesto sigillato che elenca ogni segmento col suo hash, chi ha esportato, quando e perche. Una manomissione di un solo bit viene rilevata |
 | **Console locale** | Sul monitor collegato al server appare il muro video a schermo intero con barra di stato e indirizzo IP: la macchina diventa un'appliance |
-| **Accelerazione GPU e tuning RAM** | Decodifica/codifica GPU (CUDA/NVENC, QSV, D3D11VA, VAAPI), inferenza AI multithread, tuning RAM SQLite fino a 2GB cache e preset rapidi |
-| **Diagnostica** | `npm run doctor` verifica ambiente, permessi, database e presenza di ffmpeg prima che tu scopra i problemi in produzione |
+| **Accelerazione verificata sul campo** | Ogni acceleratore dichiarato da ffmpeg viene **provato** prima dell'uso: `ffmpeg -hwaccels` elenca cio che e compilato, non cio che la macchina possiede. Encoder promossi da una codifica di prova, inclusi NVENC, QSV, VAAPI, VideoToolbox e V4L2 mem2mem |
+| **Capacita della macchina** | Un rapporto valido su Linux, Windows e macOS elenca processore, acceleratori usabili, dispositivi V4L2, moduli codec del chip, provider ONNX e temperatura, con i comandi esatti per abilitare cio che manca. **Non applica nulla da solo** |
+| **Analisi che non affama la registrazione** | Frequenza di analisi e thread di inferenza derivati dai core disponibili; il worker scarta i fotogrammi arretrati e resta ancorato al presente invece di accumulare ritardo |
+| **Gestione macchina** | Riavvio dei servizi, alimentazione del server e pulizia selettiva delle cache dall'interfaccia, con conferma inline |
+| **Data, ora e sincronizzazione** | Formato 24h o AM/PM, fuso orario IANA applicato anche al sistema operativo, stato reale dell'ora legale e sincronizzazione NTP su richiesta |
+| **Aggiornamento offline** | Installazione da USB, share SMB/NFS gia montata, FTP o HTTPS tramite pacchetti `git bundle`, con verifica SHA-256 e lo stesso watchdog di ripristino della OTA |
+| **Tuning RAM** | Cache SQLite fino a 2GB, mmap fino a 4GB e preset rapidi per macchine da un core a molti core |
+| **Diagnostica** | `argus doctor` verifica ambiente, permessi, database e ffmpeg, e stampa il rapporto completo delle capacita hardware con i suggerimenti applicabili |
+| **Amministrazione da riga di comando** | `argus update`, `argus watchdog-reset` e `argus vision list/enable/disable`: l'intero ciclo di aggiornamento e la configurazione dell'analisi funzionano senza browser |
 
 ### In sviluppo
 

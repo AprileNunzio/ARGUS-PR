@@ -124,7 +124,7 @@ export async function renderAccessView({ api, session }) {
                         el('div', { className: 'row' }, [
                             chip(ev.decision.toUpperCase(), decKind),
                             el('strong', { className: 'mono', textContent: ev.plate }),
-                            el('span', { className: 'section__hint', textContent: `Telecamera: ${ev.cameraId}` }),
+                            el('span', { className: 'section__hint', textContent: `Telecamera: ${ev.cameraName ?? ev.cameraId}` }),
                             el('span', { className: 'section__hint mono', textContent: dateStr })
                         ])
                     ])

@@ -334,3 +334,72 @@
     .boot-screen--compact .boot-screen__detail,
     .boot-screen--compact .boot-screen__versions { display: none; }
 }
+
+.console__cell--empty {
+    display: grid;
+    place-items: center;
+    cursor: default;
+    background:
+        radial-gradient(120% 90% at 50% 0%, rgba(56, 189, 248, .07), transparent 65%),
+        linear-gradient(160deg, #0c1220, #070b12);
+    border-color: rgba(255, 255, 255, 0.045);
+}
+
+.console__cell--empty:hover { border-color: rgba(255, 255, 255, 0.09); }
+
+.console__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1rem;
+    text-align: center;
+    user-select: none;
+}
+
+.console__brand-mark {
+    display: grid;
+    place-items: center;
+    width: clamp(38px, 5.5vmin, 68px);
+    height: clamp(38px, 5.5vmin, 68px);
+    border-radius: clamp(11px, 1.5vmin, 20px);
+    background: linear-gradient(135deg, #0ea5e9, #7c5cf0);
+    box-shadow: 0 10px 30px -12px rgba(56, 189, 248, .75);
+    margin-bottom: 0.15rem;
+}
+
+.console__brand-glyph {
+    font-family: var(--display, system-ui, sans-serif);
+    font-size: clamp(1.1rem, 2.6vmin, 2.1rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+
+.console__brand-name {
+    font-family: var(--display, system-ui, sans-serif);
+    font-size: clamp(0.78rem, 1.7vmin, 1.35rem);
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: #cbd9ea;
+}
+
+.console__brand-by {
+    font-family: var(--mono, monospace);
+    font-size: clamp(0.52rem, 0.95vmin, 0.72rem);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #5f7a99;
+}
+
+.console__brand-slot {
+    margin-top: 0.35rem;
+    font-family: var(--mono, monospace);
+    font-size: clamp(0.5rem, 0.85vmin, 0.66rem);
+    letter-spacing: 0.1em;
+    color: #3f5670;
+}
+
+@media (max-width: 700px) {
+    .console__brand-slot { display: none; }
+}

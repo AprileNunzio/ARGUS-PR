@@ -21,6 +21,7 @@ function mapEvent(row) {
     return {
         id: row.id,
         cameraId: row.camera_id,
+        cameraName: row.camera_name ?? row.camera_id,
         plate: row.plate,
         decision: row.decision,
         ruleId: row.rule_id,
@@ -54,8 +55,8 @@ export function createAccessRepository(db) {
         INSERT INTO access_events (id, camera_id, plate, decision, rule_id, confidence, snapshot_path, created_at)
         VALUES (@id, @cameraId, @plate, @decision, @ruleId, @confidence, @snapshotPath, @createdAt)
     `);
-    const listEventsStmt = db.prepare('SELECT * FROM access_events ORDER BY created_at DESC LIMIT ? OFFSET ?');
-    const listEventsByPlateStmt = db.prepare('SELECT * FROM access_events WHERE plate = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const listEventsStmt = db.prepare('SELECT e.*, c.name AS camera_name FROM access_events e LEFT JOIN cameras c ON c.id = e.camera_id ORDER BY e.created_at DESC LIMIT ? OFFSET ?');
+    const listEventsByPlateStmt = db.prepare('SELECT e.*, c.name AS camera_name FROM access_events e LEFT JOIN cameras c ON c.id = e.camera_id WHERE e.plate = ? ORDER BY e.created_at DESC LIMIT ? OFFSET ?');
 
     return {
         listRules() {

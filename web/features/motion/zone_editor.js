@@ -1,5 +1,6 @@
 import { el, field, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
 
 const ZONE_COLORS = [
     'rgba(41, 128, 185, 0.4)',
@@ -24,6 +25,34 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
 
     const canvas = el('canvas', { className: 'zone-canvas' });
     const ctx = canvas.getContext('2d');
+
+    const preview = el('video', { className: 'zone-preview', autoplay: 'autoplay', playsinline: 'playsinline' });
+    preview.muted = true;
+
+    const previewState = el('span', { className: 'zone-preview__state' }, [
+        icon('camera'),
+        el('span', { textContent: 'Collegamento alla telecamera…' })
+    ]);
+
+    const player = isPlaybackSupported()
+        ? createLivePlayer(preview, camera.id, {
+            quality: 'sub',
+            onState: (value) => {
+                previewState.hidden = value === 'live';
+                const label = previewState.querySelector('span');
+                if (label) {
+                    label.textContent = value === 'unsupported'
+                        ? 'Anteprima non supportata da questo browser'
+                        : (value === 'reconnecting' ? 'Riconnessione alla telecamera…' : 'Collegamento alla telecamera…');
+                }
+            }
+        })
+        : null;
+
+    if (!player) {
+        const label = previewState.querySelector('span');
+        if (label) label.textContent = 'Anteprima non supportata da questo browser';
+    }
 
     const zonesList = el('div', { className: 'stack' });
 
@@ -221,12 +250,12 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
 
     window.addEventListener('resize', resizeCanvas);
 
-    return el('section', { className: 'panel' }, [
+    const root = el('section', { className: 'panel' }, [
         el('div', { className: 'panel__head' }, [
             el('span', { className: 'panel__title', textContent: `Zone di rilevamento movimento: ${camera.name}` })
         ]),
         el('div', { className: 'panel__body stack' }, [
-            el('div', { className: 'zone-canvas-wrapper' }, [canvas]),
+            el('div', { className: 'zone-canvas-wrapper' }, [preview, canvas, previewState]),
             el('div', { className: 'row' }, [
                 el('button', {
                     className: 'btn btn--sm',
@@ -240,9 +269,24 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
             zonesList,
             feedback,
             el('div', { className: 'row row--end' }, [
-                el('button', { className: 'btn', type: 'button', textContent: 'Chiudi', onclick: onCancel }),
+                el('button', {
+                    className: 'btn',
+                    type: 'button',
+                    textContent: 'Chiudi',
+                    onclick: () => {
+                        player?.destroy();
+                        onCancel();
+                    }
+                }),
                 saveBtn
             ])
         ])
     ]);
+
+    root.addEventListener('argus:teardown', () => {
+        player?.destroy();
+        window.removeEventListener('resize', resizeCanvas);
+    });
+
+    return root;
 }

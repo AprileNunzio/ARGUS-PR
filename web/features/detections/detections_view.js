@@ -72,7 +72,7 @@ export async function renderDetectionsView({ api, session }) {
                     el('div', { className: 'row' }, [
                         chip(label, badgeKind),
                         plateBadge,
-                        el('strong', { textContent: `Telecamera: ${ev.cameraId}` }),
+                        el('strong', { textContent: `Telecamera: ${ev.cameraName ?? ev.cameraId}` }),
                         el('span', { className: 'section__hint mono', textContent: dateStr })
                     ]),
                     el('div', { className: 'row' }, [

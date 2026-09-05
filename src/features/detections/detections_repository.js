@@ -22,6 +22,7 @@ function toEvent(row) {
     return {
         id: row.id,
         cameraId: row.camera_id,
+        cameraName: row.camera_name ?? row.camera_id,
         source: row.source,
         className: row.class_name,
         trackId: row.track_id,
@@ -125,19 +126,19 @@ export function listDetectionEvents(filters = {}) {
     const params = [];
 
     if (filters.cameraId) {
-        conditions.push('camera_id = ?');
+        conditions.push('e.camera_id = ?');
         params.push(filters.cameraId);
     }
     if (filters.className) {
-        conditions.push('class_name = ?');
+        conditions.push('e.class_name = ?');
         params.push(filters.className);
     }
     if (filters.from) {
-        conditions.push('started_at >= ?');
+        conditions.push('e.started_at >= ?');
         params.push(filters.from);
     }
     if (filters.to) {
-        conditions.push('started_at <= ?');
+        conditions.push('e.started_at <= ?');
         params.push(filters.to);
     }
 
@@ -146,7 +147,10 @@ export function listDetectionEvents(filters = {}) {
     const offset = Math.max(Number(filters.offset) || 0, 0);
 
     const rows = getDatabase()
-        .prepare(`SELECT * FROM detection_events ${whereClause} ORDER BY started_at DESC LIMIT ? OFFSET ?`)
+        .prepare(`SELECT e.*, c.name AS camera_name FROM detection_events e
+                  LEFT JOIN cameras c ON c.id = e.camera_id
+                  ${whereClause}
+                  ORDER BY e.started_at DESC LIMIT ? OFFSET ?`)
         .all(...params, limit, offset);
 
     return rows.map(toEvent);
