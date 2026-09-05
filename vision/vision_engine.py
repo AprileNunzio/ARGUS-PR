@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import onnxruntime as ort
 
-from vision_common import COCO_CLASSES, VEHICLE_CLASSES, get_glyph_templates, letterbox, nms
+from vision_common import COCO_CLASSES, VEHICLE_CLASSES, MIN_BOX_AREA, MIN_BOX_SIDE, get_glyph_templates, letterbox, nms
 
 class VisionEngine:
     def __init__(self, models_dir, profile, provider='auto', intra_threads=0, inter_threads=0):
@@ -134,7 +134,14 @@ class VisionEngine:
         keep = nms(np.array(boxes), np.array(scores), 0.45)
         detections = []
         for idx in keep:
-            if self.min_size > 0 and boxes[idx][2] * boxes[idx][3] < self.min_size:
+            width = float(boxes[idx][2])
+            height = float(boxes[idx][3])
+
+            if width < MIN_BOX_SIDE or height < MIN_BOX_SIDE:
+                continue
+            if width * height < MIN_BOX_AREA:
+                continue
+            if self.min_size > 0 and width * height < self.min_size:
                 continue
             detections.append({
                 'className': COCO_CLASSES[int(class_ids[idx])],
