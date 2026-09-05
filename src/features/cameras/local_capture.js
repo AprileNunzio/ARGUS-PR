@@ -76,6 +76,7 @@ function createBroker(cameraId) {
     function outputArgs(tools) {
         const args = [];
         const encoder = pickEncoder(tools.accelerators, secrets?.hwaccel === 'none' ? 'libx264' : 'auto', tools.encoders);
+        let liveConfigured = false;
 
         for (const consumer of consumers.values()) {
             if (consumer.role === 'record') {
@@ -98,12 +99,15 @@ function createBroker(cameraId) {
             }
 
             if (consumer.role === 'live') {
-                args.push('-map', '0:v:0', '-an');
-                args.push(...encoderArgs(encoder, { gop: 50, bitrate: '2500k', maxrate: '3000k', bufsize: '4000k' }));
-                args.push('-f', 'mp4');
-                args.push('-movflags', 'frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset');
-                args.push('-frag_duration', '500000');
-                args.push('pipe:1');
+                if (!liveConfigured) {
+                    args.push('-map', '0:v:0', '-an');
+                    args.push(...encoderArgs(encoder, { gop: 50, bitrate: '2500k', maxrate: '3000k', bufsize: '4000k' }));
+                    args.push('-f', 'mp4');
+                    args.push('-movflags', 'frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset');
+                    args.push('-frag_duration', '500000');
+                    args.push('pipe:1');
+                    liveConfigured = true;
+                }
                 continue;
             }
 
@@ -131,14 +135,22 @@ function createBroker(cameraId) {
         args.splice(args.indexOf('-i'), 0, '-y');
         args.push(...outputArgs(tools));
 
-        const live = [...consumers.values()].find((consumer) => consumer.role === 'live');
+        const hasLive = [...consumers.values()].some((consumer) => consumer.role === 'live');
         child = spawn(tools.ffmpeg.path, args, {
             windowsHide: true,
             shell: false,
-            stdio: ['ignore', live ? 'pipe' : 'ignore', 'pipe']
+            stdio: ['ignore', hasLive ? 'pipe' : 'ignore', 'pipe']
         });
 
-        if (live) child.stdout.on('data', (chunk) => live.stream.write(chunk));
+        if (hasLive) {
+            child.stdout.on('data', (chunk) => {
+                for (const consumer of consumers.values()) {
+                    if (consumer.role === 'live' && consumer.stream?.writable) {
+                        consumer.stream.write(chunk);
+                    }
+                }
+            });
+        }
 
         child.stderr.on('data', (chunk) => {
             const text = chunk.toString('utf8').trim();
@@ -178,9 +190,31 @@ function createBroker(cameraId) {
     return {
         attach(camera, role, options) {
             secrets = camera;
+            const hadLive = [...consumers.values()].some((c) => c.role === 'live');
             const token = randomBytes(8).toString('hex');
             const consumer = { role, options: options ?? {}, stream: role === 'record' ? null : new PassThrough() };
             consumers.set(token, consumer);
+
+            if (role === 'live' && child && hadLive) {
+                return {
+                    stream: consumer.stream,
+                    stop() {
+                        if (!consumers.delete(token)) return;
+                        consumer.stream?.end();
+                        if (consumers.size === 0) {
+                            if (restartTimer) clearTimeout(restartTimer);
+                            restartTimer = null;
+                            killChild();
+                            closeServers();
+                            brokers.delete(cameraId);
+                            return;
+                        }
+                        const stillHasLive = [...consumers.values()].some((c) => c.role === 'live');
+                        if (!stillHasLive) rebuild();
+                    }
+                };
+            }
+
             rebuild();
 
             return {
@@ -196,6 +230,8 @@ function createBroker(cameraId) {
                         brokers.delete(cameraId);
                         return;
                     }
+                    const stillHasLive = [...consumers.values()].some((c) => c.role === 'live');
+                    if (role === 'live' && stillHasLive) return;
                     rebuild();
                 }
             };

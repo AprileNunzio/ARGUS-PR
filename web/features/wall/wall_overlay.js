@@ -184,7 +184,14 @@ export function createOverlay(video = null) {
             context.shadowBlur = 0;
 
             const parts = [];
-            if (settings.showLabel) parts.push(entry.plate ?? labelFor(entry.className));
+            if (settings.showLabel) {
+                if (entry.personName) {
+                    const roleSuffix = entry.personRole ? ` (${entry.personRole})` : '';
+                    parts.push(`👤 ${entry.personName}${roleSuffix}`);
+                } else {
+                    parts.push(entry.plate ?? labelFor(entry.className));
+                }
+            }
             if (settings.showConfidence) parts.push(`${Math.round(entry.confidence * 100)}%`);
             if (settings.showTrackId) parts.push(`#${entry.id}`);
             if (parts.length > 0) drawCaption(context, x, y, parts.join('  '), colour);

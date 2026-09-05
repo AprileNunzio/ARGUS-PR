@@ -2,7 +2,7 @@ import { createLogger } from '../../kernel/logger.js';
 import { publish, subscribe, Topic } from '../../kernel/event_bus.js';
 import { Tracker } from './tracking.js';
 import { voteOnPlate } from './plates.js';
-import { findBestMatch, SFACE_COSINE_THRESHOLD } from './face_matcher.js';
+import { findBestMatch, estimateFacePose3D, updateMovingCentroid, SFACE_COSINE_THRESHOLD } from './face_matcher.js';
 import { evaluateAccess } from '../access/access_rules.js';
 import { createVisionProcess } from './vision_process.js';
 import { profileFor } from './analytics_repository.js';
@@ -29,6 +29,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
     const trackers = new Map();
     const runtime = new Map();
     const lastBroadcast = new Map();
+    const lastFaceLogs = new Map();
     const modelsDir = modelsDirFor(config);
 
     function plannedFor(camera) {
@@ -144,19 +145,38 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
     function recordFaces(cameraId, plan, detections, timestamp) {
         if (!plan.recognizeFaces) return;
 
+        const people = peopleRepository.listPeople();
         for (const detection of detections) {
             if (detection.className !== 'face' || !detection.faceEmbedding) continue;
 
-            const people = peopleRepository.listPeople();
             const match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
+            const pose3d = estimateFacePose3D(detection.landmarks);
+            const personId = match ? match.person.id : null;
+            const cooldownKey = `${cameraId}:${personId ?? 'unknown'}`;
+            const lastLog = lastFaceLogs.get(cooldownKey);
+
+            if (lastLog && (timestamp - lastLog.at < 45000) && lastLog.pose === pose3d.pose) {
+                continue;
+            }
+
+            lastFaceLogs.set(cooldownKey, { at: timestamp, pose: pose3d.pose });
 
             peopleRepository.recordFaceLog({
                 cameraId,
-                personId: match ? match.person.id : null,
+                personId,
                 confidence: detection.confidence,
                 box: detection.box,
+                pose3d,
                 createdAt: new Date(timestamp).toISOString()
             });
+
+            if (match && match.score >= 0.55 && match.person.embedding?.length > 0) {
+                const updatedEmb = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
+                peopleRepository.updatePerson(match.person.id, {
+                    embedding: updatedEmb,
+                    sampleCount: (match.person.sampleCount || 1) + 1
+                });
+            }
         }
     }
 
@@ -195,18 +215,32 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         if (timestamp - previous < LIVE_INTERVAL_MS) return;
         lastBroadcast.set(cameraId, timestamp);
 
+        const people = plan.recognizeFaces ? peopleRepository.listPeople() : [];
         const boxes = [];
         for (const track of tracker.tracks.values()) {
             if (!track.isConfirmed || !plan.accepted.has(track.className)) continue;
             if (!Array.isArray(track.box) || track.box.length !== 4) continue;
             if (boxes.length >= MAX_LIVE_BOXES) break;
 
+            let personName = null;
+            let personRole = null;
+            if (track.className === 'face' && track.faceEmbeddings?.length > 0) {
+                const bestEmbedding = track.faceEmbeddings[track.faceEmbeddings.length - 1].embedding;
+                const match = findBestMatch(bestEmbedding, people, plan.faceThreshold);
+                if (match) {
+                    personName = match.person.name;
+                    personRole = match.person.role;
+                }
+            }
+
             boxes.push({
                 id: track.id.slice(0, 8),
                 className: track.className,
                 confidence: Math.round(track.maxConfidence * 100) / 100,
                 box: track.box.map((value) => Math.round(value * 1000) / 1000),
-                plate: track.plateReadings?.[0]?.text ?? null
+                plate: track.plateReadings?.[0]?.text ?? null,
+                personName,
+                personRole
             });
         }
 

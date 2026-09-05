@@ -26,16 +26,31 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
 
     router.post('/api/people', async (ctx) => {
         const name = requireString(ctx.body?.name, 'name', { min: 1, max: 120 });
+        const role = optionalString(ctx.body?.role, 'role', { max: 64 }) ?? 'dipendente';
+        const department = optionalString(ctx.body?.department, 'department', { max: 120 }) ?? '';
+        const specialPermissions = Array.isArray(ctx.body?.specialPermissions) ? ctx.body.specialPermissions : [];
+        const face3dParams = typeof ctx.body?.face3dParams === 'object' && ctx.body.face3dParams !== null ? ctx.body.face3dParams : {};
+        const gallery = Array.isArray(ctx.body?.gallery) ? ctx.body.gallery.slice(0, 3) : [];
         const notes = optionalString(ctx.body?.notes, 'notes', { max: 1000 }) ?? '';
         const embedding = ctx.body?.embedding ? requireEmbedding(ctx.body.embedding, 'embedding') : [];
         const photoPath = optionalString(ctx.body?.photoPath, 'photoPath', { max: 500 });
 
-        const person = peopleRepository.createPerson({ name, notes, embedding, photoPath });
+        const person = peopleRepository.createPerson({
+            name,
+            role,
+            department,
+            specialPermissions,
+            face3dParams,
+            gallery,
+            notes,
+            embedding,
+            photoPath
+        });
         recordAudit(db, {
             userId: ctx.actor?.id,
             action: 'people.create',
             resource: person.id,
-            details: { name: person.name }
+            details: { name: person.name, role: person.role }
         });
         return { body: { person }, status: 201 };
     }, { permission: Permission.CAMERA_MANAGE });
@@ -46,6 +61,21 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
 
         if (ctx.body?.name !== undefined) {
             changes.name = requireString(ctx.body.name, 'name', { min: 1, max: 120 });
+        }
+        if (ctx.body?.role !== undefined) {
+            changes.role = optionalString(ctx.body.role, 'role', { max: 64 }) ?? 'dipendente';
+        }
+        if (ctx.body?.department !== undefined) {
+            changes.department = optionalString(ctx.body.department, 'department', { max: 120 }) ?? '';
+        }
+        if (ctx.body?.specialPermissions !== undefined) {
+            changes.specialPermissions = Array.isArray(ctx.body.specialPermissions) ? ctx.body.specialPermissions : [];
+        }
+        if (ctx.body?.face3dParams !== undefined) {
+            changes.face3dParams = typeof ctx.body.face3dParams === 'object' && ctx.body.face3dParams !== null ? ctx.body.face3dParams : {};
+        }
+        if (ctx.body?.gallery !== undefined) {
+            changes.gallery = Array.isArray(ctx.body.gallery) ? ctx.body.gallery.slice(0, 3) : [];
         }
         if (ctx.body?.notes !== undefined) {
             changes.notes = optionalString(ctx.body.notes, 'notes', { max: 1000 }) ?? '';
@@ -99,6 +129,22 @@ export function registerPeopleRoutes({ router, peopleRepository, db, config }) {
         const faceLogs = peopleRepository.listFaceLogs({ limit, offset, personId });
         return { body: { faceLogs } };
     }, { permission: Permission.LIVE_VIEW });
+
+    router.post('/api/people/logs/:id/correct', async (ctx) => {
+        const logId = requireId(ctx.params.id, 'id');
+        const newPersonId = ctx.body?.personId ? requireId(ctx.body.personId, 'personId') : null;
+
+        const updated = peopleRepository.correctFaceLog(logId, newPersonId);
+        if (!updated) throw notFound('Face log not found');
+
+        recordAudit(db, {
+            userId: ctx.actor?.id,
+            action: 'people.correct_log',
+            resource: logId,
+            details: { correctedPersonId: newPersonId }
+        });
+        return { body: { ok: true, logId, correctedPersonId: newPersonId } };
+    }, { permission: Permission.CAMERA_MANAGE });
 
     router.post('/api/people/extract-face', async (ctx) => {
         const imageBase64 = requireString(ctx.body?.imageBase64, 'imageBase64', { min: 10, max: 15000000 });

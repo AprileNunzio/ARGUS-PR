@@ -1,5 +1,15 @@
-import { el, chip, empty, field, notice, confirmPanel } from '/assets/dom.js';
+import { el, chip, empty, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
+import { renderAddPersonForm } from './people_form.js';
+import { createFace3DCanvas, renderBiometricBadge } from './people_face3d.js';
+
+const ROLE_CHIPS = {
+    dipendente: { label: 'Dipendente', variant: 'ok' },
+    responsabile: { label: 'Responsabile', variant: 'info' },
+    visitatore: { label: 'Visitatore', variant: 'warn' },
+    fornitore: { label: 'Fornitore', variant: 'warn' },
+    speciale: { label: 'VIP / Speciale', variant: 'violet' }
+};
 
 export async function renderPeopleView({ api, session }) {
     const outlet = el('div', { className: 'view' });
@@ -11,105 +21,78 @@ export async function renderPeopleView({ api, session }) {
     const confirmHost = el('div', {});
     const logsHost = el('div', { className: 'stack' });
 
-    function renderAddForm() {
-        const nameInput = el('input', { className: 'input', type: 'text', placeholder: 'Mario Rossi', required: 'required' });
-        const notesInput = el('textarea', { className: 'input', rows: '2', placeholder: 'Dipendente, Responsabile, Visitatore' });
-        const fileInput = el('input', { className: 'input', type: 'file', accept: 'image/*' });
-        
-        let extractedEmbedding = [];
-        let thumbnailData = null;
+    function renderPersonCard(p) {
+        const hasBiometrics = Array.isArray(p.embedding) && p.embedding.length > 0;
+        const dateStr = new Date(p.createdAt).toLocaleDateString();
+        const roleConfig = ROLE_CHIPS[p.role] ?? { label: p.role, variant: 'info' };
 
-        const previewContainer = el('div', { className: 'row row--tight' });
-        const previewImg = el('img', { className: 'avatar-preview' });
-        const statusBadge = el('div', { className: 'section__hint', textContent: 'Seleziona una foto frontale chiara per estrarre la biometria facciale.' });
-        previewContainer.append(previewImg, statusBadge);
+        const avatarEl = p.photoPath 
+            ? el('img', { src: p.photoPath, className: 'avatar-thumb' })
+            : el('div', { className: 'avatar-thumb--empty' }, [icon('user')]);
 
-        const feedback = el('div', { hidden: 'hidden' });
-        const saveBtn = el('button', { className: 'btn btn--primary', type: 'submit', textContent: 'Salva Persona' });
-        const cancelBtn = el('button', {
-            className: 'btn',
-            type: 'button',
-            textContent: 'Annulla',
-            onclick: () => formHost.setAttribute('hidden', 'hidden')
+        const permChips = (p.specialPermissions ?? []).map(perm => {
+            const labels = {
+                varchi: 'Varchi',
+                h24: 'H24',
+                vip: 'VIP',
+                allarme_silenzioso: 'Allarme'
+            };
+            return el('span', { className: 'chip chip--info mono', textContent: labels[perm] ?? perm });
         });
 
-        fileInput.onchange = async () => {
-            const file = fileInput.files?.[0];
-            if (!file) return;
+        const has3d = p.face3dParams && Object.keys(p.face3dParams).length > 0;
+        let canvas3D = null;
+        if (has3d) {
+            canvas3D = el('div', { className: 'face3d-mini-host' }, [
+                createFace3DCanvas(p.face3dParams, 90, 90)
+            ]);
+        }
 
-            statusBadge.textContent = 'Analisi biometrica in corso (YuNet + SFace)...';
-            statusBadge.className = 'section__hint mono';
-            feedback.setAttribute('hidden', 'hidden');
+        const galleryThumbs = (p.gallery ?? []).map((photo) => el('img', {
+            src: photo,
+            className: 'avatar-thumb avatar-thumb--sm'
+        }));
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const base64 = e.target.result;
-                previewImg.src = base64;
-                previewImg.className = 'avatar-preview avatar-preview--active';
-
-                try {
-                    const res = await api.post('/api/people/extract-face', { imageBase64: base64 });
-                    if (res && res.ok) {
-                        extractedEmbedding = res.embedding;
-                        thumbnailData = res.thumbnail || base64;
-                        if (res.thumbnail) previewImg.src = res.thumbnail;
-                        previewImg.className = 'avatar-preview avatar-preview--active';
-                        statusBadge.replaceChildren(
-                            chip('Volto Rilevato & Codificato', 'ok'),
-                            el('span', { className: 'section__hint mono', textContent: `Confidenza: ${Math.round(res.confidence * 100)}% (128-D SFace)` })
-                        );
-                    } else {
-                        throw new Error(res?.error || 'Nessun volto valido trovato nella foto');
+        const deleteBtn = canManage ? el('button', {
+            className: 'btn btn--sm btn--danger',
+            type: 'button',
+            textContent: 'Elimina (GDPR)',
+            onclick: () => {
+                confirmHost.replaceChildren(confirmPanel({
+                    title: `Cancellare definitivamente ${p.name}?`,
+                    message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati, ai sensi del GDPR. L operazione non e reversibile.',
+                    confirmLabel: 'Cancella tutto',
+                    onCancel: () => confirmHost.replaceChildren(),
+                    onConfirm: async () => {
+                        await api.remove(`/api/people/${p.id}`).catch(() => undefined);
+                        confirmHost.replaceChildren();
+                        await loadPeople();
                     }
-                } catch (err) {
-                    previewImg.className = 'avatar-preview avatar-preview--warn';
-                    statusBadge.replaceChildren(
-                        chip('Nessun volto riconosciuto', 'warn'),
-                        el('span', { className: 'section__hint', textContent: err.message || 'Prova con una foto più ravvicinata e luminosa' })
-                    );
-                    extractedEmbedding = [];
-                    thumbnailData = null;
-                }
-            };
-            reader.readAsDataURL(file);
-        };
-
-        const form = el('form', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Iscrizione Biometrica Persona' })]),
-            el('div', { className: 'panel__body stack' }, [
-                field('Nome e Cognome', nameInput),
-                field('Fotografia del Volto (Estrazione Biometrica)', fileInput),
-                previewContainer,
-                field('Note informative / Ruolo', notesInput),
-                feedback,
-                el('div', { className: 'row row--end' }, [cancelBtn, saveBtn])
-            ])
-        ]);
-
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            saveBtn.disabled = true;
-            feedback.setAttribute('hidden', 'hidden');
-
-            const outcome = await api.post('/api/people', {
-                name: nameInput.value,
-                notes: notesInput.value,
-                embedding: extractedEmbedding,
-                photoPath: thumbnailData
-            }).then(() => null).catch((err) => err);
-
-            saveBtn.disabled = false;
-            if (outcome instanceof Error) {
-                feedback.replaceChildren(notice('error', outcome.message));
-                feedback.removeAttribute('hidden');
-                return;
+                }));
+                confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+        }) : null;
 
-            formHost.setAttribute('hidden', 'hidden');
-            await loadPeople();
-        };
-
-        return form;
+        return el('div', { className: 'device-row row--space' }, [
+            el('div', { className: 'row row--tight' }, [
+                avatarEl,
+                canvas3D,
+                el('div', { className: 'stack' }, [
+                    el('div', { className: 'row row--wrap row--tight' }, [
+                        el('strong', { textContent: p.name }),
+                        chip(roleConfig.label, roleConfig.variant),
+                        p.department ? chip(p.department, 'info') : null,
+                        hasBiometrics ? chip(`vettori: ${p.sampleCount || 1}`, 'ok') : chip('senza foto', 'warn'),
+                        has3d ? renderBiometricBadge(p.face3dParams) : null
+                    ]),
+                    permChips.length > 0 ? el('div', { className: 'row row--wrap row--tight' }, permChips) : null,
+                    p.notes ? el('div', { className: 'section__hint', textContent: p.notes }) : null,
+                    galleryThumbs.length > 0 ? el('div', { className: 'row row--tight' }, galleryThumbs) : null,
+                    el('span', { className: 'section__hint mono', textContent: `Iscritto il ${dateStr}` })
+                ])
+            ]),
+            deleteBtn
+        ]);
     }
 
     async function loadPeople() {
@@ -121,49 +104,7 @@ export async function renderPeopleView({ api, session }) {
             return;
         }
 
-        const rows = people.map((p) => {
-            const hasBiometrics = Array.isArray(p.embedding) && p.embedding.length > 0;
-            const dateStr = new Date(p.createdAt).toLocaleDateString();
-
-            const avatarEl = p.photoPath 
-                ? el('img', { src: p.photoPath, className: 'avatar-thumb' })
-                : el('div', { className: 'avatar-thumb--empty' }, [icon('user')]);
-
-            const deleteBtn = canManage ? el('button', {
-                className: 'btn btn--sm btn--danger',
-                type: 'button',
-                textContent: 'Elimina (GDPR)',
-                onclick: () => {
-                    confirmHost.replaceChildren(confirmPanel({
-                        title: `Cancellare definitivamente ${p.name}?`,
-                        message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati, ai sensi del GDPR. L operazione non e reversibile.',
-                        confirmLabel: 'Cancella tutto',
-                        onCancel: () => confirmHost.replaceChildren(),
-                        onConfirm: async () => {
-                            await api.remove(`/api/people/${p.id}`).catch(() => undefined);
-                            confirmHost.replaceChildren();
-                            await loadPeople();
-                        }
-                    }));
-                    confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }) : null;
-
-            return el('div', { className: 'device-row' }, [
-                avatarEl,
-                el('div', { className: 'stack' }, [
-                    el('div', { className: 'row' }, [
-                        el('strong', { textContent: p.name }),
-                        hasBiometrics ? chip('biometria 128-D', 'ok') : chip('senza foto', 'warn'),
-                        el('span', { className: 'section__hint mono', textContent: `Iscritto il ${dateStr}` })
-                    ]),
-                    p.notes ? el('div', { className: 'section__hint', textContent: p.notes }) : null
-                ]),
-                deleteBtn
-            ]);
-        });
-
-        listHost.replaceChildren(...rows);
+        listHost.replaceChildren(...people.map(renderPersonCard));
     }
 
     async function loadLogs() {
@@ -176,25 +117,66 @@ export async function renderPeopleView({ api, session }) {
         }
 
         const peopleData = await api.get('/api/people').catch(() => ({ people: [] }));
-        const peopleMap = new Map((peopleData.people ?? []).map(p => [p.id, p]));
+        const peopleList = peopleData.people ?? [];
+        const peopleMap = new Map(peopleList.map(p => [p.id, p]));
 
         const rows = logs.map((log) => {
             const person = log.personId ? peopleMap.get(log.personId) : null;
             const dateStr = new Date(log.createdAt).toLocaleString();
             const confPct = `${Math.round((log.confidence ?? 0) * 100)}%`;
 
-            return el('div', { className: 'device-row' }, [
+            let personBadge = chip('Sconosciuto', 'warn');
+            if (person) {
+                const roleConfig = ROLE_CHIPS[person.role] ?? { label: person.role, variant: 'ok' };
+                personBadge = chip(`${person.name} (${roleConfig.label})`, roleConfig.variant);
+            }
+
+            const correctBtn = canManage ? el('button', {
+                className: 'btn btn--sm btn--ghost',
+                type: 'button',
+                textContent: 'Correggi Riconoscimento',
+                onclick: () => {
+                    const selectPerson = el('select', { className: 'input select' }, [
+                        el('option', { value: '', textContent: '– Segna come Sconosciuto –' }),
+                        ...peopleList.map(p => el('option', {
+                            value: p.id,
+                            textContent: `${p.name} (${p.role})`,
+                            selected: p.id === log.personId ? 'selected' : undefined
+                        }))
+                    ]);
+
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: 'Correzione Forense Transito Volto',
+                        message: 'Seleziona la persona reale corretta per questo transito. Il sistema aggiornerà il log di audit.',
+                        body: selectPerson,
+                        confirmLabel: 'Salva Correzione',
+                        onCancel: () => confirmHost.replaceChildren(),
+                        onConfirm: async () => {
+                            const newId = selectPerson.value || null;
+                            await api.post(`/api/people/logs/${log.id}/correct`, { personId: newId }).catch(() => undefined);
+                            confirmHost.replaceChildren();
+                            await loadLogs();
+                        }
+                    }));
+                    confirmHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }) : null;
+
+            return el('div', { className: 'device-row row--space' }, [
                 el('div', { className: 'stack' }, [
-                    el('div', { className: 'row' }, [
-                        person ? chip(person.name, 'ok') : chip('Sconosciuto', 'info'),
+                    el('div', { className: 'row row--wrap row--tight' }, [
+                        personBadge,
+                        log.isVerified ? chip('Verificato', 'ok') : null,
+                        log.pose3d?.pose ? renderBiometricBadge(log.pose3d) : null,
                         el('strong', { textContent: `Telecamera: ${log.cameraName ?? log.cameraId}` }),
                         el('span', { className: 'section__hint mono', textContent: dateStr })
                     ]),
-                    el('div', { className: 'row' }, [
+                    el('div', { className: 'row row--wrap row--tight' }, [
                         el('span', { className: 'section__hint', textContent: `Confidenza: ${confPct}` }),
                         log.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${log.box.map(b => Number(b).toFixed(2)).join(', ')}]` }) : null
                     ])
-                ])
+                ]),
+                correctBtn
             ]);
         });
 
@@ -204,7 +186,7 @@ export async function renderPeopleView({ api, session }) {
     const tabPeopleBtn = el('button', {
         className: 'seg__btn seg__btn--on',
         type: 'button',
-        textContent: 'Anagrafica',
+        textContent: 'Catalogo Persone',
         onclick: () => {
             currentTab = 'people';
             tabPeopleBtn.classList.add('seg__btn--on');
@@ -217,12 +199,12 @@ export async function renderPeopleView({ api, session }) {
     const tabLogsBtn = el('button', {
         className: 'seg__btn',
         type: 'button',
-        textContent: 'Transiti',
+        textContent: 'Transiti & Forense',
         onclick: () => {
             currentTab = 'logs';
             tabLogsBtn.classList.add('seg__btn--on');
             tabPeopleBtn.classList.remove('seg__btn--on');
-            panelBody.replaceChildren(logsHost);
+            panelBody.replaceChildren(confirmHost, logsHost);
             loadLogs();
         }
     });
@@ -231,17 +213,24 @@ export async function renderPeopleView({ api, session }) {
         className: 'btn btn--primary btn--sm',
         type: 'button',
         onclick: () => {
-            formHost.replaceChildren(renderAddForm());
+            formHost.replaceChildren(renderAddPersonForm({
+                api,
+                onSaved: async () => {
+                    formHost.setAttribute('hidden', 'hidden');
+                    await loadPeople();
+                },
+                onCancel: () => formHost.setAttribute('hidden', 'hidden')
+            }));
             formHost.removeAttribute('hidden');
             formHost.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [icon('plus'), el('span', { textContent: 'Iscrivi' })]) : null;
+    }, [icon('plus'), el('span', { textContent: 'Nuova Persona' })]) : null;
 
     const panelBody = el('div', { className: 'panel__body' }, [confirmHost, listHost]);
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Volti' }),
+            el('h1', { className: 'view__title', textContent: 'Catalogo Persone & Volti' }),
             el('div', { className: 'row row--tight' }, [addBtn])
         ]),
         el('div', { className: 'row schedule-presets' }, [tabPeopleBtn, tabLogsBtn]),
