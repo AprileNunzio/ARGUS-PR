@@ -137,9 +137,9 @@ class VisionEngine:
             if self.min_size > 0 and boxes[idx][2] * boxes[idx][3] < self.min_size:
                 continue
             detections.append({
-                'className': COCO_CLASSES[class_ids[idx]],
+                'className': COCO_CLASSES[int(class_ids[idx])],
                 'confidence': round(float(scores[idx]), 3),
-                'box': [round(v, 4) for v in boxes[idx]]
+                'box': [round(float(v), 4) for v in boxes[idx]]
             })
         return detections
 
@@ -183,8 +183,8 @@ class VisionEngine:
 
             results.append({
                 'className': 'face',
-                'confidence': round(score, 3),
-                'box': [round(norm_x, 4), round(norm_y, 4), round(norm_w, 4), round(norm_h, 4)],
+                'confidence': round(float(score), 3),
+                'box': [round(float(norm_x), 4), round(float(norm_y), 4), round(float(norm_w), 4), round(float(norm_h), 4)],
                 'faceEmbedding': embedding,
                 'landmarks': landmarks if landmarks else None
             })
@@ -301,8 +301,8 @@ class VisionEngine:
                         obj['plateText'] = text
                         plate_dets.append({
                             'className': 'plate',
-                            'confidence': round(conf, 3),
-                            'box': [round(norm_px, 4), round(norm_py, 4), round(norm_pw, 4), round(norm_ph, 4)],
+                            'confidence': round(float(conf), 3),
+                            'box': [round(float(norm_px), 4), round(float(norm_py), 4), round(float(norm_pw), 4), round(float(norm_ph), 4)],
                             'plateText': text
                         })
                         break

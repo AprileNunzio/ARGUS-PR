@@ -204,7 +204,7 @@ tbody tr:hover { background: var(--surface-2); }
 tr:last-child td { border-bottom: none; }
 td.right { text-align: right; white-space: nowrap; }
 
-.spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 0 var(--gap-4); padding: 0.75rem 0.9rem; }
+.spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 0 var(--gap-5); padding: 0.75rem 0.9rem; }
 .spec { display: flex; justify-content: space-between; gap: var(--gap-3); padding: 0.3rem 0; border-bottom: 1px solid var(--rule-soft); min-width: 0; }
 .spec:last-child { border-bottom: none; }
 .spec__k { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }

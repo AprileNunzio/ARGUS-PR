@@ -297,3 +297,40 @@
 }
 
 .console__overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+
+.boot-screen--compact {
+    inset: auto 0 auto 0;
+    top: 0;
+    height: auto;
+    background: linear-gradient(180deg, rgba(7, 11, 18, .96), rgba(7, 11, 18, .82));
+    border-bottom: 1px solid rgba(56, 189, 248, .35);
+    box-shadow: 0 12px 32px -18px rgba(0, 0, 0, .9);
+}
+
+.boot-screen--compact .boot-screen__glow,
+.boot-screen--compact .boot-screen__steps,
+.boot-screen--compact .boot-screen__logo { display: none; }
+
+.boot-screen--compact .boot-screen__panel {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    max-width: none;
+    width: 100%;
+    padding: 0.6rem 1.2rem;
+    text-align: left;
+}
+
+.boot-screen--compact .boot-screen__mark { width: 30px; height: 30px; margin: 0; flex: 0 0 30px; }
+.boot-screen--compact .boot-screen__ring { border-width: 2px; }
+.boot-screen--compact .boot-screen__brand { display: none; }
+.boot-screen--compact .boot-screen__title { font-size: 0.95rem; margin: 0; white-space: nowrap; }
+.boot-screen--compact .boot-screen__detail { font-size: 0.78rem; flex: 1; margin: 0; }
+.boot-screen--compact .boot-screen__bar { width: 160px; margin: 0; flex: 0 0 160px; }
+.boot-screen--compact .boot-screen__versions { margin: 0; white-space: nowrap; }
+.boot-screen--compact .boot-screen__warning { margin: 0; white-space: nowrap; }
+
+@media (max-width: 900px) {
+    .boot-screen--compact .boot-screen__detail,
+    .boot-screen--compact .boot-screen__versions { display: none; }
+}

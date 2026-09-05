@@ -6,7 +6,7 @@ const PHASE_COPY = {
     },
     pending: {
         title: 'Verifica della nuova versione',
-        detail: 'Controllo di stabilita in corso, il ripristino automatico e pronto',
+        detail: 'La nuova versione e installata e in prova: se non si stabilizza entro novanta secondi il sistema ripristina da solo quella precedente. La sorveglianza continua a funzionare.',
         step: 2
     },
     'rolled-back': {
@@ -81,11 +81,13 @@ export function createBootScreen() {
         element,
         hide() {
             element.hidden = true;
+            element.classList.remove('boot-screen--compact');
         },
-        show(phase, { currentVersion = null, targetRef = null, attempts = 0, maxAttempts = 3 } = {}) {
+        show(phase, { currentVersion = null, targetRef = null, attempts = 0, maxAttempts = 3, compact = false, since = null } = {}) {
             const copy = PHASE_COPY[phase] ?? PHASE_COPY.reconnecting;
 
             element.hidden = false;
+            element.classList.toggle('boot-screen--compact', compact === true);
             title.textContent = copy.title;
             detail.textContent = copy.detail;
 
@@ -101,6 +103,7 @@ export function createBootScreen() {
             if (currentVersion) parts.push(`versione installata v${currentVersion}`);
             if (targetRef) parts.push(`destinazione ${targetRef}`);
             if (phase === 'pending' && attempts > 0) parts.push(`tentativo ${attempts} di ${maxAttempts}`);
+            if (since !== null) parts.push(`da ${Math.max(0, Math.round(since))} secondi`);
             versions.textContent = parts.join(' · ');
 
             const risky = phase === 'requested' || phase === 'pending';

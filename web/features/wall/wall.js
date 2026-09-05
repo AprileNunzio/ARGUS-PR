@@ -228,13 +228,18 @@ async function boot() {
         }
 
         if (phase === 'requested' || phase === 'pending') {
+            const showing = plan.length > 0;
+
             boot.show(phase, {
                 currentVersion: status.version,
                 targetRef: status.update.targetRef,
                 attempts: status.update.attempts,
-                maxAttempts: status.update.maxAttempts
+                maxAttempts: status.update.maxAttempts,
+                since: status.uptimeSeconds,
+                compact: showing
             });
-            return true;
+
+            return !showing;
         }
 
         boot.hide();
@@ -312,7 +317,7 @@ Effettua il login su ${bar.webUrl} per visualizzare il Muro Video.`);
         }
 
         bar.setLink('offline');
-        boot.show('reconnecting', { currentVersion: serverVersion });
+        boot.show('reconnecting', { currentVersion: serverVersion, compact: plan.length > 0 });
     });
 
     const safeMetrics = () => request('/api/console/status')
@@ -320,7 +325,7 @@ Effettua il login su ${bar.webUrl} per visualizzare il Muro Video.`);
             bar.update(status);
             trackVersion(status);
         })
-        .catch(() => boot.show('reconnecting', { currentVersion: serverVersion }));
+        .catch(() => boot.show('reconnecting', { currentVersion: serverVersion, compact: plan.length > 0 }));
 
     const safeConfig = () => {
         if (!authenticated) return;

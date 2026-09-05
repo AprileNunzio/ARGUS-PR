@@ -44,10 +44,10 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.025em; margin: 0; l
 .fatal { margin: 2rem; }
 
 .grid { display: grid; gap: var(--gap-3); }
-.grid--stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.grid--stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
 .grid--cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .grid--wide { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
-.form-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.form-grid { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 
 .boot {
     flex: 1;

@@ -37,6 +37,18 @@ MAX_SKIP_PER_CYCLE = 12
 CAN_POLL = os.name == 'posix'
 
 
+def plain_number(value):
+    item = getattr(value, 'item', None)
+    if callable(item):
+        return item()
+
+    tolist = getattr(value, 'tolist', None)
+    if callable(tolist):
+        return tolist()
+
+    raise TypeError(f'Object of type {value.__class__.__name__} is not JSON serializable')
+
+
 def read_exact(fd, size):
     buffer = bytearray()
     while len(buffer) < size:
@@ -146,16 +158,24 @@ def main():
         detections = engine.process_frame(frame)
         elapsed = (time.perf_counter() - started) * 1000.0
 
+        payload = {
+            't': int(time.time() * 1000),
+            'seq': seq,
+            'ms': round(elapsed, 1),
+            'skipped': skipped,
+            'dropped': dropped,
+            'provider': provider,
+            'dets': detections
+        }
+
         try:
-            sys.stdout.write(json.dumps({
-                't': int(time.time() * 1000),
-                'seq': seq,
-                'ms': round(elapsed, 1),
-                'skipped': skipped,
-                'dropped': dropped,
-                'provider': provider,
-                'dets': detections
-            }) + '\n')
+            line = json.dumps(payload, default=plain_number)
+        except (TypeError, ValueError) as error:
+            sys.stderr.write("Vision warning: frame not serialisable: " + str(error) + "\n")
+            continue
+
+        try:
+            sys.stdout.write(line + '\n')
             sys.stdout.flush()
         except (BrokenPipeError, ValueError):
             break
