@@ -210,6 +210,13 @@ export async function renderPersonDetailsView({ api, session, personId }) {
         ])
     );
 
+    const has3d = person.face3dParams && Object.keys(person.face3dParams).length > 0;
+    const pointCount = person.face3dParams?.landmarkCount ?? 0;
+    const observations = Math.round(person.face3dParams?.observations ?? 0);
+    const modelHint = observations > 0
+        ? `${observations} osservazioni apprese`
+        : (pointCount > 0 ? `${pointCount} punti facciali` : 'posa stimata');
+
     const statsStrip = el('div', { className: 'person-stats' }, [
         statTile('Transiti', String(stats.total), 'ultimi 100'),
         statTile('Telecamere', String(stats.cameras), 'canali distinti'),
@@ -218,13 +225,6 @@ export async function renderPersonDetailsView({ api, session, personId }) {
         statTile('Modello 3D', observations > 0 ? String(observations) : '—', 'osservazioni'),
         statTile('Ultimo avvistamento', stats.last, null)
     ]);
-
-    const has3d = person.face3dParams && Object.keys(person.face3dParams).length > 0;
-    const pointCount = person.face3dParams?.landmarkCount ?? 0;
-    const observations = Math.round(person.face3dParams?.observations ?? 0);
-    const modelHint = observations > 0
-        ? `${observations} osservazioni apprese`
-        : (pointCount > 0 ? `${pointCount} punti facciali` : 'posa stimata');
 
     const modelPanel = el('div', { className: 'panel stack' }, [
         el('div', { className: 'panel__head' }, [

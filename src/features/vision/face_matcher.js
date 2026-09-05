@@ -103,34 +103,6 @@ export function estimateFacePose3D(landmarks = []) {
     return { yaw, pitch, roll, pose };
 }
 
-export function calculateBiometricMetrics(landmarks = [], box = [0, 0, 1, 1]) {
-    if (!Array.isArray(landmarks) || landmarks.length < 5) {
-        return null;
-    }
-
-    const [leftEye, rightEye, nose, leftMouth, rightMouth] = landmarks;
-    const eyeDist = Math.hypot(rightEye[0] - leftEye[0], rightEye[1] - leftEye[1]);
-    const mouthWidth = Math.hypot(rightMouth[0] - leftMouth[0], rightMouth[1] - leftMouth[1]);
-    const noseToMouth = Math.hypot((leftMouth[0] + rightMouth[0]) / 2 - nose[0], (leftMouth[1] + rightMouth[1]) / 2 - nose[1]);
-    const boxW = Math.max(0.001, box[2] ?? 1);
-    const boxH = Math.max(0.001, box[3] ?? 1);
-
-    const interocularRatio = Number((eyeDist / boxW).toFixed(3));
-    const mouthToEyeRatio = Number((mouthWidth / Math.max(0.001, eyeDist)).toFixed(3));
-    const noseMouthRatio = Number((noseToMouth / boxH).toFixed(3));
-
-    const leftDist = Math.hypot(nose[0] - leftEye[0], nose[1] - leftEye[1]);
-    const rightDist = Math.hypot(rightEye[0] - nose[0], rightEye[1] - nose[1]);
-    const symmetry = Number((Math.min(leftDist, rightDist) / Math.max(0.001, Math.max(leftDist, rightDist))).toFixed(3));
-
-    return {
-        interocularRatio,
-        mouthToEyeRatio,
-        noseMouthRatio,
-        symmetry
-    };
-}
-
 export function updateMovingCentroid(currentEmbedding = [], newEmbedding = [], weight = 0.88) {
     if (!Array.isArray(currentEmbedding) || currentEmbedding.length === 0) return newEmbedding;
     if (!Array.isArray(newEmbedding) || newEmbedding.length !== currentEmbedding.length) return currentEmbedding;

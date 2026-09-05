@@ -1,7 +1,7 @@
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
-export const ROLE_CHIPS = Object.freeze({
+const ROLE_CHIPS = Object.freeze({
     dipendente: { label: 'Dipendente', variant: 'ok' },
     responsabile: { label: 'Responsabile', variant: 'info' },
     visitatore: { label: 'Visitatore', variant: 'warn' },

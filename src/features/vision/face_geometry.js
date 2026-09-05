@@ -26,7 +26,7 @@ export function deriveBiometrics(landmarks = [], box = [0, 0, 1, 1]) {
     };
 }
 
-export function sampleWeight({ pose = {}, confidence = 1 } = {}) {
+function sampleWeight({ pose = {}, confidence = 1 } = {}) {
     const yaw = Math.abs(Number(pose.yaw) || 0);
     const pitch = Math.abs(Number(pose.pitch) || 0);
     const frontality = Math.max(0, 1 - yaw / 55) * Math.max(0, 1 - pitch / 45);
