@@ -69,7 +69,7 @@ export function getMediaTools() {
 
 export function mediaToolsStatus() {
     if (!tools) {
-        return { available: false, reason: 'not initialised', installable: installationSupported(), accelerators: [] };
+        return { available: false, reason: 'not initialised', installable: installationSupported(), accelerators: [], compiledAccelerators: [], encoders: [] };
     }
     return {
         available: tools.available,
@@ -77,6 +77,8 @@ export function mediaToolsStatus() {
         installable: installationSupported(),
         ffmpegVersion: tools.ffmpeg?.version ?? null,
         ffmpegPath: tools.ffmpeg?.path ?? null,
-        accelerators: tools.accelerators
+        accelerators: tools.accelerators,
+        compiledAccelerators: tools.compiledAccelerators ?? [],
+        encoders: tools.encoders ?? []
     };
 }

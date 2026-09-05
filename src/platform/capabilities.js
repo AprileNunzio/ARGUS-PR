@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getHardwareProfile } from './hardware.js';
-import { mediaToolsStatus, getMediaTools } from './media_tools.js';
+import { mediaToolsStatus } from './media_tools.js';
 import { suggestedAnalysisFps } from '../features/settings/performance_tuning.js';
 
 const run = promisify(execFile);
@@ -220,13 +220,7 @@ export async function capabilityReport(config) {
     const devices = videoDevices();
     const modules = availableCodecModules();
 
-    const usableEncoders = (() => {
-        try {
-            return getMediaTools().encoders ?? [];
-        } catch {
-            return [];
-        }
-    })();
+    const usableEncoders = media.encoders ?? [];
 
     const encoders = {
         usable: usableEncoders,
@@ -247,7 +241,7 @@ export async function capabilityReport(config) {
         memory: profile.memory,
         video: {
             ffmpeg: { available: media.available, version: media.ffmpegVersion, path: media.ffmpegPath },
-            accelerators: { compiled: profile.accelerators, usable: media.accelerators ?? [] },
+            accelerators: { compiled: media.compiledAccelerators ?? [], usable: media.accelerators ?? [] },
             encoders,
             devices,
             codecModules: modules
