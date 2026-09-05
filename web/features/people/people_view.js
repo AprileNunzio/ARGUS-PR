@@ -1,6 +1,5 @@
 import { el, chip, empty, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
-import { renderAddPersonForm } from './people_form.js';
 import { createFace3DCanvas, renderBiometricBadge } from './people_face3d.js';
 
 const ROLE_CHIPS = {
@@ -12,8 +11,12 @@ const ROLE_CHIPS = {
 };
 
 import { renderPersonDetailsView } from './person_details_view.js';
+import { renderNewPersonView } from './person_new_view.js';
 
 export async function renderPeopleView({ api, session, params }) {
+    if (params && params[0] === 'new') {
+        return renderNewPersonView({ api, session });
+    }
     if (params && params[0]) {
         return renderPersonDetailsView({ api, session, personId: params[0] });
     }
@@ -22,7 +25,6 @@ export async function renderPeopleView({ api, session, params }) {
     const canManage = session.permissions.includes('camera.manage');
     let currentTab = 'people';
 
-    const formHost = el('div', { hidden: 'hidden' });
     const listHost = el('div', { className: 'stack' });
     const confirmHost = el('div', {});
     const logsHost = el('div', { className: 'stack' });
@@ -217,32 +219,8 @@ export async function renderPeopleView({ api, session, params }) {
                 type: 'button',
                 textContent: 'Nuova Persona',
                 onclick: () => {
-                    const renderForm = (base64) => {
-                        formHost.replaceChildren(renderAddPersonForm({
-                            api,
-                            initialImageBase64: base64,
-                            onSaved: async () => {
-                                formHost.setAttribute('hidden', 'hidden');
-                                await loadPeople();
-                            },
-                            onCancel: () => formHost.setAttribute('hidden', 'hidden')
-                        }));
-                        formHost.removeAttribute('hidden');
-                        formHost.scrollIntoView({ behavior: 'smooth' });
-                    };
-
-                    if (log.snapshotPath.startsWith('data:')) {
-                        renderForm(log.snapshotPath);
-                    } else {
-                        fetch(log.snapshotPath)
-                            .then(res => res.blob())
-                            .then(blob => {
-                                const reader = new FileReader();
-                                reader.onload = (e) => renderForm(e.target.result);
-                                reader.readAsDataURL(blob);
-                            })
-                            .catch(() => notice('error', 'Impossibile caricare l\'immagine.'));
-                    }
+                    sessionStorage.setItem('argus_new_person_base64', log.snapshotPath);
+                    go('people', 'new');
                 }
             }) : null;
 
@@ -306,18 +284,7 @@ export async function renderPeopleView({ api, session, params }) {
     const addBtn = canManage ? el('button', {
         className: 'btn btn--primary btn--sm',
         type: 'button',
-        onclick: () => {
-            formHost.replaceChildren(renderAddPersonForm({
-                api,
-                onSaved: async () => {
-                    formHost.setAttribute('hidden', 'hidden');
-                    await loadPeople();
-                },
-                onCancel: () => formHost.setAttribute('hidden', 'hidden')
-            }));
-            formHost.removeAttribute('hidden');
-            formHost.scrollIntoView({ behavior: 'smooth' });
-        }
+        onclick: () => go('people', 'new')
     }, [icon('plus'), el('span', { textContent: 'Nuova Persona' })]) : null;
 
     const panelBody = el('div', { className: 'panel__body' }, [confirmHost, listHost]);
@@ -328,7 +295,6 @@ export async function renderPeopleView({ api, session, params }) {
             el('div', { className: 'row row--tight' }, [addBtn])
         ]),
         el('div', { className: 'row schedule-presets' }, [tabPeopleBtn, tabLogsBtn]),
-        formHost,
         el('section', { className: 'panel' }, [panelBody])
     );
 
