@@ -1,7 +1,7 @@
 import { el, chip, field, notice } from '/assets/dom.js';
 import { createFace3DCanvas, renderBiometricBadge } from './people_face3d.js';
 
-export function renderAddPersonForm({ api, onSaved, onCancel }) {
+export function renderAddPersonForm({ api, initialImageBase64, onSaved, onCancel }) {
     const nameInput = el('input', { className: 'input', type: 'text', placeholder: 'Mario Rossi', required: 'required' });
     const departmentInput = el('input', { className: 'input', type: 'text', placeholder: 'Sicurezza, IT, Logistica...' });
     
@@ -47,56 +47,59 @@ export function renderAddPersonForm({ api, onSaved, onCancel }) {
         onclick: onCancel
     });
 
-    fileInput.onchange = async () => {
-        const file = fileInput.files?.[0];
-        if (!file) return;
-
+    async function extractFromBase64(base64) {
         statusBadge.textContent = 'Analisi biometrica e calcolo 3D in corso (YuNet + SFace)...';
         statusBadge.className = 'section__hint mono';
         feedback.setAttribute('hidden', 'hidden');
+        previewImg.src = base64;
+        previewImg.className = 'avatar-preview avatar-preview--active';
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
-            previewImg.src = base64;
-            previewImg.className = 'avatar-preview avatar-preview--active';
+        try {
+            const res = await api.post('/api/people/extract-face', { imageBase64: base64 });
+            if (res && res.ok) {
+                extractedEmbedding = res.embedding;
+                thumbnailData = res.thumbnail || base64;
+                face3dParams = res.pose3d || { yaw: 0, pitch: 0, roll: 0, pose: 'front' };
+                if (res.thumbnail) previewImg.src = res.thumbnail;
 
-            try {
-                const res = await api.post('/api/people/extract-face', { imageBase64: base64 });
-                if (res && res.ok) {
-                    extractedEmbedding = res.embedding;
-                    thumbnailData = res.thumbnail || base64;
-                    face3dParams = res.pose3d || { yaw: 0, pitch: 0, roll: 0, pose: 'front' };
-                    if (res.thumbnail) previewImg.src = res.thumbnail;
+                canvas3DHost.replaceChildren(createFace3DCanvas(face3dParams, 120, 120));
 
-                    canvas3DHost.replaceChildren(createFace3DCanvas(face3dParams, 120, 120));
-
-                    statusBadge.replaceChildren(
-                        chip('Volto Codificato 128-D', 'ok'),
-                        renderBiometricBadge(face3dParams),
-                        el('span', { className: 'section__hint mono', textContent: `Confidenza: ${Math.round(res.confidence * 100)}%` })
-                    );
-
-                    if (galleryPhotos.length < 3) {
-                        galleryPhotos.push(thumbnailData);
-                    }
-                } else {
-                    throw new Error(res?.error || 'Nessun volto valido trovato nella foto');
-                }
-            } catch (err) {
-                previewImg.className = 'avatar-preview avatar-preview--warn';
-                canvas3DHost.replaceChildren();
                 statusBadge.replaceChildren(
-                    chip('Nessun volto riconosciuto', 'warn'),
-                    el('span', { className: 'section__hint', textContent: err.message || 'Prova con una foto più ravvicinata e luminosa' })
+                    chip('Volto Codificato 128-D', 'ok'),
+                    renderBiometricBadge(face3dParams),
+                    el('span', { className: 'section__hint mono', textContent: `Confidenza: ${Math.round(res.confidence * 100)}%` })
                 );
-                extractedEmbedding = [];
-                thumbnailData = null;
-                face3dParams = {};
+
+                if (galleryPhotos.length < 3) {
+                    galleryPhotos.push(thumbnailData);
+                }
+            } else {
+                throw new Error(res?.error || 'Nessun volto valido trovato nella foto');
             }
-        };
+        } catch (err) {
+            previewImg.className = 'avatar-preview avatar-preview--warn';
+            canvas3DHost.replaceChildren();
+            statusBadge.replaceChildren(
+                chip('Nessun volto riconosciuto', 'warn'),
+                el('span', { className: 'section__hint', textContent: err.message || 'Prova con una foto più ravvicinata e luminosa' })
+            );
+            extractedEmbedding = [];
+            thumbnailData = null;
+            face3dParams = {};
+        }
+    }
+
+    fileInput.onchange = () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => extractFromBase64(e.target.result);
         reader.readAsDataURL(file);
     };
+
+    if (initialImageBase64) {
+        extractFromBase64(initialImageBase64);
+    }
 
     const form = el('form', { className: 'panel stack' }, [
         el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Iscrizione Persona nel Catalogo' })]),

@@ -142,10 +142,21 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         });
     }
 
+    let cachedPeople = null;
+    let cachedPeopleAt = 0;
+
+    function getPeople() {
+        const now = Date.now();
+        if (cachedPeople && now - cachedPeopleAt < 2000) return cachedPeople;
+        cachedPeople = peopleRepository.listPeople();
+        cachedPeopleAt = now;
+        return cachedPeople;
+    }
+
     function recordFaces(cameraId, plan, detections, timestamp) {
         if (!plan.recognizeFaces) return;
 
-        const people = peopleRepository.listPeople();
+        const people = getPeople();
         for (const detection of detections) {
             if (detection.className !== 'face' || !detection.faceEmbedding) continue;
 
@@ -215,7 +226,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         if (timestamp - previous < LIVE_INTERVAL_MS) return;
         lastBroadcast.set(cameraId, timestamp);
 
-        const people = plan.recognizeFaces ? peopleRepository.listPeople() : [];
+        const people = plan.recognizeFaces ? getPeople() : [];
         const boxes = [];
         for (const track of tracker.tracks.values()) {
             if (!track.isConfirmed || !plan.accepted.has(track.className)) continue;

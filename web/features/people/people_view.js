@@ -162,6 +162,35 @@ export async function renderPeopleView({ api, session }) {
                 }
             }) : null;
 
+            const addPersonBtn = (!person && canManage && log.snapshotPath) ? el('button', {
+                className: 'btn btn--sm btn--primary',
+                type: 'button',
+                textContent: 'Crea Nuova Persona',
+                onclick: async () => {
+                    try {
+                        const response = await fetch(log.snapshotPath);
+                        const blob = await response.blob();
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            formHost.replaceChildren(renderAddPersonForm({
+                                api,
+                                initialImageBase64: e.target.result,
+                                onSaved: async () => {
+                                    formHost.setAttribute('hidden', 'hidden');
+                                    await loadPeople();
+                                },
+                                onCancel: () => formHost.setAttribute('hidden', 'hidden')
+                            }));
+                            formHost.removeAttribute('hidden');
+                            formHost.scrollIntoView({ behavior: 'smooth' });
+                        };
+                        reader.readAsDataURL(blob);
+                    } catch (err) {
+                        notice('error', 'Impossibile caricare l\'immagine.');
+                    }
+                }
+            }) : null;
+
             return el('div', { className: 'device-row row--space' }, [
                 el('div', { className: 'stack' }, [
                     el('div', { className: 'row row--wrap row--tight' }, [
@@ -176,7 +205,7 @@ export async function renderPeopleView({ api, session }) {
                         log.box ? el('span', { className: 'section__hint mono', textContent: `Box: [${log.box.map(b => Number(b).toFixed(2)).join(', ')}]` }) : null
                     ])
                 ]),
-                correctBtn
+                el('div', { className: 'row row--tight' }, [correctBtn, addPersonBtn])
             ]);
         });
 
