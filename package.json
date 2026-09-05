@@ -1,6 +1,6 @@
 {
   "name": "argus-pr",
-  "version": "0.43.2",
+  "version": "0.43.3",
   "description": "Self-hosted Network Video Recorder with ONVIF discovery, RTSP recording and AI-assisted analytics",
   "type": "module",
   "license": "MIT",

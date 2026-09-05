@@ -154,46 +154,55 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         return cachedPeople;
     }
 
-    function recordFaces(cameraId, plan, detections, timestamp) {
+    function recordFaces(cameraId, plan, tracker, detections, timestamp) {
         if (!plan.detectFaces && !plan.recognizeFaces) return;
 
         const people = plan.recognizeFaces ? getPeople() : [];
-        for (const detection of detections) {
-            if (detection.className !== 'face') continue;
 
-            const pose3d = detection.landmarks ? estimateFacePose3D(detection.landmarks) : {};
+        // Log newly confirmed faces (once per physical track)
+        for (const track of tracker.activeTracks || Array.from(tracker.tracks.values()).filter(t => t.isConfirmed)) {
+            if (track.className !== 'face') continue;
+            
+            // Ensure we log each track only once
+            if (track.hasBeenLogged) continue;
+            track.hasBeenLogged = true;
+
+            const bestDet = track.faceEmbeddings?.length > 0 
+                ? track.faceEmbeddings[track.faceEmbeddings.length - 1] 
+                : null;
+            
+            const embedding = bestDet ? bestDet.embedding : null;
             let match = null;
 
-            if (plan.recognizeFaces && detection.faceEmbedding) {
-                match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
+            if (plan.recognizeFaces && embedding) {
+                match = findBestMatch(embedding, people, plan.faceThreshold);
             }
 
             const personId = match ? match.person.id : null;
-            const cooldownKey = `${cameraId}:${personId ?? 'unknown'}`;
-            const lastLog = lastFaceLogs.get(cooldownKey);
-
-            if (lastLog && (timestamp - lastLog.at < 45000) && lastLog.pose === pose3d.pose) {
-                continue;
-            }
-
-            lastFaceLogs.set(cooldownKey, { at: timestamp, pose: pose3d.pose });
-
+            
             peopleRepository.recordFaceLog({
                 cameraId,
                 personId,
-                confidence: detection.confidence,
-                box: detection.box,
-                pose3d,
-                snapshotPath: detection.snapshotBase64 || null,
+                confidence: track.maxConfidence,
+                box: track.bestBox,
+                pose3d: {}, 
+                snapshotPath: bestDet && bestDet.snapshotBase64 ? bestDet.snapshotBase64 : null,
                 createdAt: new Date(timestamp).toISOString()
             });
+        }
 
-            if (match && match.score >= 0.55 && match.person.embedding?.length > 0) {
-                const updatedEmb = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
-                peopleRepository.updatePerson(match.person.id, {
-                    embedding: updatedEmb,
-                    sampleCount: (match.person.sampleCount || 1) + 1
-                });
+        // Update enrolled person embeddings continuously using live detections
+        if (plan.recognizeFaces) {
+            for (const detection of detections) {
+                if (detection.className !== 'face' || !detection.faceEmbedding) continue;
+                const match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
+                if (match && match.score >= 0.55 && match.person.embedding?.length > 0) {
+                    const updatedEmb = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
+                    peopleRepository.updatePerson(match.person.id, {
+                        embedding: updatedEmb,
+                        sampleCount: (match.person.sampleCount || 1) + 1
+                    });
+                }
             }
         }
     }
@@ -273,7 +282,7 @@ export function installVisionHub({ config, cameraRepository, detectionsRepositor
         const { newlyConfirmed, closedTracks } = tracker.update(detections, timestamp);
 
         for (const track of newlyConfirmed) recordTrack(cameraId, plan, track);
-        recordFaces(cameraId, plan, detections, timestamp);
+        recordFaces(cameraId, plan, tracker, detections, timestamp);
         recordPlates(cameraId, plan, closedTracks, timestamp);
         broadcastLive(cameraId, tracker, plan, timestamp);
     }
