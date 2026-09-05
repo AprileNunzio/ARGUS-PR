@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -133,7 +133,7 @@ export function updateStatus(config) {
     };
 }
 
-export async function requestUpdate(config, ref) {
+export async function requestUpdate(config, ref, { force = false } = {}) {
     if (!isUpdateSupported()) {
         throw new AppError(ErrorCode.CONFLICT, 'Aggiornamento automatico non disponibile su questa piattaforma');
     }
@@ -142,18 +142,18 @@ export async function requestUpdate(config, ref) {
         throw new AppError(ErrorCode.VALIDATION, 'Riferimento non valido: sono ammessi solo i tag di release (vX.Y.Z)');
     }
 
-    if (!isNewer(ref, readPackageVersion())) {
+    if (!force && !isNewer(ref, readPackageVersion())) {
         throw new AppError(ErrorCode.CONFLICT, 'La versione richiesta non e\' successiva a quella installata');
     }
 
     const state = readState(config);
-    if (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING) {
+    if (!force && (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING)) {
         throw new AppError(ErrorCode.CONFLICT, 'Un aggiornamento e\' gia\' in corso');
     }
 
     if (process.platform === 'win32') {
         const { applyWindowsUpdate } = await import('./windows_updater.js');
-        return applyWindowsUpdate(config, ref);
+        return applyWindowsUpdate(config, ref, { force });
     }
 
     const head = await currentCommit();
@@ -166,10 +166,10 @@ export async function requestUpdate(config, ref) {
         attempts: 0,
         requestedAt: new Date().toISOString(),
         appliedAt: null,
-        message: null
+        message: force ? 'Aggiornamento forzato dall operatore' : null
     });
 
-    log.warn('update requested', { target: ref, from: next.previousVersion });
+    log.warn('update requested', { target: ref, from: next.previousVersion, force });
 
     return next;
 }
@@ -184,6 +184,19 @@ export function cancelUpdate(config) {
 
 export function scheduleRestart() {
     log.warn('restarting to apply update', { exitCode: RESTART_EXIT_CODE });
+    if (process.platform === 'win32' && !process.env.ARGUS_SERVICE && process.env.NODE_ENV !== 'test') {
+        try {
+            const entry = path.join(projectRoot, 'bin', 'argus.js');
+            const child = spawn(process.execPath, [entry, 'serve'], {
+                cwd: projectRoot,
+                detached: true,
+                stdio: 'ignore',
+                windowsHide: true,
+                shell: false
+            });
+            child.unref();
+        } catch {}
+    }
     setTimeout(() => process.exit(RESTART_EXIT_CODE), 400).unref();
 }
 

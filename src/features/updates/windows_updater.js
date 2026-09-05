@@ -144,20 +144,20 @@ function findExtractedRoot(stagingDir) {
 }
 
 async function applyGitUpdate(targetRef) {
-    await run('git', ['-C', projectRoot, 'fetch', '--tags', '--force', '--prune', '--quiet', 'origin'], {
+    await run('git', ['-C', projectRoot, '-c', `safe.directory=${projectRoot}`, 'fetch', '--tags', '--force', '--prune', '--quiet', 'origin'], {
         windowsHide: true,
         shell: false,
         timeout: 30000
     });
 
-    await run('git', ['-C', projectRoot, '-c', 'advice.detachedHead=false', 'checkout', '--quiet', '--force', targetRef], {
+    await run('git', ['-C', projectRoot, '-c', `safe.directory=${projectRoot}`, '-c', 'advice.detachedHead=false', 'checkout', '--quiet', '--force', targetRef], {
         windowsHide: true,
         shell: false,
         timeout: 20000
     });
 }
 
-export async function applyWindowsUpdate(config, targetRef) {
+export async function applyWindowsUpdate(config, targetRef, { force = false } = {}) {
     if (!isReleaseTag(targetRef)) {
         throw new AppError(ErrorCode.VALIDATION, 'Riferimento non valido: ammessi solo tag vX.Y.Z');
     }
@@ -168,7 +168,7 @@ export async function applyWindowsUpdate(config, targetRef) {
     const stagingDir = path.join(updatesDir, 'staging');
     const backupDir = path.join(updatesDir, 'backup');
 
-    log.warn('applying windows update', { target: targetRef, from: previousVersion });
+    log.warn('applying windows update', { target: targetRef, from: previousVersion, force });
 
     if (isGitInstall()) {
         await applyGitUpdate(targetRef);
@@ -196,6 +196,15 @@ export async function applyWindowsUpdate(config, targetRef) {
 
     try {
         await runNpm(['install', '--omit=dev', '--no-audit', '--no-fund', '--loglevel=error'], projectRoot);
+        await run(process.execPath, ['-e', 'import("better-sqlite3")'], {
+            cwd: projectRoot,
+            windowsHide: true,
+            shell: false,
+            timeout: 10000
+        }).catch(async () => {
+            log.warn('rebuilding better-sqlite3 for windows');
+            await runNpm(['rebuild', 'better-sqlite3', '--build-from-source', '--loglevel=error'], projectRoot).catch(() => {});
+        });
     } catch (error) {
         log.warn('npm install warning during update', { message: error.message });
     }
@@ -206,7 +215,7 @@ export async function applyWindowsUpdate(config, targetRef) {
         previousVersion,
         attempts: 1,
         appliedAt: new Date().toISOString(),
-        message: null
+        message: force ? 'Aggiornamento forzato' : null
     });
 
     log.info('windows update files staged, restarting service', { target: targetRef });

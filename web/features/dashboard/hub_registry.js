@@ -50,6 +50,7 @@ export const MACRO_AREAS = [
         color: 'amber',
         getMetric: () => 'Zero-Trust',
         subapps: [
+            { id: 'users', title: 'Utenti & Permessi RBAC', desc: 'Profili operatori, ruoli e permessi di controllo accessi', icon: 'users', png: 'app_people', route: 'users', badge: { text: 'RBAC', tone: 'blue' }, permission: 'user.manage' },
             { id: 'automation', title: 'Automazioni', desc: 'Notifiche, email, webhook, MQTT e apertura varchi', icon: 'zap', png: 'app_shield', route: 'automation', badge: { text: 'Regole', tone: 'amber' }, permission: 'alarm.manage' },
             { id: 'shield', title: 'Firewall ARGUS-SHIELD', desc: 'Sorveglianza indirizzi IP e blocco attacchi', icon: 'shield', png: 'app_shield', route: 'settings', badge: { text: 'Shield', tone: 'amber' } },
             { id: 'mfa', title: 'Autenticazione MFA', desc: 'Protezione TOTP con codici di sicurezza', icon: 'lock', png: 'app_mfa', route: 'settings', badge: { text: 'TOTP', tone: 'red' } }
@@ -70,7 +71,8 @@ export const MACRO_AREAS = [
             { id: 'system', title: 'Telemetria', desc: 'Monitoraggio CPU, RAM, storage e rete', icon: 'activity', png: 'app_telemetry', route: 'system', badge: { text: 'Hardware', tone: 'purple' }, permission: 'system.manage' },
             { id: 'updates', title: 'Aggiornamenti & Versioni', desc: 'Controllo release, auto-upgrade OTA, installazione offline da USB e SMB', icon: 'download', png: 'app_settings', route: 'updates', badge: { text: 'OTA', tone: 'green' }, permission: 'system.manage' },
             { id: 'maintenance', title: 'Gestione Macchina', desc: 'Riavvio servizi, spegnimento del server e pulizia delle cache', icon: 'power', png: 'app_settings', route: 'maintenance', badge: { text: 'Manutenzione', tone: 'amber' }, permission: 'system.manage' },
-            { id: 'datetime', title: 'Data, Ora & Sincronizzazione', desc: 'Formato 24h o AM/PM, fuso orario, ora legale e NTP', icon: 'clock', png: 'app_settings', route: 'datetime', badge: { text: 'NTP', tone: 'blue' }, permission: 'system.manage' }
+            { id: 'datetime', title: 'Data, Ora & Sincronizzazione', desc: 'Formato 24h o AM/PM, fuso orario, ora legale e NTP', icon: 'clock', png: 'app_settings', route: 'datetime', badge: { text: 'NTP', tone: 'blue' }, permission: 'system.manage' },
+            { id: 'audio', title: 'Libreria Audio', desc: 'Messaggi preregistrati e diffusione sonora su telecamere', icon: 'speaker', png: 'app_settings', route: 'audio', badge: { text: 'Audio', tone: 'cyan' }, permission: 'system.manage' }
         ]
     }
 ];

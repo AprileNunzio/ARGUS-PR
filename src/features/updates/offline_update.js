@@ -9,11 +9,11 @@ import { createLogger } from '../../kernel/logger.js';
 import { AppError, ErrorCode } from '../../kernel/errors.js';
 import { isReleaseTag, isNewer } from './semver.js';
 import { Phase, readState, writeState } from './update_state.js';
+import { isZipFile, inspectZipPackage, applyZipPackage } from './zip_bundle.js';
 
 const run = promisify(execFile);
 const log = createLogger('offline-update');
 
-const BUNDLE_PATTERN = /^argus-pr-(v\d+\.\d+\.\d+)\.(bundle|pack)$/i;
 const MAX_BUNDLE_BYTES = 512 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 300000;
 
@@ -38,16 +38,22 @@ function describeBundle(file) {
     const stats = safeStat(file);
     if (!stats || !stats.isFile()) return null;
 
-    const match = BUNDLE_PATTERN.exec(path.basename(file));
-    if (!match) return null;
+    const base = path.basename(file);
+    const isZip = base.toLowerCase().endsWith('.zip');
+    const isBundle = /\.(bundle|pack)$/i.test(base);
+    if (!isZip && !isBundle) return null;
+
+    const tagMatch = /(v\d+\.\d+\.\d+)/i.exec(base);
+    const tag = tagMatch ? tagMatch[1].toLowerCase() : (isZip ? 'zip' : 'bundle');
 
     return {
         path: file,
-        name: path.basename(file),
-        tag: match[1],
+        name: base,
+        tag,
+        isZip,
         sizeBytes: stats.size,
         modifiedAt: stats.mtime.toISOString(),
-        newer: isNewer(match[1], readPackageVersion())
+        newer: isReleaseTag(tag) ? isNewer(tag, readPackageVersion()) : true
     };
 }
 
@@ -164,8 +170,8 @@ export async function fetchRemoteBundle(config, rawUrl) {
     }
 
     const filename = path.basename(parsed.pathname);
-    if (!BUNDLE_PATTERN.test(filename)) {
-        throw new AppError(ErrorCode.VALIDATION, 'Il nome del pacchetto deve essere argus-pr-vX.Y.Z.bundle');
+    if (!/\.(bundle|pack|zip)$/i.test(filename)) {
+        throw new AppError(ErrorCode.VALIDATION, 'Il nome del pacchetto deve terminare con .bundle o .zip');
     }
 
     const destination = path.join(stagingDir(config), filename);
@@ -196,10 +202,14 @@ async function git(args, timeout = 120000) {
     return String(result.stdout ?? '').trim();
 }
 
-export async function verifyBundle(bundlePath) {
+export async function verifyBundle(bundlePath, config = null) {
+    if (isZipFile(bundlePath)) {
+        return inspectZipPackage(bundlePath, config ?? { dataDir: path.join(projectRoot, 'data') });
+    }
+
     const bundle = describeBundle(bundlePath);
     if (!bundle) {
-        throw new AppError(ErrorCode.VALIDATION, 'Il file non e un pacchetto ARGUS-PR valido (argus-pr-vX.Y.Z.bundle)');
+        throw new AppError(ErrorCode.VALIDATION, 'Il file non e un pacchetto ARGUS-PR valido (argus-pr-vX.Y.Z.bundle o archivio .zip)');
     }
 
     if (!isReleaseTag(bundle.tag)) {
@@ -220,20 +230,24 @@ export async function verifyBundle(bundlePath) {
     };
 }
 
-export async function applyOfflineBundle(config, bundlePath, expectedSha256 = null) {
-    const verified = await verifyBundle(bundlePath);
+export async function applyOfflineBundle(config, bundlePath, expectedSha256 = null, { force = false } = {}) {
+    const verified = await verifyBundle(bundlePath, config);
 
-    if (expectedSha256 && expectedSha256.toLowerCase() !== verified.sha256) {
+    if (expectedSha256 && expectedSha256.toLowerCase() !== verified.sha256.toLowerCase()) {
         throw new AppError(ErrorCode.VALIDATION, 'Impronta SHA-256 del pacchetto diversa da quella dichiarata');
     }
 
-    if (!isNewer(verified.tag, readPackageVersion())) {
+    if (!force && !isNewer(verified.tag, readPackageVersion())) {
         throw new AppError(ErrorCode.CONFLICT, `Il pacchetto contiene ${verified.tag}, non successiva alla v${readPackageVersion()} installata`);
     }
 
     const state = readState(config);
-    if (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING) {
+    if (!force && (state.phase === Phase.REQUESTED || state.phase === Phase.PENDING)) {
         throw new AppError(ErrorCode.CONFLICT, 'Un aggiornamento e gia in corso');
+    }
+
+    if (verified.isZip) {
+        return applyZipPackage(config, verified.path, verified.tag, { force });
     }
 
     await git(['fetch', '--force', verified.path, `refs/tags/${verified.tag}:refs/tags/${verified.tag}`]);
@@ -251,7 +265,7 @@ export async function applyOfflineBundle(config, bundlePath, expectedSha256 = nu
         message: `Aggiornamento offline da ${verified.name}`
     });
 
-    log.warn('offline update staged', { target: verified.tag, source: verified.name, sha256: verified.sha256 });
+    log.warn('offline update staged', { target: verified.tag, source: verified.name, sha256: verified.sha256, force });
 
     return { state: next, bundle: verified };
 }

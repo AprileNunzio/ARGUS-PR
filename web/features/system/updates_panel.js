@@ -102,6 +102,37 @@ export function renderUpdatesPanel({ api }) {
             }, [icon('download'), el('span', { textContent: `Installa ${latest.tag}` })])
             : null;
 
+        const forceButton = (!available && latest && status.supported)
+            ? el('button', {
+                className: 'btn btn--sm',
+                type: 'button',
+                onclick: () => {
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: `Reinstallare e forzare ${latest.tag}?`,
+                        message: `Verranno riscaricati e riscritti tutti i file di programma allineandoli alla release ufficiale.`,
+                        confirmLabel: 'Forza aggiornamento',
+                        onCancel: () => confirmHost.replaceChildren(),
+                        onConfirm: async () => {
+                            const failure = await api.post('/api/updates/apply', { ref: latest.tag, force: true }).then(() => null).catch((error) => error);
+                            if (failure) {
+                                confirmHost.replaceChildren(notice('error', failure.message));
+                                return;
+                            }
+                            host.replaceChildren(
+                                el('div', { className: 'panel__head' }, [
+                                    el('span', { className: 'panel__title' }, [icon('download'), 'Aggiornamento forzato in corso']),
+                                    chip('riavvio', 'warn')
+                                ]),
+                                el('div', { className: 'panel__body' }, [
+                                    notice('info', 'Il servizio si sta riavviando sulla nuova versione. Ricarica la pagina tra un minuto.')
+                                ])
+                            );
+                        }
+                    }));
+                }
+            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento' })])
+            : null;
+
         const messages = [
             status.message
                 ? notice(status.phase === 'rolled-back' || status.phase === 'failed' ? 'error' : 'success', status.message)
@@ -147,7 +178,7 @@ export function renderUpdatesPanel({ api }) {
             ]),
             el('div', { className: 'panel__foot' }, [
                 el('span', { className: 'section__hint', textContent: status.lastCheck ? `Ultimo controllo: ${new Date(status.lastCheck.checkedAt).toLocaleString()}` : 'Mai controllato' }),
-                el('div', { className: 'row row--tight' }, [checkButton, applyButton])
+                el('div', { className: 'row row--tight' }, [checkButton, forceButton, applyButton].filter(Boolean))
             ])
         );
     };

@@ -172,7 +172,9 @@ async function dispatch(router, req, res, config) {
         }
     }
 
-    const body = MUTATING_METHODS.has(req.method) ? await readJsonBody(req) : {};
+    const body = MUTATING_METHODS.has(req.method)
+        ? (route.rawBody ? {} : await readJsonBody(req))
+        : {};
 
     const context = {
         req,

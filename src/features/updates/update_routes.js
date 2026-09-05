@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { Permission } from '../../security/rbac.js';
 import { recordAudit } from '../../security/audit.js';
 import { checkForUpdate, updateStatus, requestUpdate, cancelUpdate, scheduleRestart, resetWatchdog } from './update_service.js';
@@ -19,7 +22,8 @@ export function registerUpdateRoutes(router) {
     });
 
     router.post('/api/updates/apply', async (ctx) => {
-        const state = await requestUpdate(ctx.config, ctx.body.ref);
+        const force = Boolean(ctx.body?.force);
+        const state = await requestUpdate(ctx.config, ctx.body.ref, { force });
 
         recordAudit({
             actorId: ctx.actor.id,
@@ -27,7 +31,7 @@ export function registerUpdateRoutes(router) {
             action: 'update.request',
             target: state.targetRef,
             remoteAddr: ctx.address,
-            detail: { from: state.previousVersion }
+            detail: { from: state.previousVersion, force }
         });
 
         scheduleRestart();
@@ -35,7 +39,7 @@ export function registerUpdateRoutes(router) {
         return { status: 202, body: { state, restarting: true } };
     }, {
         permission: Permission.SYSTEM_MANAGE,
-        rateLimit: { limit: 5, windowMs: 60 * 60 * 1000 }
+        rateLimit: { limit: 10, windowMs: 60 * 60 * 1000 }
     });
 
     router.post('/api/updates/approve', async (ctx) => {
@@ -81,10 +85,61 @@ export function registerUpdateRoutes(router) {
 
     router.post('/api/updates/offline/verify', async (ctx) => {
         const bundlePath = requireString(ctx.body.path, 'Percorso del pacchetto', { max: 400 });
-        return { body: { bundle: await verifyBundle(bundlePath) } };
+        return { body: { bundle: await verifyBundle(bundlePath, ctx.config) } };
     }, {
         permission: Permission.SYSTEM_MANAGE,
         rateLimit: { limit: 20, windowMs: 10 * 60 * 1000 }
+    });
+
+    router.post('/api/updates/offline/upload', async (ctx) => {
+        const staging = path.join(ctx.config.dataDir, 'updates', 'staging');
+        fs.mkdirSync(staging, { recursive: true });
+
+        const filename = `upload-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.zip`;
+        const destPath = path.join(staging, filename);
+        const fileStream = fs.createWriteStream(destPath);
+        const hash = crypto.createHash('sha256');
+
+        let totalBytes = 0;
+        const maxBytes = 512 * 1024 * 1024;
+
+        try {
+            for await (const chunk of ctx.req) {
+                totalBytes += chunk.length;
+                if (totalBytes > maxBytes) {
+                    fileStream.destroy();
+                    try { fs.unlinkSync(destPath); } catch {}
+                    throw validationError('File troppo grande (massimo 512 MB)');
+                }
+                hash.update(chunk);
+                fileStream.write(chunk);
+            }
+            await new Promise((resolve, reject) => {
+                fileStream.end(() => resolve());
+                fileStream.on('error', reject);
+            });
+        } catch (error) {
+            fileStream.destroy();
+            try { fs.unlinkSync(destPath); } catch {}
+            throw error;
+        }
+
+        const bundle = await verifyBundle(destPath, ctx.config);
+
+        recordAudit({
+            actorId: ctx.actor.id,
+            actorName: ctx.actor.username,
+            action: 'update.offline.upload',
+            target: bundle.tag,
+            remoteAddr: ctx.address,
+            detail: { name: bundle.name, size: totalBytes, sha256: bundle.sha256 }
+        });
+
+        return { body: { bundle } };
+    }, {
+        permission: Permission.SYSTEM_MANAGE,
+        rawBody: true,
+        rateLimit: { limit: 10, windowMs: 30 * 60 * 1000 }
     });
 
     router.post('/api/updates/offline/download', async (ctx) => {
@@ -110,15 +165,16 @@ export function registerUpdateRoutes(router) {
     router.post('/api/updates/offline/apply', async (ctx) => {
         const bundlePath = requireString(ctx.body.path, 'Percorso del pacchetto', { max: 400 });
         const expected = optionalString(ctx.body.sha256, 'Impronta SHA-256', { max: 64 });
-        const outcome = await applyOfflineBundle(ctx.config, bundlePath, expected);
+        const force = Boolean(ctx.body.force);
+        const outcome = await applyOfflineBundle(ctx.config, bundlePath, expected, { force });
 
         recordAudit({
             actorId: ctx.actor.id,
             actorName: ctx.actor.username,
             action: 'update.offline.apply',
-            target: outcome.bundle.tag,
+            target: outcome.bundle?.tag ?? outcome.target,
             remoteAddr: ctx.address,
-            detail: { name: outcome.bundle.name, sha256: outcome.bundle.sha256 }
+            detail: { name: outcome.bundle?.name, sha256: outcome.bundle?.sha256, force }
         });
 
         scheduleRestart();

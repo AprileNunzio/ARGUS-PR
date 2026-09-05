@@ -103,13 +103,36 @@ export async function renderUpdatesView({ api }) {
             }, [icon('download'), el('span', { textContent: `Installa ${latest.tag} subito` })])
             : null;
 
+        const reinstallButton = (!version.available && latest && status.supported && (status.phase === 'idle' || status.phase === 'healthy'))
+            ? el('button', {
+                className: 'btn',
+                type: 'button',
+                onclick: () => {
+                    confirmHost.replaceChildren(confirmPanel({
+                        title: `Reinstallare e forzare ${latest.tag}?`,
+                        message: `Verranno riscaricati e riscritti tutti i file di programma allineandoli alla release ufficiale. Il watchdog garantisce il ripristino in caso di anomalie.`,
+                        confirmLabel: 'Forza aggiornamento',
+                        onCancel: () => confirmHost.replaceChildren(),
+                        onConfirm: async () => {
+                            const result = await api.post('/api/updates/apply', { ref: latest.tag, force: true }).catch((error) => ({ failure: error }));
+                            confirmHost.replaceChildren();
+                            feedback.replaceChildren(result.failure
+                                ? notice('error', result.failure.message)
+                                : notice('warn', `Sincronizzazione e forzatura a ${latest.tag} avviata. Il servizio si sta riavviando: ricarica fra 30-60 secondi.`));
+                            await refresh();
+                        }
+                    }));
+                }
+            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento / Reinstalla' })])
+            : null;
+
         return card({
             title: 'Stato della release',
             subtitle: version.detail,
             iconName: 'download',
             tone: version.tone === 'ok' ? 'emerald' : (version.tone === 'warn' ? 'amber' : 'cyan'),
             badge: phaseBadge(status.phase),
-            actions: installButton ? [installButton] : [],
+            actions: [installButton, reinstallButton].filter(Boolean),
             body: [
                 version.tone === 'ok'
                     ? notice('ok', `Sistema aggiornato alla release piu recente: v${status.currentVersion}.`)
