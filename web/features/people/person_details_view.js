@@ -25,13 +25,15 @@ export async function renderPersonDetailsView({ api, session, personId }) {
     const bodyHost = el('div', { className: 'stack' });
 
     try {
-        const [personRes, logsRes] = await Promise.all([
+        const [personRes, logsRes, allPeopleRes] = await Promise.all([
             api.get(`/api/people/${personId}`),
-            api.get(`/api/people/logs/faces?personId=${personId}&limit=100`)
+            api.get(`/api/people/logs/faces?personId=${personId}&limit=100`),
+            api.get('/api/people').catch(() => ({ people: [] }))
         ]);
 
         const person = personRes.person;
         const logs = logsRes.faceLogs ?? [];
+        const allPeople = allPeopleRes.people ?? [];
 
         const roleConfig = ROLE_CHIPS[person.role] ?? { label: person.role, variant: 'info' };
         const hasBiometrics = Array.isArray(person.embedding) && person.embedding.length > 0;
@@ -41,6 +43,62 @@ export async function renderPersonDetailsView({ api, session, personId }) {
         const avatarEl = person.photoPath 
             ? el('img', { src: person.photoPath, className: 'person-card__avatar person-card__avatar--lg' })
             : el('div', { className: 'person-card__avatar person-card__avatar--lg' }, [icon('user')]);
+
+        const deleteBtn = canManage ? el('button', {
+            className: 'btn btn--sm btn--danger',
+            type: 'button',
+            textContent: 'Elimina',
+            onclick: () => {
+                bodyHost.prepend(confirmPanel({
+                    title: `Cancellare definitivamente ${person.name}?`,
+                    message: 'Vengono purgati il profilo, i vettori biometrici e tutti i transiti registrati. Operazione non reversibile.',
+                    confirmLabel: 'Cancella tutto',
+                    onCancel: () => bodyHost.firstElementChild.remove(),
+                    onConfirm: async () => {
+                        await api.remove(`/api/people/${person.id}`).catch(() => undefined);
+                        go('people');
+                    }
+                }));
+                bodyHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }) : null;
+
+        const mergeBtn = canManage ? el('button', {
+            className: 'btn btn--sm btn--ghost',
+            type: 'button',
+            textContent: 'Unisci...',
+            onclick: () => {
+                const otherPeople = allPeople.filter(op => op.id !== person.id);
+                if (otherPeople.length === 0) {
+                    notice('warn', 'Non ci sono altre persone nel catalogo con cui unire.');
+                    return;
+                }
+                const selectTarget = el('select', { className: 'input select' }, [
+                    el('option', { value: '', textContent: '– Seleziona Persona Destinazione –' }),
+                    ...otherPeople.map(op => el('option', {
+                        value: op.id,
+                        textContent: `${op.name} (${op.role})`
+                    }))
+                ]);
+
+                bodyHost.prepend(confirmPanel({
+                    title: `Unisci i transiti di ${person.name} a un'altra persona`,
+                    message: 'Tutti i transiti di questo profilo verranno assegnati alla persona selezionata. Questo profilo verrà rimosso.',
+                    body: selectTarget,
+                    confirmLabel: 'Esegui Fusione',
+                    onCancel: () => bodyHost.firstElementChild.remove(),
+                    onConfirm: async () => {
+                        const targetId = selectTarget.value;
+                        if (!targetId) return;
+                        await api.post(`/api/people/${person.id}/merge`, { targetId }).catch(() => undefined);
+                        go('people');
+                    }
+                }));
+                bodyHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }) : null;
+
+        const headerActions = el('div', { className: 'row row--tight', style: 'margin-left: auto;' }, [mergeBtn, deleteBtn].filter(Boolean));
 
         headerHost.replaceChildren(
             el('div', { className: 'stack stack--tight' }, [
@@ -55,7 +113,8 @@ export async function renderPersonDetailsView({ api, session, personId }) {
                             hasBiometrics ? chip(`Vettori: ${person.sampleCount || 1}`, 'ok') : chip('Nessun Vettore', 'warn')
                         ]),
                         el('span', { className: 'section__hint mono', textContent: `ID: ${person.id} • Iscritto il: ${dateStr}` })
-                    ])
+                    ]),
+                    headerActions
                 ])
             ])
         );
