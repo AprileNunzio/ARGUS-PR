@@ -176,28 +176,28 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
             }, [icon('download'), el('span', { textContent: 'Sfoglia file ZIP / Bundle' })]);
 
             const dropZone = el('div', {
-                className: 'panel panel--dashed stack stack--tight',
+                className: 'dropzone-box rise',
                 onclick: (e) => {
                     if (e.target !== chooseBtn && !chooseBtn.contains(e.target)) fileInput.click();
                 }
             }, [
                 fileInput,
-                el('div', { className: 'row row--center' }, [icon('archive', { className: 'icon--lg' })]),
-                el('strong', { className: 'text-center', textContent: 'Carica archivio ZIP o pacchetto Git' }),
-                el('span', { className: 'section__hint text-center', textContent: 'Trascina qui il file .zip (es. scaricato da GitHub Releases) oppure fai clic per sfogliare' }),
+                el('div', { className: 'dropzone-box__icon' }, [icon('archive', { className: 'icon--xl' })]),
+                el('strong', { className: 'xrow__title', textContent: 'Trascina qui l archivio ZIP o selezionalo' }),
+                el('span', { className: 'section__hint text-center', textContent: 'Supporta file .zip (es. scaricati da GitHub Releases) o pacchetti .bundle Git fino a 512 MB' }),
                 el('div', { className: 'row row--center' }, [chooseBtn])
             ]);
 
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                dropZone.classList.add('dropzone--active');
+                dropZone.classList.add('dropzone-box--active');
             });
             dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dropzone--active');
+                dropZone.classList.remove('dropzone-box--active');
             });
             dropZone.addEventListener('drop', async (e) => {
                 e.preventDefault();
-                dropZone.classList.remove('dropzone--active');
+                dropZone.classList.remove('dropzone-box--active');
                 const file = e.dataTransfer?.files?.[0];
                 if (file) await uploadFile(file);
             });

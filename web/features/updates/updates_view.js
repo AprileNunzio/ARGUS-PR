@@ -76,6 +76,43 @@ export async function renderUpdatesView({ api }) {
         return actions;
     };
 
+    const heroBanner = (version) => {
+        const isUpToDate = version.tone === 'ok';
+        const isAvailable = version.available;
+        const toneClass = isUpToDate ? 'update-hero--ok' : (isAvailable ? 'update-hero--warn' : '');
+        const iconTone = isUpToDate ? 'update-hero__icon--emerald' : (isAvailable ? 'update-hero__icon--amber' : 'update-hero__icon--blue');
+        const iconName = isUpToDate ? 'check' : (isAvailable ? 'download' : 'server');
+
+        return el('div', { className: `update-hero ${toneClass} rise` }, [
+            el('div', { className: 'update-hero__body' }, [
+                el('div', { className: `update-hero__icon ${iconTone}` }, [icon(iconName, { className: 'icon--lg' })]),
+                el('div', { className: 'stack stack--tight' }, [
+                    el('h2', { className: 'update-hero__title', textContent: version.headline }),
+                    el('p', { className: 'update-hero__sub', textContent: version.detail })
+                ])
+            ]),
+            el('div', { className: 'update-hero__actions' }, [
+                phaseBadge(status.phase),
+                chip(`v${status.currentVersion}`, 'info')
+            ])
+        ]);
+    };
+
+    const workflowSteps = () => {
+        const p = status.phase;
+        const s1 = (p === 'idle' || p === 'healthy') ? 'update-flow__step--done' : 'update-flow__step--active';
+        const s2 = (p === 'requested' || p === 'pending') ? 'update-flow__step--active' : ((p === 'healthy') ? 'update-flow__step--done' : '');
+        const s3 = p === 'pending' ? 'update-flow__step--active' : ((p === 'healthy') ? 'update-flow__step--done' : '');
+        const s4 = p === 'healthy' ? 'update-flow__step--done' : '';
+
+        return el('div', { className: 'update-flow rise' }, [
+            el('div', { className: `update-flow__step ${s1}` }, [el('span', { className: 'update-flow__num', textContent: '1' }), el('span', { textContent: 'Verifica release' })]),
+            el('div', { className: `update-flow__step ${s2}` }, [el('span', { className: 'update-flow__num', textContent: '2' }), el('span', { textContent: 'Download & Patch' })]),
+            el('div', { className: `update-flow__step ${s3}` }, [el('span', { className: 'update-flow__num', textContent: '3' }), el('span', { textContent: 'Test 90s Watchdog' })]),
+            el('div', { className: `update-flow__step ${s4}` }, [el('span', { className: 'update-flow__num', textContent: '4' }), el('span', { textContent: 'Stabile & Confermato' })])
+        ]);
+    };
+
     const installCard = (version) => {
         const latest = status.lastCheck?.latest ?? null;
         const canInstall = version.available && latest && status.supported && (status.phase === 'idle' || status.phase === 'healthy');
@@ -87,7 +124,7 @@ export async function renderUpdatesView({ api }) {
                 onclick: () => {
                     confirmHost.replaceChildren(confirmPanel({
                         title: `Installare la versione ${latest.tag}?`,
-                        message: `Il servizio verra riavviato automaticamente. Se entro 90 secondi non si stabilizza, il watchdog ripristina la v${status.currentVersion}.`,
+                        message: `Il servizio verra aggiornato e riavviato in sicurezza. Se entro 90 secondi non si stabilizza, il watchdog ripristina la versione precedente.`,
                         confirmLabel: 'Installa e riavvia ora',
                         onCancel: () => confirmHost.replaceChildren(),
                         onConfirm: async () => {
@@ -123,20 +160,18 @@ export async function renderUpdatesView({ api }) {
                         }
                     }));
                 }
-            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento / Reinstalla' })])
+            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento / Ripara installazione' })])
             : null;
 
         return card({
-            title: 'Stato della release',
+            title: 'Canale di aggiornamento ufficiale GitHub',
             subtitle: version.detail,
             iconName: 'download',
             tone: version.tone === 'ok' ? 'emerald' : (version.tone === 'warn' ? 'amber' : 'cyan'),
             badge: phaseBadge(status.phase),
             actions: [installButton, reinstallButton].filter(Boolean),
             body: [
-                version.tone === 'ok'
-                    ? notice('ok', `Sistema aggiornato alla release piu recente: v${status.currentVersion}.`)
-                    : (version.tone === 'warn' ? notice('warn', version.headline) : notice('info', version.headline)),
+                workflowSteps(),
                 releaseDetail(status.lastCheck),
                 status.message ? el('p', { className: 'section__hint', textContent: `Ultimo esito: ${status.message}` }) : null
             ]
@@ -272,6 +307,7 @@ export async function renderUpdatesView({ api }) {
             feedback,
             confirmHost,
             statusTiles(status, version, watchdog),
+            heroBanner(version),
             el('div', { className: 'xstack' }, [
                 installCard(version),
                 offlineUpdateCard({
