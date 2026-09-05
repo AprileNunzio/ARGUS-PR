@@ -151,10 +151,10 @@ export const ENGINES = Object.freeze([
         capability: 'face_detect',
         label: 'SCRFD-500m',
         hint: 'Piu robusto su volti piccoli e pose estreme.',
-        status: EngineStatus.PLANNED,
+        status: EngineStatus.READY,
         runtime: 'python',
         cost: 2,
-        models: [],
+        models: ['face_detection_scrfd'],
         license: 'Apache-2.0'
     },
     {
@@ -173,10 +173,10 @@ export const ENGINES = Object.freeze([
         capability: 'face_recognize',
         label: 'MobileFaceNet (ArcFace)',
         hint: 'Alternativa piu leggera, richiede nuova taratura della soglia.',
-        status: EngineStatus.PLANNED,
+        status: EngineStatus.READY,
         runtime: 'python',
         cost: 1,
-        models: [],
+        models: ['face_recognition_mobilefacenet'],
         license: 'MIT'
     },
     {

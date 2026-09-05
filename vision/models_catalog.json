@@ -57,6 +57,26 @@
         "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/text_recognition_crnn/text_recognition_CRNN_EN_2021sep.onnx",
         "https://github.com/AprileNunzio/ARGUS-PR/releases/download/models-v1/text_recognition_CRNN_EN_2021sep.onnx"
       ]
+    },
+    {
+      "name": "face_detection_scrfd",
+      "filename": "scrfd_500m.onnx",
+      "sha256": "placeholder_sha256_for_scrfd",
+      "size": 2000000,
+      "license": "Apache-2.0",
+      "sources": [
+        "https://github.com/AprileNunzio/ARGUS-PR/releases/download/models-v1/scrfd_500m.onnx"
+      ]
+    },
+    {
+      "name": "face_recognition_mobilefacenet",
+      "filename": "mobilefacenet.onnx",
+      "sha256": "placeholder_sha256_for_mobilefacenet",
+      "size": 4000000,
+      "license": "MIT",
+      "sources": [
+        "https://github.com/AprileNunzio/ARGUS-PR/releases/download/models-v1/mobilefacenet.onnx"
+      ]
     }
   ]
 }

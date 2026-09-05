@@ -100,13 +100,24 @@ class VisionEngine:
             sys.stderr.write("Vision warning: could not load object model: " + str(e) + "\n")
 
     def load_faces(self, detector_path, recognizer_path):
-        if not os.path.isfile(detector_path) or not hasattr(cv2, 'FaceDetectorYN'):
+        if not os.path.isfile(detector_path):
             sys.stderr.write("Vision warning: face detector unavailable\n")
             return
         try:
-            self.face_detector = cv2.FaceDetectorYN.create(detector_path, "", (640, 360), self.face_thresh, 0.3, 5000)
-            if recognizer_path and os.path.isfile(recognizer_path) and hasattr(cv2, 'FaceRecognizerSF'):
-                self.face_recognizer = cv2.FaceRecognizerSF.create(recognizer_path, "")
+            if 'scrfd' in detector_path.lower():
+                self.face_detector = ort.InferenceSession(detector_path, providers=['CPUExecutionProvider'])
+                self.face_detector_type = 'scrfd'
+            elif hasattr(cv2, 'FaceDetectorYN'):
+                self.face_detector = cv2.FaceDetectorYN.create(detector_path, "", (640, 360), self.face_thresh, 0.3, 5000)
+                self.face_detector_type = 'yunet'
+
+            if recognizer_path and os.path.isfile(recognizer_path):
+                if 'mobilefacenet' in recognizer_path.lower() or 'arcface' in recognizer_path.lower():
+                    self.face_recognizer = ort.InferenceSession(recognizer_path, providers=['CPUExecutionProvider'])
+                    self.face_recognizer_type = 'mobilefacenet'
+                elif hasattr(cv2, 'FaceRecognizerSF'):
+                    self.face_recognizer = cv2.FaceRecognizerSF.create(recognizer_path, "")
+                    self.face_recognizer_type = 'sface'
             sys.stderr.write("Vision: face models ready\n")
         except Exception as e:
             sys.stderr.write("Vision warning: could not load face models: " + str(e) + "\n")

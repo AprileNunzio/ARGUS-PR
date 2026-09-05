@@ -4,8 +4,11 @@ import { icon } from '/assets/icons.js';
 const COST_LABELS = Object.freeze(['nullo', 'trascurabile', 'basso', 'medio', 'alto', 'molto alto']);
 
 function engineOption(engine) {
+    const isRecommended = engine.id === 'yolox_nano' || engine.id === 'sface' || engine.id === 'yunet' || engine.id === 'pixel_ema' || engine.id === 'plate_template';
+    const recText = isRecommended ? ' (Migliore/Bilanciato)' : '';
+    const costText = engine.cost === 0 ? 'Cost zero (Hardware)' : `Consumo: ${COST_LABELS[engine.cost] ?? engine.cost}`;
     const label = engine.status === 'ready'
-        ? `${engine.label} · costo ${COST_LABELS[engine.cost] ?? engine.cost}`
+        ? `${engine.label}${recText} · ${costText}`
         : `${engine.label} · da costruire`;
 
     const option = el('option', { value: engine.id, textContent: label });
