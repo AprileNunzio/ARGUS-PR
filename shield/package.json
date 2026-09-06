@@ -1,6 +1,6 @@
 {
   "name": "argus-shield",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Independent perimeter firewall and intrusion response for ARGUS-PR",
   "type": "module",
   "license": "MIT",

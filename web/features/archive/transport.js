@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -33,9 +34,9 @@ export function createTransport({ video, onNudge }) {
     const playButton = el('button', {
         type: 'button',
         className: 'btn btn--sm btn--primary',
-        title: 'Riproduci o metti in pausa (barra spaziatrice)',
+        title: t('archive.riproduciOMettiInPausaBa', 'Riproduci o metti in pausa (barra spaziatrice)'),
         onclick: toggle
-    }, [icon('play'), el('span', { textContent: 'Riproduci' })]);
+    }, [icon('play'), el('span', { textContent: t('archive.riproduci', 'Riproduci') })]);
 
     const syncPlayButton = () => {
         const label = playButton.querySelector('span');
@@ -45,7 +46,7 @@ export function createTransport({ video, onNudge }) {
     video.addEventListener('play', syncPlayButton);
     video.addEventListener('pause', syncPlayButton);
 
-    const speedSelect = el('select', { className: 'select select--sm', title: 'Velocità di riproduzione' },
+    const speedSelect = el('select', { className: 'select select--sm', title: t('archive.velocitDiRiproduzione', 'Velocità di riproduzione') },
         SPEEDS.map((speed) => el('option', {
             value: String(speed),
             textContent: `${speed}×`,
@@ -66,7 +67,7 @@ export function createTransport({ video, onNudge }) {
             step('+1 s', 'Avanti di un secondo', () => nudge(1)),
             step('+10 s', 'Avanti di dieci secondi', () => nudge(10)),
             el('span', { className: 'spacer' }),
-            el('span', { className: 'section__hint', textContent: 'Velocità' }),
+            el('span', { className: 'section__hint', textContent: t('archive.velocit', 'Velocità') }),
             speedSelect
         ])
     ]);

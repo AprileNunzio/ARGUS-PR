@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow } from '/assets/ui.js';
@@ -69,8 +70,8 @@ export async function renderAppearanceApp({ api, payload }) {
         timer = setInterval(paint, 1000);
 
         return card({
-            title: 'Orologio della barra di stato',
-            subtitle: 'Formato mostrato in basso a destra sul muro',
+            title: t('apps.orologioDellaBarraDiStato', 'Orologio della barra di stato'),
+            subtitle: t('apps.formatoMostratoInBassoADe', 'Formato mostrato in basso a destra sul muro'),
             iconName: 'clock',
             tone: 'amber',
             badge: chip(payload.timezone ?? 'Fuso di sistema', 'info'),
@@ -80,7 +81,7 @@ export async function renderAppearanceApp({ api, payload }) {
                     el('div', { className: 'clock-preview__body' }, [time, date])
                 ]),
                 optionRow({
-                    title: 'Formato orario',
+                    title: t('apps.formatoOrario', 'Formato orario'),
                     hint: '24 ore in notazione europea oppure 12 ore con AM e PM',
                     iconName: 'clock',
                     control: segmented(CLOCK_FORMAT_OPTIONS.map((option) => ({ ...option, icon: 'clock' })), config.clock.format, (value) => {
@@ -89,7 +90,7 @@ export async function renderAppearanceApp({ api, payload }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Stile della data',
+                    title: t('apps.stileDellaData', 'Stile della data'),
                     hint: 'Nessuna, breve o estesa accanto all orario',
                     iconName: 'timeline',
                     control: segmented(DATE_STYLE_OPTIONS.map((option) => ({ ...option, icon: 'timeline' })), config.clock.dateStyle, (value) => {
@@ -98,7 +99,7 @@ export async function renderAppearanceApp({ api, payload }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Secondi',
+                    title: t('apps.secondi', 'Secondi'),
                     hint: 'Necessari per correlare gli eventi con i timestamp dei segmenti',
                     iconName: 'activity',
                     control: toggle(config.clock.showSeconds, (value) => {
@@ -107,7 +108,7 @@ export async function renderAppearanceApp({ api, payload }) {
                     }, ['Visibili', 'Nascosti'])
                 }),
                 optionRow({
-                    title: 'Sigla del fuso orario',
+                    title: t('apps.siglaDelFusoOrario', 'Sigla del fuso orario'),
                     hint: 'Aggiunge CET o CEST accanto all orario',
                     iconName: 'globe',
                     control: toggle(config.clock.showTimezone, (value) => {
@@ -125,14 +126,14 @@ export async function renderAppearanceApp({ api, payload }) {
         host.replaceChildren(
             autosaveBar(saver.element),
             card({
-                title: 'Barra di stato',
-                subtitle: 'Accendi o spegni ogni singola informazione mostrata in fondo al muro',
+                title: t('apps.barraDiStato', 'Barra di stato'),
+                subtitle: t('apps.accendiOSpegniOgniSingola', 'Accendi o spegni ogni singola informazione mostrata in fondo al muro'),
                 iconName: 'sliders',
                 tone: 'cyan',
                 badge: chip(`${visibleParts}/${STATUSBAR_PARTS.length} visibili`, visibleParts > 0 ? 'ok' : 'warn'),
                 body: [
                     optionRow({
-                        title: 'Mostra la barra di stato',
+                        title: t('apps.mostraLaBarraDiStato', 'Mostra la barra di stato'),
                         hint: 'Spegnendola il muro diventa video a pieno schermo, senza alcuna sovrimpressione in basso',
                         iconName: 'monitor',
                         control: toggle(config.statusbar.visible !== false, (value) => {
@@ -144,8 +145,8 @@ export async function renderAppearanceApp({ api, payload }) {
                 ]
             }),
             card({
-                title: 'Elementi sui riquadri',
-                subtitle: 'Cosa compare sopra il video di ogni telecamera',
+                title: t('apps.elementiSuiRiquadri', 'Elementi sui riquadri'),
+                subtitle: t('apps.cosaCompareSopraIlVideoDi', 'Cosa compare sopra il video di ogni telecamera'),
                 iconName: 'crop',
                 tone: 'purple',
                 body: partRows(TILE_PARTS, config.tile)

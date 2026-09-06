@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { metricTile } from '/assets/ui.js';
@@ -27,7 +28,7 @@ export function releaseNotes(text) {
     if (lines.length === 0) return null;
 
     return el('div', { className: 'stack stack--tight' }, [
-        el('span', { className: 'xrow__title text-sm text-muted', textContent: 'Novita e modifiche in questa versione:' }),
+        el('span', { className: 'xrow__title text-sm text-muted', textContent: t('updates.novitaEModificheInQuestaV', 'Novita e modifiche in questa versione:') }),
         el('ul', { className: 'stack stack--tight' }, lines.map((line) => el('li', { className: 'section__hint', textContent: line })))
     ]);
 }
@@ -181,6 +182,6 @@ export function releaseDetail(check) {
             href: latest.url,
             target: '_blank',
             rel: 'noreferrer noopener'
-        }, [icon('globe'), el('span', { textContent: 'Visualizza sorgenti e note complete su GitHub' })]) : null
+        }, [icon('globe'), el('span', { textContent: t('updates.visualizzaSorgentiENoteCom', 'Visualizza sorgenti e note complete su GitHub') })]) : null
     ]);
 }

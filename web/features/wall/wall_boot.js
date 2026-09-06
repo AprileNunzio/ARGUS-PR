@@ -1,31 +1,32 @@
+import { t } from '/assets/i18n.js';
 const PHASE_COPY = {
     requested: {
-        title: 'Aggiornamento in corso',
+        title: t('wall.aggiornamentoInCorso', 'Aggiornamento in corso'),
         detail: 'Download e installazione della nuova versione',
         step: 1
     },
     pending: {
-        title: 'Verifica della nuova versione',
+        title: t('wall.verificaDellaNuovaVersione', 'Verifica della nuova versione'),
         detail: 'La nuova versione e installata e in prova: se non si stabilizza entro novanta secondi il sistema ripristina da solo quella precedente. La sorveglianza continua a funzionare.',
         step: 2
     },
     'rolled-back': {
-        title: 'Versione precedente ripristinata',
+        title: t('wall.versionePrecedenteRipristina', 'Versione precedente ripristinata'),
         detail: 'La nuova versione non si e avviata, il sistema e tornato a quella funzionante',
         step: 3
     },
     failed: {
-        title: 'Aggiornamento non riuscito',
+        title: t('wall.aggiornamentoNonRiuscito', 'Aggiornamento non riuscito'),
         detail: 'Il sistema continua a funzionare con la versione installata',
         step: 3
     },
     reconnecting: {
-        title: 'Riavvio del servizio',
+        title: t('wall.riavvioDelServizio', 'Riavvio del servizio'),
         detail: 'Attendo che il server torni disponibile',
         step: 2
     },
     ready: {
-        title: 'Sistema pronto',
+        title: t('wall.sistemaPronto', 'Sistema pronto'),
         detail: 'Ripristino della vista in corso',
         step: 3
     }
@@ -47,10 +48,10 @@ function el(tag, props = {}, children = []) {
 }
 
 export function createBootScreen() {
-    const title = el('h1', { className: 'boot-screen__title', textContent: 'Avvio del sistema' });
-    const detail = el('p', { className: 'boot-screen__detail', textContent: 'Attendere prego' });
+    const title = el('h1', { className: 'boot-screen__title', textContent: t('wall.avvioDelSistema', 'Avvio del sistema') });
+    const detail = el('p', { className: 'boot-screen__detail', textContent: t('wall.attenderePrego', 'Attendere prego') });
     const versions = el('p', { className: 'boot-screen__versions' });
-    const warning = el('p', { className: 'boot-screen__warning', textContent: 'Non spegnere il dispositivo' });
+    const warning = el('p', { className: 'boot-screen__warning', textContent: t('wall.nonSpegnereIlDispositivo', 'Non spegnere il dispositivo') });
     const bar = el('span', { className: 'boot-screen__bar-fill' });
 
     const dots = STEPS.map((label) => el('span', { className: 'boot-screen__step' }, [
@@ -65,7 +66,7 @@ export function createBootScreen() {
                 el('span', { className: 'boot-screen__ring' }),
                 el('span', { className: 'boot-screen__logo', textContent: 'A' })
             ]),
-            el('span', { className: 'boot-screen__brand', textContent: 'ARGUS-PR' }),
+            el('span', { className: 'boot-screen__brand', textContent: t('wall.aRGUSPR', 'ARGUS-PR') }),
             title,
             detail,
             el('div', { className: 'boot-screen__bar' }, [bar]),

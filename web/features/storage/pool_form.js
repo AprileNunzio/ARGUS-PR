@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, notice, formatBytes, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, tabsBar } from '/assets/ui.js';
@@ -70,13 +71,13 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
     const say = (kind, text) => message.replaceChildren(notice(kind, text));
 
     const targetTab = () => {
-        const nameInput = el('input', { className: 'input', value: draft.name, placeholder: 'es. HDD Videosorveglianza 4TB' });
+        const nameInput = el('input', { className: 'input', value: draft.name, placeholder: t('storage.esHDDVideosorveglianza4TB', 'es. HDD Videosorveglianza 4TB') });
         nameInput.addEventListener('input', () => { draft.name = nameInput.value; });
 
         const pathInput = el('input', { className: 'input input--mono', value: draft.path, placeholder: draft.kind === 'nas' ? '/mnt/nas_recordings' : '/mnt/storage' });
         pathInput.addEventListener('input', () => { draft.path = pathInput.value; });
 
-        const verify = el('button', { className: 'btn', type: 'button' }, [icon('check'), el('span', { textContent: 'Verifica percorso' })]);
+        const verify = el('button', { className: 'btn', type: 'button' }, [icon('check'), el('span', { textContent: t('storage.verificaPercorso', 'Verifica percorso') })]);
         verify.addEventListener('click', async () => {
             if (draft.path.trim().length === 0) {
                 say('warn', 'Indica prima un percorso di destinazione.');
@@ -103,8 +104,8 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
                 render();
             })),
             el('div', { className: 'stack stack--tight' }, [
-                el('span', { className: 'xrow__title', textContent: 'Dischi e partizioni rilevati' }),
-                el('span', { className: 'xrow__hint', textContent: 'Un clic seleziona il punto di montaggio: non serve digitare il percorso a mano.' }),
+                el('span', { className: 'xrow__title', textContent: t('storage.dischiEPartizioniRilevati', 'Dischi e partizioni rilevati') }),
+                el('span', { className: 'xrow__hint', textContent: t('storage.unClicSelezionaIlPuntoDi', 'Un clic seleziona il punto di montaggio: non serve digitare il percorso a mano.') }),
                 targetPicker({
                     detected,
                     selectedPath: draft.path,
@@ -165,7 +166,7 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
     };
 
     const camerasTab = () => [
-        el('span', { className: 'xrow__hint', textContent: 'Le telecamere selezionate scriveranno i loro segmenti su questa destinazione appena il pool viene creato.' }),
+        el('span', { className: 'xrow__hint', textContent: t('storage.leTelecamereSelezionateScri', 'Le telecamere selezionate scriveranno i loro segmenti su questa destinazione appena il pool viene creato.') }),
         cameraPicker({
             cameras,
             selected: selectedCameras,
@@ -186,10 +187,10 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
         const host_ = el('input', { className: 'input', value: draft.networkHost, placeholder: '192.168.1.50' });
         host_.addEventListener('input', () => { draft.networkHost = host_.value; });
 
-        const share = el('input', { className: 'input', value: draft.networkShare, placeholder: 'cctv_archive' });
+        const share = el('input', { className: 'input', value: draft.networkShare, placeholder: t('storage.cctvArchive', 'cctv_archive') });
         share.addEventListener('input', () => { draft.networkShare = share.value; });
 
-        const user = el('input', { className: 'input', value: draft.username, placeholder: 'operatore', autocomplete: 'off' });
+        const user = el('input', { className: 'input', value: draft.username, placeholder: t('storage.operatore', 'operatore'), autocomplete: 'off' });
         user.addEventListener('input', () => { draft.username = user.value; });
 
         const password = el('input', { className: 'input', type: 'password', placeholder: pool?.hasPassword ? 'Lascia vuoto per non cambiarla' : 'Password della share', autocomplete: 'new-password' });
@@ -199,13 +200,13 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
         smb.addEventListener('change', () => { draft.smbVersion = smb.value; });
         smb.disabled = draft.networkProto === 'nfs';
 
-        const options = el('input', { className: 'input input--mono', value: draft.mountOptions, placeholder: 'noatime,uid=argus,gid=argus' });
+        const options = el('input', { className: 'input input--mono', value: draft.mountOptions, placeholder: t('storage.noatimeUidArgusGidArgus', 'noatime,uid=argus,gid=argus') });
         options.addEventListener('input', () => { draft.mountOptions = options.value; });
 
         const reconnect = numberInput(draft.reconnectSeconds, { min: 5, max: 600, step: 5 });
         reconnect.addEventListener('input', () => { draft.reconnectSeconds = Number(reconnect.value); });
 
-        const mount = el('button', { className: 'btn', type: 'button' }, [icon('network'), el('span', { textContent: 'Monta la share adesso' })]);
+        const mount = el('button', { className: 'btn', type: 'button' }, [icon('network'), el('span', { textContent: t('storage.montaLaShareAdesso', 'Monta la share adesso') })]);
         mount.addEventListener('click', async () => {
             mount.disabled = true;
             const result = await api.post('/api/storage/nas/mount', {
@@ -257,14 +258,14 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
             { value: 128, label: '128 MB (accurato)' }
         ], 32);
 
-        const run = el('button', { className: 'btn btn--primary', type: 'button' }, [icon('activity'), el('span', { textContent: 'Misura velocita di scrittura' })]);
+        const run = el('button', { className: 'btn btn--primary', type: 'button' }, [icon('activity'), el('span', { textContent: t('storage.misuraVelocitaDiScrittura', 'Misura velocita di scrittura') })]);
         run.addEventListener('click', async () => {
             if (draft.path.trim().length === 0) {
                 say('warn', 'Seleziona prima una destinazione nella scheda Destinazione.');
                 return;
             }
             run.disabled = true;
-            run.replaceChildren(icon('refresh'), el('span', { textContent: 'Misurazione in corso…' }));
+            run.replaceChildren(icon('refresh'), el('span', { textContent: t('storage.misurazioneInCorso', 'Misurazione in corso…') }));
             const result = await api.post('/api/storage/benchmark', { path: draft.path.trim(), megabytes: Number(size.value) })
                 .catch((error) => ({ success: false, error: error.message }));
             benchmark = result;
@@ -272,7 +273,7 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
         });
 
         return [
-            el('span', { className: 'xrow__hint', textContent: 'Scrive un file temporaneo sulla destinazione, ne misura throughput e latenza, poi lo rimuove.' }),
+            el('span', { className: 'xrow__hint', textContent: t('storage.scriveUnFileTemporaneoSull', 'Scrive un file temporaneo sulla destinazione, ne misura throughput e latenza, poi lo rimuove.') }),
             el('div', { className: 'row row--between' }, [
                 labelled('Volume del test', null, size),
                 run
@@ -365,7 +366,7 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
                     className: 'page-back',
                     type: 'button',
                     onclick: close
-                }, [icon('chevronLeft'), el('span', { textContent: 'Torna a Storage & Dischi' })]),
+                }, [icon('chevronLeft'), el('span', { textContent: t('storage.tornaAStorageDischi', 'Torna a Storage & Dischi') })]),
                 actions: [saveButton]
             }),
             card({
@@ -377,7 +378,7 @@ export function renderPoolForm({ api, detected, cameras, pool = null, onSaved, o
                 footer: [
                     el('span', { className: 'section__hint', textContent: draft.path.trim().length > 0 ? draft.path.trim() : 'Scegli una destinazione nella scheda Destinazione' }),
                     el('div', { className: 'row row--tight' }, [
-                        el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: close }),
+                        el('button', { className: 'btn', type: 'button', textContent: t('storage.annulla', 'Annulla'), onclick: close }),
                         saveButton
                     ])
                 ]

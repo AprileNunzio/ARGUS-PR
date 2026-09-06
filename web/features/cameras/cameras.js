@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -37,7 +38,7 @@ function cameraCard({ camera, recorder, canEdit, onToggleEnabled }) {
         ]),
         el('span', { className: 'mono truncate cam-card__source', textContent: sourceLabel(camera) }),
         el('div', { className: 'row row--between' }, [
-            camera.group ? chip(camera.group) : el('span', { className: 'section__hint', textContent: 'senza gruppo' }),
+            camera.group ? chip(camera.group) : el('span', { className: 'section__hint', textContent: t('cameras.senzaGruppo', 'senza gruppo') }),
             el('div', { className: 'row row--tight' }, [
                 canEdit ? el('button', {
                     className: `btn btn--sm ${camera.enabled ? 'btn--ghost' : 'btn--primary'}`,
@@ -66,7 +67,7 @@ async function renderList({ api, session }) {
     const { recorders } = await api.get('/api/recording').catch(() => ({ recorders: [] }));
 
     const grid = el('div', { className: 'cam-grid' });
-    const search = el('input', { className: 'input', type: 'search', placeholder: 'Filtra per nome, gruppo o posizione' });
+    const search = el('input', { className: 'input', type: 'search', placeholder: t('cameras.filtraPerNomeGruppoOPosi', 'Filtra per nome, gruppo o posizione') });
 
     const onToggleEnabled = async (cam) => {
         const nextState = !cam.enabled;
@@ -104,21 +105,21 @@ async function renderList({ api, session }) {
 
     outlet.append(
         pageHead({
-            title: 'Telecamere',
+            title: t('cameras.telecamere', 'Telecamere'),
             hint: `${cameras.length} canali configurati · rete e periferiche locali`,
             actions: canEdit
                 ? [
                     el('button', { className: 'btn', type: 'button', onclick: () => go('cameras', 'profiles') }, [
                         icon('settings'),
-                        el('span', { textContent: 'Profili Marche' })
+                        el('span', { textContent: t('cameras.profiliMarche', 'Profili Marche') })
                     ]),
                     el('button', { className: 'btn', type: 'button', onclick: () => go('cameras', 'discover') }, [
                         icon('search'),
-                        el('span', { textContent: 'Cerca ONVIF' })
+                        el('span', { textContent: t('cameras.cercaONVIF', 'Cerca ONVIF') })
                     ]),
                     el('button', { className: 'btn btn--primary', type: 'button', onclick: () => go('cameras', 'new') }, [
                         icon('plus'),
-                        el('span', { textContent: 'Aggiungi canale' })
+                        el('span', { textContent: t('cameras.aggiungiCanale', 'Aggiungi canale') })
                     ])
                 ]
                 : []
@@ -137,10 +138,10 @@ async function renderDetailPage({ api, session, cameraId, tab }) {
 
     if (!camera) {
         return el('div', { className: 'view' }, [
-            pageHead({ title: 'Canale non trovato', hint: 'Il canale richiesto non esiste piu' }),
+            pageHead({ title: t('cameras.canaleNonTrovato', 'Canale non trovato'), hint: 'Il canale richiesto non esiste piu' }),
             notice('warn', 'Torna all elenco per vedere i canali disponibili.'),
             el('div', { className: 'row' }, [
-                el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Elenco telecamere', onclick: () => go('cameras') })
+                el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.elencoTelecamere', 'Elenco telecamere'), onclick: () => go('cameras') })
             ])
         ]);
     }

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { api } from '/assets/api.js';
 import { el, field } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
@@ -9,8 +10,8 @@ export function renderLogin({ message, onSuccess, onRecovery }) {
         el('div', { className: 'login__brand' }, [
             el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('div', {}, [
-                el('h1', { className: 'login__title', textContent: 'ARGUS-PR' }),
-                el('p', { className: 'login__sub', textContent: 'Network Video Recorder by NunzioTech' })
+                el('h1', { className: 'login__title', textContent: t('login.aRGUSPR', 'ARGUS-PR') }),
+                el('p', { className: 'login__sub', textContent: t('login.networkVideoRecorderByNunz', 'Network Video Recorder by NunzioTech') })
             ])
         ]),
         cardContent
@@ -20,7 +21,7 @@ export function renderLogin({ message, onSuccess, onRecovery }) {
         const username = el('input', { className: 'input', type: 'text', name: 'username', autocomplete: 'username', required: 'required' });
         const password = el('input', { className: 'input', type: 'password', name: 'password', autocomplete: 'current-password', required: 'required' });
         const feedback = el('div', { className: 'notice notice--error', hidden: 'hidden' });
-        const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: 'Accedi' });
+        const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: t('login.accedi', 'Accedi') });
 
         if (initialMessage) {
             feedback.textContent = initialMessage;
@@ -66,7 +67,7 @@ export function renderLogin({ message, onSuccess, onRecovery }) {
             el('button', {
                 className: 'btn btn--ghost btn--block',
                 type: 'button',
-                textContent: 'Ho dimenticato la password',
+                textContent: t('login.hoDimenticatoLaPassword', 'Ho dimenticato la password'),
                 onclick: () => onRecovery?.()
             })
         ]);
@@ -80,15 +81,15 @@ export function renderLogin({ message, onSuccess, onRecovery }) {
             className: 'input',
             type: 'text',
             autocomplete: 'one-time-code',
-            placeholder: 'Codice a 6 cifre o di recupero',
+            placeholder: t('login.codiceA6CifreODiRecupero', 'Codice a 6 cifre o di recupero'),
             required: 'required'
         });
         const feedback = el('div', { className: 'notice notice--error', hidden: 'hidden' });
-        const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: 'Verifica codice' });
+        const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: t('login.verificaCodice', 'Verifica codice') });
         const cancel = el('button', {
             className: 'btn btn--secondary',
             type: 'button',
-            textContent: 'Annulla',
+            textContent: t('login.annulla', 'Annulla'),
             onclick: () => showPasswordStep()
         });
 

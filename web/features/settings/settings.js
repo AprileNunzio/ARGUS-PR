@@ -1,15 +1,16 @@
+import { t } from '/assets/i18n.js';
 import { el, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { controlFor, isVisible } from './controls.js';
 import { setLocale } from '/assets/i18n.js';
 
 const GROUP_META = {
-    general: { subtitle: 'Lingua del sistema, fuso orario e parametri di base', icon: 'globe', color: 'blue' },
-    access: { subtitle: 'Esposizione su internet, reti fidate LAN e proxy', icon: 'globe', color: 'cyan' },
-    security: { subtitle: 'MFA TOTP, blocco account anti-bruteforce e durata sessioni', icon: 'shield', color: 'amber' },
-    console: { subtitle: 'Console HDMI/Muro Video, layout griglie e uscite display', icon: 'monitor', color: 'rose' },
-    retention: { subtitle: 'Spazio minimo su disco, quote e ritenzione automatica', icon: 'clock', color: 'emerald' },
-    vision: { subtitle: 'Sensibilita modelli AI, tracciamento e soglie di inferenza', icon: 'eye', color: 'purple' }
+    general: { subtitle: t('settings.linguaDelSistemaFusoOrari', 'Lingua del sistema, fuso orario e parametri di base'), icon: 'globe', color: 'blue' },
+    access: { subtitle: t('settings.esposizioneSuInternetReti', 'Esposizione su internet, reti fidate LAN e proxy'), icon: 'globe', color: 'cyan' },
+    security: { subtitle: t('settings.mFATOTPBloccoAccountAnti', 'MFA TOTP, blocco account anti-bruteforce e durata sessioni'), icon: 'shield', color: 'amber' },
+    console: { subtitle: t('settings.consoleHDMIMuroVideoLayou', 'Console HDMI/Muro Video, layout griglie e uscite display'), icon: 'monitor', color: 'rose' },
+    retention: { subtitle: t('settings.spazioMinimoSuDiscoQuote', 'Spazio minimo su disco, quote e ritenzione automatica'), icon: 'clock', color: 'emerald' },
+    vision: { subtitle: t('settings.sensibilitaModelliAITracci', 'Sensibilita modelli AI, tracciamento e soglie di inferenza'), icon: 'eye', color: 'purple' }
 };
 
 function renderBadge(badge) {
@@ -20,7 +21,7 @@ function renderBadge(badge) {
 function settingRow(entry, values, onChange) {
     const badges = [];
     if (entry.badge) badges.push(renderBadge(entry.badge));
-    if (entry.sensitive) badges.push(el('span', { className: 'badge badge--amber', textContent: 'Sensibile' }));
+    if (entry.sensitive) badges.push(el('span', { className: 'badge badge--amber', textContent: t('settings.sensibile', 'Sensibile') }));
 
     const row = el('div', { className: 'settings-row' }, [
         el('div', { className: 'settings-row__info' }, [
@@ -72,7 +73,7 @@ function renderMacroCategoryCard(group, entries, onSelect) {
             el('p', { className: 'settings-cat-card__subtitle', textContent: meta.subtitle })
         ]),
         el('div', { className: 'settings-cat-card__footer' }, [
-            el('span', { className: 'settings-cat-card__action', textContent: 'Configura' }),
+            el('span', { className: 'settings-cat-card__action', textContent: t('settings.configura', 'Configura') }),
             icon('chevron-right')
         ])
     ]);
@@ -100,9 +101,9 @@ export async function renderSettings({ api }) {
     let viewMode = 'categories';
     let searchQuery = '';
 
-    const saveBtn = el('button', { className: 'btn btn--primary btn--save', type: 'button', textContent: 'Salva modifiche' });
-    const cancelBtn = el('button', { className: 'btn btn--ghost', type: 'button', textContent: 'Annulla' });
-    const changeCountBadge = el('span', { className: 'floating-save__count', textContent: '0 modifiche' });
+    const saveBtn = el('button', { className: 'btn btn--primary btn--save', type: 'button', textContent: t('settings.salvaModifiche', 'Salva modifiche') });
+    const cancelBtn = el('button', { className: 'btn btn--ghost', type: 'button', textContent: t('settings.annulla', 'Annulla') });
+    const changeCountBadge = el('span', { className: 'floating-save__count', textContent: t('settings.0Modifiche', '0 modifiche') });
     const saveFeedback = el('span', { className: 'floating-save__msg' });
 
     const floatingBar = el('div', { className: 'floating-save-bar' }, [
@@ -157,14 +158,14 @@ export async function renderSettings({ api }) {
         const searchInput = el('input', {
             type: 'search',
             className: 'settings-search__input',
-            placeholder: 'Cerca parametro, chiave o descrizione…',
+            placeholder: t('settings.cercaParametroChiaveODesc', 'Cerca parametro, chiave o descrizione…'),
             value: searchQuery
         });
 
         const clearBtn = searchQuery.length > 0 ? el('button', {
             type: 'button',
             className: 'settings-search__clear',
-            title: 'Cancella ricerca',
+            title: t('settings.cancellaRicerca', 'Cancella ricerca'),
             onclick: () => {
                 searchQuery = '';
                 renderContent();
@@ -184,7 +185,7 @@ export async function renderSettings({ api }) {
                 selectedGroupId = null;
                 renderContent();
             }
-        }, [icon('grid'), el('span', { textContent: 'Categorie' })]);
+        }, [icon('grid'), el('span', { textContent: t('settings.categorie', 'Categorie') })]);
 
         const segExpanded = el('button', {
             type: 'button',
@@ -193,13 +194,13 @@ export async function renderSettings({ api }) {
                 viewMode = 'expanded';
                 renderContent();
             }
-        }, [icon('apps'), el('span', { textContent: 'Tutte le opzioni' })]);
+        }, [icon('apps'), el('span', { textContent: t('settings.tutteLeOpzioni', 'Tutte le opzioni') })]);
 
         const toolbar = el('div', { className: 'settings-toolbar' }, [
             el('div', { className: 'settings-toolbar__left' }, [
                 el('div', { className: 'settings-toolbar__brand' }, [
                     el('div', { className: 'settings-toolbar__logo' }, [icon('settings')]),
-                    el('h1', { className: 'settings-toolbar__title', textContent: 'Impostazioni' }),
+                    el('h1', { className: 'settings-toolbar__title', textContent: t('settings.impostazioni', 'Impostazioni') }),
                     el('span', { className: 'settings-toolbar__status' }, ['● Configurazione'])
                 ])
             ]),
@@ -228,7 +229,7 @@ export async function renderSettings({ api }) {
                     selectedGroupId = null;
                     renderContent();
                 }
-            }, [icon('chevron-left'), el('span', { textContent: 'Tutte le sezioni' })]);
+            }, [icon('chevron-left'), el('span', { textContent: t('settings.tutteLeSezioni', 'Tutte le sezioni') })]);
 
             const tabs = el('div', { className: 'settings-pills' }, groups.map((g) => {
                 const isSelected = g.id === activeGroup.id;

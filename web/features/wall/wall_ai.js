@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { segmented, toggle, optionRow } from '/assets/ui.js';
@@ -98,7 +99,7 @@ export function classPicker(overlay, onToggle, onGroup) {
 
 export function engineTable(engines) {
     if (!Array.isArray(engines) || engines.length === 0) {
-        return el('span', { className: 'xrow__hint', textContent: 'Catalogo dei motori non disponibile.' });
+        return el('span', { className: 'xrow__hint', textContent: t('wall.catalogoDeiMotoriNonDispon', 'Catalogo dei motori non disponibile.') });
     }
 
     return el('div', { className: 'ai-engines' }, engines.map((engine) => el('div', {
@@ -159,37 +160,37 @@ export function overlayControls(overlay, onChange) {
 
     return [
         optionRow({
-            title: 'Stile del riquadro',
+            title: t('wall.stileDelRiquadro', 'Stile del riquadro'),
             hint: 'Come vengono disegnati i contorni attorno agli oggetti riconosciuti',
             iconName: 'crop',
             control: segmented(STYLE_OPTIONS, overlay.style, (value) => onChange({ style: value }), { compact: true })
         }),
         optionRow({
-            title: 'Soglia minima di confidenza',
+            title: t('wall.sogliaMinimaDiConfidenza', 'Soglia minima di confidenza'),
             hint: 'Sotto questa percentuale il riquadro non viene disegnato: alzala se compaiono falsi riconoscimenti',
             iconName: 'activity',
             control: el('div', { className: 'slider-wrap' }, [confidence, confidenceBadge])
         }),
         optionRow({
-            title: 'Persistenza del riquadro',
+            title: t('wall.persistenzaDelRiquadro', 'Persistenza del riquadro'),
             hint: 'Per quanto tempo il contorno resta visibile dopo l ultimo fotogramma in cui il soggetto e stato visto',
             iconName: 'clock',
             control: el('div', { className: 'slider-wrap' }, [hold, holdBadge])
         }),
         optionRow({
-            title: 'Etichetta con il nome dell oggetto',
+            title: t('wall.etichettaConIlNomeDellOgg', 'Etichetta con il nome dell oggetto'),
             hint: 'Mostra Persona, Auto, Gatto e simili accanto al riquadro',
             iconName: 'info',
             control: toggle(overlay.showLabel, (value) => onChange({ showLabel: value }), ['Visibile', 'Nascosta'])
         }),
         optionRow({
-            title: 'Percentuale di confidenza',
+            title: t('wall.percentualeDiConfidenza', 'Percentuale di confidenza'),
             hint: 'Affianca all etichetta la certezza del riconoscimento',
             iconName: 'activity',
             control: toggle(overlay.showConfidence, (value) => onChange({ showConfidence: value }), ['Visibile', 'Nascosta'])
         }),
         optionRow({
-            title: 'Identificativo di tracciamento',
+            title: t('wall.identificativoDiTracciamento', 'Identificativo di tracciamento'),
             hint: 'Mostra il codice del track: utile in fase di taratura, superfluo in esercizio',
             iconName: 'crop',
             control: toggle(overlay.showTrackId, (value) => onChange({ showTrackId: value }), ['Visibile', 'Nascosto'])

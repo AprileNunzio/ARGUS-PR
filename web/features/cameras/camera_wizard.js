@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, notice, chip, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -54,7 +55,7 @@ function kindCard(entry) {
 export function renderKindPage() {
     return el('div', { className: 'view' }, [
         pageHead({
-            title: 'Nuovo canale',
+            title: t('cameras.nuovoCanale', 'Nuovo canale'),
             hint: 'Da dove arriva il video di questa telecamera',
             back: backLink('Torna all elenco', 'cameras')
         }),
@@ -74,8 +75,8 @@ export function renderNewCameraPage({ api, kind }) {
     const form = createCameraForm({ api, kind, camera: prefill });
     const feedback = el('div', { hidden: 'hidden' });
 
-    const probeButton = el('button', { className: 'btn', type: 'button', textContent: 'Verifica sorgente' });
-    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva canale' });
+    const probeButton = el('button', { className: 'btn', type: 'button', textContent: t('cameras.verificaSorgente', 'Verifica sorgente') });
+    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.salvaCanale', 'Salva canale') });
 
     const fail = (error) => {
         feedback.replaceChildren(notice('error', error.message));
@@ -125,7 +126,7 @@ export function renderNewCameraPage({ api, kind }) {
                 form.node,
                 feedback,
                 el('div', { className: 'row row--end' }, [
-                    el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: () => go('cameras') }),
+                    el('button', { className: 'btn', type: 'button', textContent: t('cameras.annulla', 'Annulla'), onclick: () => go('cameras') }),
                     probeButton,
                     saveButton
                 ])
@@ -137,12 +138,12 @@ export function renderNewCameraPage({ api, kind }) {
 export async function renderDiscoveryPage({ api }) {
     const outlet = el('div', { className: 'view' });
     const body = el('div', { className: 'panel__body stack stack--tight' }, [
-        el('span', { className: 'section__hint', textContent: 'Ricerca in corso sulla rete locale…' })
+        el('span', { className: 'section__hint', textContent: t('cameras.ricercaInCorsoSullaReteLo', 'Ricerca in corso sulla rete locale…') })
     ]);
 
     const scanButton = el('button', { className: 'btn', type: 'button' }, [
         icon('refresh'),
-        el('span', { textContent: 'Cerca di nuovo' })
+        el('span', { textContent: t('cameras.cercaDiNuovo', 'Cerca di nuovo') })
     ]);
 
     const paint = (result) => {
@@ -154,7 +155,7 @@ export async function renderDiscoveryPage({ api }) {
         }
 
         if (devices.length === 0) {
-            body.replaceChildren(el('div', { className: 'empty', textContent: 'Nessun dispositivo ONVIF ha risposto sulla rete locale.' }));
+            body.replaceChildren(el('div', { className: 'empty', textContent: t('cameras.nessunDispositivoONVIFHaRi', 'Nessun dispositivo ONVIF ha risposto sulla rete locale.') }));
             return;
         }
 
@@ -168,7 +169,7 @@ export async function renderDiscoveryPage({ api }) {
                 el('button', {
                     className: 'btn btn--sm btn--primary',
                     type: 'button',
-                    textContent: 'Aggiungi',
+                    textContent: t('cameras.aggiungi', 'Aggiungi'),
                     onclick: () => {
                         stashPrefill({
                             sourceKind: 'rtsp',
@@ -187,7 +188,7 @@ export async function renderDiscoveryPage({ api }) {
 
     const scan = async () => {
         scanButton.disabled = true;
-        body.replaceChildren(el('span', { className: 'section__hint', textContent: 'Ricerca in corso sulla rete locale…' }));
+        body.replaceChildren(el('span', { className: 'section__hint', textContent: t('cameras.ricercaInCorsoSullaReteLo', 'Ricerca in corso sulla rete locale…') }));
 
         const result = await api.post('/api/discovery/onvif', { timeoutMs: 4000 })
             .catch((error) => ({ devices: [], error: error.message }));
@@ -200,7 +201,7 @@ export async function renderDiscoveryPage({ api }) {
 
     outlet.append(
         pageHead({
-            title: 'Ricerca ONVIF',
+            title: t('cameras.ricercaONVIF', 'Ricerca ONVIF'),
             hint: 'Dispositivi che rispondono al protocollo di scoperta sulla rete locale',
             actions: [scanButton],
             back: backLink('Torna all elenco', 'cameras')

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, field, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -25,10 +26,10 @@ export async function renderNewPersonView({ api, session }) {
         className: 'page-back',
         type: 'button',
         onclick: () => go('people')
-    }, [icon('chevronLeft'), el('span', { textContent: 'Torna al catalogo' })]);
+    }, [icon('chevronLeft'), el('span', { textContent: t('people.tornaAlCatalogo', 'Torna al catalogo') })]);
 
-    const nameInput = el('input', { className: 'input input--lg', type: 'text', placeholder: 'Mario Rossi', required: 'required' });
-    const departmentInput = el('input', { className: 'input', type: 'text', placeholder: 'Sicurezza, IT, Logistica…' });
+    const nameInput = el('input', { className: 'input input--lg', type: 'text', placeholder: t('people.marioRossi', 'Mario Rossi'), required: 'required' });
+    const departmentInput = el('input', { className: 'input', type: 'text', placeholder: t('people.sicurezzaITLogistica', 'Sicurezza, IT, Logistica…') });
     const roleSelect = el('select', { className: 'input select' }, ROLE_OPTIONS.map(([value, label]) => (
         el('option', { value, textContent: label })
     )));
@@ -38,7 +39,7 @@ export async function renderNewPersonView({ api, session }) {
         return { value, input, node: el('label', { className: 'row row--tight' }, [input, el('span', { textContent: label })]) };
     });
 
-    const notesInput = el('textarea', { className: 'input', rows: '4', placeholder: 'Note operative, badge n. 1234, mansioni…' });
+    const notesInput = el('textarea', { className: 'input', rows: '4', placeholder: t('people.noteOperativeBadgeN1234', 'Note operative, badge n. 1234, mansioni…') });
 
     let extractedEmbedding = [];
     let thumbnailData = null;
@@ -47,7 +48,7 @@ export async function renderNewPersonView({ api, session }) {
 
     const previewImg = el('img', { className: 'nerd-face-img', alt: '' });
     const canvas3DHost = el('div', { className: 'nerd-canvas-host' });
-    const statusBadge = el('div', { className: 'section__hint', textContent: 'Carica una foto frontale e nitida: da lì estraiamo il vettore 128-D e la posa 3D.' });
+    const statusBadge = el('div', { className: 'section__hint', textContent: t('people.caricaUnaFotoFrontaleENit', 'Carica una foto frontale e nitida: da lì estraiamo il vettore 128-D e la posa 3D.') });
 
     const previewContainer = el('div', { className: 'nerd-preview-container' }, [
         previewImg,
@@ -56,7 +57,7 @@ export async function renderNewPersonView({ api, session }) {
     ]);
 
     const feedback = el('div', { hidden: 'hidden' });
-    const saveBtn = el('button', { className: 'btn btn--primary btn--lg', type: 'submit', textContent: 'Registra profilo nel database' });
+    const saveBtn = el('button', { className: 'btn btn--primary btn--lg', type: 'submit', textContent: t('people.registraProfiloNelDatabase', 'Registra profilo nel database') });
 
     function applyBiometrics({ embedding, thumbnail, pose3d, confidence, source }) {
         extractedEmbedding = embedding;
@@ -165,7 +166,7 @@ export async function renderNewPersonView({ api, session }) {
     const form = el('form', { className: 'stack' }, [
         el('div', { className: 'details-layout' }, [
             el('div', { className: 'panel stack details-main' }, [
-                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title mono', textContent: 'Dati anagrafici e permessi' })]),
+                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title mono', textContent: t('people.datiAnagraficiEPermessi', 'Dati anagrafici e permessi') })]),
                 el('div', { className: 'panel__body stack' }, [
                     field('Nome e cognome completo', nameInput),
                     field('Ruolo nel sistema', roleSelect),
@@ -176,10 +177,10 @@ export async function renderNewPersonView({ api, session }) {
             ]),
             el('div', { className: 'panel stack details-side details-side--scanner' }, [
                 el('div', { className: 'panel__head' }, [
-                    el('span', { className: 'panel__title mono', textContent: 'Scanner biometrico HD' }),
+                    el('span', { className: 'panel__title mono', textContent: t('people.scannerBiometricoHD', 'Scanner biometrico HD') }),
                     el('label', { className: 'btn btn--sm btn--ghost cursor-pointer panel__head-action' }, [
                         icon('download'),
-                        el('span', { textContent: 'Carica immagine' }),
+                        el('span', { textContent: t('people.caricaImmagine', 'Carica immagine') }),
                         uploadInput
                     ])
                 ]),
@@ -231,8 +232,8 @@ export async function renderNewPersonView({ api, session }) {
         el('div', { className: 'view__head' }, [
             el('div', { className: 'stack stack--tight' }, [
                 backBtn,
-                el('h1', { className: 'view__title', textContent: 'Iscrizione biometrica HD' }),
-                el('span', { className: 'section__hint', textContent: 'Acquisizione del volto in alta definizione e mapping dei punti facciali.' })
+                el('h1', { className: 'view__title', textContent: t('people.iscrizioneBiometricaHD', 'Iscrizione biometrica HD') }),
+                el('span', { className: 'section__hint', textContent: t('people.acquisizioneDelVoltoInAlta', 'Acquisizione del volto in alta definizione e mapping dei punti facciali.') })
             ])
         ]),
         el('div', { className: 'stack' }, [form])

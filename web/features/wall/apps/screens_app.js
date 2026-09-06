@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow } from '/assets/ui.js';
@@ -85,12 +86,12 @@ export async function renderScreensApp({ api, payload }) {
                     className: 'btn btn--sm',
                     type: 'button',
                     onclick: () => go('wall-settings', 'tiles', screen.id)
-                }, [icon('crop'), el('span', { textContent: 'Disponi riquadri' })]),
+                }, [icon('crop'), el('span', { textContent: t('apps.disponiRiquadri', 'Disponi riquadri') })]),
                 el('button', {
                     className: 'btn btn--sm',
                     type: 'button',
                     onclick: () => window.open(`/wall?screen=${encodeURIComponent(screen.id)}`, '_blank')
-                }, [icon('play'), el('span', { textContent: 'Anteprima' })]),
+                }, [icon('play'), el('span', { textContent: t('apps.anteprima', 'Anteprima') })]),
                 config.screens.length > 1 ? el('button', {
                     className: 'btn btn--sm btn--danger',
                     type: 'button',
@@ -99,15 +100,15 @@ export async function renderScreensApp({ api, payload }) {
                         if (config.primaryScreen === screen.id) config.primaryScreen = config.screens[0].id;
                         touch();
                     }
-                }, [icon('trash'), el('span', { textContent: 'Rimuovi' })]) : null
+                }, [icon('trash'), el('span', { textContent: t('apps.rimuovi', 'Rimuovi') })]) : null
             ].filter(Boolean),
             body: [
                 el('div', { className: 'field' }, [
-                    el('label', { textContent: 'Nome dello schermo' }),
+                    el('label', { textContent: t('apps.nomeDelloSchermo', 'Nome dello schermo') }),
                     nameInput
                 ]),
                 optionRow({
-                    title: 'Griglia di questo schermo',
+                    title: t('apps.grigliaDiQuestoSchermo', 'Griglia di questo schermo'),
                     hint: 'Ogni uscita ha la propria: su HDMI 1 puoi mostrare una sola telecamera e su HDMI 2 sedici',
                     iconName: 'grid',
                     control: segmented(LAYOUT_OPTIONS, screen.layout, (value) => {
@@ -116,7 +117,7 @@ export async function renderScreensApp({ api, payload }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Qualita predefinita',
+                    title: t('apps.qualitaPredefinita', 'Qualita predefinita'),
                     hint: 'Applicata ai canali di questo schermo senza una scelta esplicita',
                     iconName: 'activity',
                     control: segmented(QUALITY_OPTIONS, screen.defaultQuality, (value) => {
@@ -125,7 +126,7 @@ export async function renderScreensApp({ api, payload }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Schermo attivo',
+                    title: t('apps.schermoAttivo', 'Schermo attivo'),
                     hint: 'Uno schermo disattivato resta configurato ma non viene proposto',
                     iconName: 'monitor',
                     control: toggle(screen.enabled, (value) => {
@@ -134,7 +135,7 @@ export async function renderScreensApp({ api, payload }) {
                     })
                 }),
                 optionRow({
-                    title: 'Schermo predefinito',
+                    title: t('apps.schermoPredefinito', 'Schermo predefinito'),
                     hint: 'Usato dal muro aperto senza indicare quale schermo, ad esempio dal browser',
                     iconName: 'shield',
                     control: el('button', {
@@ -161,7 +162,7 @@ export async function renderScreensApp({ api, payload }) {
         host.replaceChildren(
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
-                    el('span', { className: 'xrow__hint', textContent: 'Aggiungi uno schermo da un uscita rilevata:' }),
+                    el('span', { className: 'xrow__hint', textContent: t('apps.aggiungiUnoSchermoDaUnUsc', 'Aggiungi uno schermo da un uscita rilevata:') }),
                     ...unused.map((display) => el('button', {
                         className: 'btn btn--sm',
                         type: 'button',
@@ -171,7 +172,7 @@ export async function renderScreensApp({ api, payload }) {
                         className: 'btn btn--sm',
                         type: 'button',
                         onclick: () => addScreen(null)
-                    }, [icon('plus'), el('span', { textContent: 'Schermo generico' })])
+                    }, [icon('plus'), el('span', { textContent: t('apps.schermoGenerico', 'Schermo generico') })])
                 ])
             ]),
             autosaveBar(saver.element),

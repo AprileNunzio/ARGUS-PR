@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -37,8 +38,8 @@ function tileCell({ index, assignment, cameras, plan, onChange }) {
     const automatic = plan.find((entry) => entry.index === index);
 
     const select = el('select', { className: 'screen-tile__select' });
-    select.append(el('option', { value: TILE_AUTO, textContent: 'Automatico' }));
-    select.append(el('option', { value: TILE_EMPTY, textContent: 'Lascia vuoto' }));
+    select.append(el('option', { value: TILE_AUTO, textContent: t('wall.automatico', 'Automatico') }));
+    select.append(el('option', { value: TILE_EMPTY, textContent: t('wall.lasciaVuoto', 'Lascia vuoto') }));
 
     for (const entry of cameras) {
         const option = el('option', { value: entry.id, textContent: entry.name });
@@ -98,6 +99,6 @@ export function renderScreenBoard({ screen, cameras, plan, onChange }) {
             chip(`${plan.length} in onda`, plan.length > 0 ? 'ok' : 'warn')
         ]),
         bezel,
-        el('p', { className: 'screen-frame__hint', textContent: 'Automatico riempie il riquadro con la prima telecamera libera. Lascia vuoto lo esclude dal riempimento automatico, utile per lasciare spazi al marchio.' })
+        el('p', { className: 'screen-frame__hint', textContent: t('wall.automaticoRiempieIlRiquadro', 'Automatico riempie il riquadro con la prima telecamera libera. Lascia vuoto lo esclude dal riempimento automatico, utile per lasciare spazi al marchio.') })
     ]);
 }

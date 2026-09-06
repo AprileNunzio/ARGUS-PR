@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { api } from '/assets/api.js';
 import { el, chip, field, notice, formatBytes } from '/assets/dom.js';
 import { getLocale, getAvailableLocales, setLocale } from '/assets/i18n.js';
@@ -20,19 +21,19 @@ export function welcomeStep({ status }) {
     }, locales.map((loc) => el('option', { value: loc.code, textContent: loc.name })));
 
     return {
-        title: 'Benvenuto',
+        title: t('setup.benvenuto', 'Benvenuto'),
         summary: 'Cosa stai per configurare',
         body: el('div', { className: 'stack' }, [
-            el('p', { className: 'step__lead', textContent: 'ARGUS-PR registra le tue telecamere IP su questa macchina. Nessun servizio esterno, nessun abbonamento: i video restano su un disco che controlli tu.' }),
+            el('p', { className: 'step__lead', textContent: t('setup.aRGUSPRRegistraLeTueTelec', 'ARGUS-PR registra le tue telecamere IP su questa macchina. Nessun servizio esterno, nessun abbonamento: i video restano su un disco che controlli tu.') }),
             el('div', { className: 'panel panel--inset' }, [
-                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Lingua di installazione' })]),
+                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('setup.linguaDiInstallazione', 'Lingua di installazione') })]),
                 el('div', { className: 'form-group' }, [
-                    el('label', { className: 'label', textContent: 'Seleziona la lingua dell interfaccia' }),
+                    el('label', { className: 'label', textContent: t('setup.selezionaLaLinguaDellInter', 'Seleziona la lingua dell interfaccia') }),
                     langSelect
                 ])
             ]),
             el('div', { className: 'panel panel--inset' }, [
-                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Macchina rilevata' })]),
+                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('setup.macchinaRilevata', 'Macchina rilevata') })]),
                 el('div', { className: 'spec-grid' }, [
                     specRow('Host', system.hostname),
                     specRow('Sistema', `${system.platform} · ${system.arch}`),
@@ -42,7 +43,7 @@ export function welcomeStep({ status }) {
                     specRow('Versione', `ARGUS-PR ${status.version}`)
                 ])
             ]),
-            el('p', { className: 'step__hint', textContent: 'La procedura richiede meno di due minuti: creerai l\'account amministratore, preparerai il motore video e confermerai dove salvare le registrazioni.' })
+            el('p', { className: 'step__hint', textContent: t('setup.laProceduraRichiedeMenoDi', "La procedura richiede meno di due minuti: creerai l'account amministratore, preparerai il motore video e confermerai dove salvare le registrazioni.") })
         ]),
         validate: () => true
     };
@@ -82,16 +83,16 @@ export function accountStep({ state }) {
     refresh();
 
     return {
-        title: 'Amministratore',
+        title: t('setup.amministratore', 'Amministratore'),
         summary: 'Account con pieni poteri',
         body: el('div', { className: 'stack' }, [
-            el('p', { className: 'step__lead', textContent: 'Questo account potrà gestire telecamere, archivio, utenti e impostazioni. Sceglilo con cura: è la chiave dell\'intero sistema.' }),
+            el('p', { className: 'step__lead', textContent: t('setup.questoAccountPotrGestireT', "Questo account potrà gestire telecamere, archivio, utenti e impostazioni. Sceglilo con cura: è la chiave dell'intero sistema.") }),
             field('Nome utente', username),
             field('Password', password),
             el('span', { className: 'meter' }, [strengthBar]),
             ruleRow,
             field('Conferma password', confirm),
-            el('p', { className: 'step__hint', textContent: 'La password viene protetta con scrypt e un salt individuale. Non è recuperabile: se la perdi, servirà accesso locale alla macchina per rigenerarla.' }),
+            el('p', { className: 'step__hint', textContent: t('setup.laPasswordVieneProtettaCon', 'La password viene protetta con scrypt e un salt individuale. Non è recuperabile: se la perdi, servirà accesso locale alla macchina per rigenerarla.') }),
             feedback
         ]),
         validate: () => {
@@ -123,10 +124,10 @@ export function mediaStep({ state, onStatusChange }) {
 
         if (media.available) {
             body.replaceChildren(
-                el('p', { className: 'step__lead', textContent: 'Il motore video è pronto. ARGUS-PR lo userà per acquisire, registrare e riprodurre i flussi delle telecamere.' }),
+                el('p', { className: 'step__lead', textContent: t('setup.ilMotoreVideoProntoARGU', 'Il motore video è pronto. ARGUS-PR lo userà per acquisire, registrare e riprodurre i flussi delle telecamere.') }),
                 el('div', { className: 'panel panel--inset' }, [
                     el('div', { className: 'panel__head' }, [
-                        el('span', { className: 'panel__title', textContent: 'ffmpeg' }),
+                        el('span', { className: 'panel__title', textContent: t('setup.ffmpeg', 'ffmpeg') }),
                         chip('pronto', 'ok')
                     ]),
                     el('div', { className: 'spec-grid' }, [
@@ -135,7 +136,7 @@ export function mediaStep({ state, onStatusChange }) {
                     ]),
                     media.accelerators?.length
                         ? el('div', { className: 'panel__body' }, [
-                            el('span', { className: 'step__hint', textContent: 'Accelerazioni hardware disponibili:' }),
+                            el('span', { className: 'step__hint', textContent: t('setup.accelerazioniHardwareDisponi', 'Accelerazioni hardware disponibili:') }),
                             el('div', { className: 'row row--tight' }, media.accelerators.map((name) => chip(name, 'info')))
                         ])
                         : null
@@ -147,7 +148,7 @@ export function mediaStep({ state, onStatusChange }) {
         const install = el('button', {
             className: 'btn btn--primary',
             type: 'button',
-            textContent: 'Installa automaticamente',
+            textContent: t('setup.installaAutomaticamente', 'Installa automaticamente'),
             onclick: async () => {
                 install.disabled = true;
                 install.textContent = 'Installazione in corso…';
@@ -170,30 +171,30 @@ export function mediaStep({ state, onStatusChange }) {
         });
 
         body.replaceChildren(
-            el('p', { className: 'step__lead', textContent: 'ARGUS-PR usa ffmpeg per parlare con le telecamere. Non è presente su questa macchina: posso installarlo io.' }),
+            el('p', { className: 'step__lead', textContent: t('setup.aRGUSPRUsaFfmpegPerParlar', 'ARGUS-PR usa ffmpeg per parlare con le telecamere. Non è presente su questa macchina: posso installarlo io.') }),
             el('div', { className: 'panel panel--inset' }, [
                 el('div', { className: 'panel__head' }, [
-                    el('span', { className: 'panel__title', textContent: 'ffmpeg' }),
+                    el('span', { className: 'panel__title', textContent: t('setup.ffmpeg', 'ffmpeg') }),
                     chip('mancante', 'bad')
                 ]),
                 el('div', { className: 'panel__body' }, [
                     state.media.installable
                         ? el('div', { className: 'stack--tight' }, [
-                            el('span', { className: 'step__hint', textContent: 'Il binario viene scaricato da una release GitHub fissata, verificato con SHA-256 e installato nella cartella dell\'applicazione. Non servono privilegi di amministratore e nulla viene modificato nel sistema.' }),
+                            el('span', { className: 'step__hint', textContent: t('setup.ilBinarioVieneScaricatoDa', "Il binario viene scaricato da una release GitHub fissata, verificato con SHA-256 e installato nella cartella dell'applicazione. Non servono privilegi di amministratore e nulla viene modificato nel sistema.") }),
                             el('div', { className: 'row' }, [install])
                         ])
                         : notice('warn', `Installazione automatica non disponibile per questa piattaforma. Installa ffmpeg con il gestore pacchetti del sistema e riavvia.`),
                     feedback
                 ])
             ]),
-            el('p', { className: 'step__hint', textContent: 'Puoi proseguire anche senza: la configurazione si completa, ma registrazione e riproduzione resteranno inattive finché ffmpeg non sarà disponibile.' })
+            el('p', { className: 'step__hint', textContent: t('setup.puoiProseguireAncheSenzaL', 'Puoi proseguire anche senza: la configurazione si completa, ma registrazione e riproduzione resteranno inattive finché ffmpeg non sarà disponibile.') })
         );
     };
 
     render();
 
     return {
-        title: 'Motore video',
+        title: t('setup.motoreVideo', 'Motore video'),
         summary: 'Componente per acquisizione e riproduzione',
         body,
         validate: () => true
@@ -204,12 +205,12 @@ export function storageStep({ status }) {
     const disk = status.storage.mediaDisk;
 
     return {
-        title: 'Archiviazione',
+        title: t('setup.archiviazione', 'Archiviazione'),
         summary: 'Dove finiscono le registrazioni',
         body: el('div', { className: 'stack' }, [
-            el('p', { className: 'step__lead', textContent: 'Le registrazioni sono file normali su disco. Puoi spostarle in seguito su un secondo disco o su un NAS senza reinstallare nulla.' }),
+            el('p', { className: 'step__lead', textContent: t('setup.leRegistrazioniSonoFileNor', 'Le registrazioni sono file normali su disco. Puoi spostarle in seguito su un secondo disco o su un NAS senza reinstallare nulla.') }),
             el('div', { className: 'panel panel--inset' }, [
-                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Percorsi' })]),
+                el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('setup.percorsi', 'Percorsi') })]),
                 el('div', { className: 'spec-grid' }, [
                     specRow('Configurazione', status.storage.dataDir),
                     specRow('Registrazioni', status.storage.mediaDir)
@@ -218,7 +219,7 @@ export function storageStep({ status }) {
             disk
                 ? el('div', { className: 'panel panel--inset' }, [
                     el('div', { className: 'panel__head' }, [
-                        el('span', { className: 'panel__title', textContent: 'Spazio disponibile' }),
+                        el('span', { className: 'panel__title', textContent: t('setup.spazioDisponibile', 'Spazio disponibile') }),
                         chip(`${disk.usedPercent}% usato`, disk.usedPercent > 85 ? 'warn' : 'ok')
                     ]),
                     el('div', { className: 'spec-grid' }, [
@@ -227,7 +228,7 @@ export function storageStep({ status }) {
                     ])
                 ])
                 : notice('warn', 'Impossibile leggere lo spazio disponibile su questo volume.'),
-            el('p', { className: 'step__hint', textContent: 'Per cambiare percorso imposta ARGUS_MEDIA_DIR e riavvia il servizio. Un flusso 1080p occupa indicativamente 1,5–3 GB al giorno per telecamera.' })
+            el('p', { className: 'step__hint', textContent: t('setup.perCambiarePercorsoImposta', 'Per cambiare percorso imposta ARGUS_MEDIA_DIR e riavvia il servizio. Un flusso 1080p occupa indicativamente 1,5–3 GB al giorno per telecamera.') })
         ]),
         validate: () => true
     };
@@ -238,7 +239,7 @@ export function reviewStep({ state, status }) {
 
     const render = () => {
         body.replaceChildren(
-            el('p', { className: 'step__lead', textContent: 'Controlla il riepilogo. Completando, l\'account viene creato e la configurazione iniziale si chiude definitivamente.' }),
+            el('p', { className: 'step__lead', textContent: t('setup.controllaIlRiepilogoComple', "Controlla il riepilogo. Completando, l'account viene creato e la configurazione iniziale si chiude definitivamente.") }),
             el('div', { className: 'panel panel--inset' }, [
                 el('div', { className: 'spec-grid' }, [
                     specRow('Amministratore', state.username),
@@ -256,10 +257,11 @@ export function reviewStep({ state, status }) {
     render();
 
     return {
-        title: 'Riepilogo',
+        title: t('setup.riepilogo', 'Riepilogo'),
         summary: 'Conferma e completa',
         body,
         onEnter: render,
         validate: () => true
     };
 }
+

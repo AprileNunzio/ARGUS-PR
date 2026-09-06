@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -107,7 +108,7 @@ export async function renderPeopleView({ api, session, params }) {
 
         openDialog(el('div', { className: 'stack stack--tight' }, [
             confirmPanel({
-                title: 'Associa il transito a una persona del catalogo',
+                title: t('people.associaIlTransitoAUnaPers', 'Associa il transito a una persona del catalogo'),
                 message: log.hasEmbedding
                     ? 'Cerca e seleziona la persona: il vettore biometrico di questo transito viene appreso dal profilo, così i prossimi passaggi vengono riconosciuti da soli.'
                     : 'Cerca e seleziona la persona. Questo transito non ha un vettore biometrico, quindi correggerà solo lo storico senza migliorare il riconoscimento.',
@@ -140,7 +141,7 @@ export async function renderPeopleView({ api, session, params }) {
 
     function confirmDeleteLog(log) {
         openDialog(confirmPanel({
-            title: 'Eliminare questo transito?',
+            title: t('people.eliminareQuestoTransito', 'Eliminare questo transito?'),
             message: `Rilevamento del ${new Date(log.createdAt).toLocaleString()} su ${log.cameraName ?? log.cameraId}.`,
             confirmLabel: 'Elimina',
             onCancel: closeDialog,
@@ -220,7 +221,7 @@ export async function renderPeopleView({ api, session, params }) {
         const enrolBtn = (!person && canManage && log.snapshotPath) ? el('button', {
             className: 'btn btn--sm btn--ghost btn--full',
             type: 'button',
-            textContent: 'Crea nuovo profilo',
+            textContent: t('people.creaNuovoProfilo', 'Crea nuovo profilo'),
             onclick: () => {
                 sessionStorage.setItem('argus_new_person_base64', log.snapshotPath);
                 sessionStorage.setItem('argus_new_person_log', log.id);
@@ -231,7 +232,7 @@ export async function renderPeopleView({ api, session, params }) {
         const deleteBtn = canManage ? el('button', {
             className: 'btn btn--sm btn--danger btn--full',
             type: 'button',
-            textContent: 'Elimina',
+            textContent: t('people.elimina', 'Elimina'),
             onclick: () => confirmDeleteLog(log)
         }) : null;
 
@@ -270,7 +271,7 @@ export async function renderPeopleView({ api, session, params }) {
     const unknownToggle = el('button', {
         className: 'btn btn--sm btn--ghost',
         type: 'button',
-        textContent: 'Solo sconosciuti',
+        textContent: t('people.soloSconosciuti', 'Solo sconosciuti'),
         onclick: () => {
             unknownOnly = !unknownOnly;
             unknownToggle.classList.toggle('btn--on', unknownOnly);
@@ -282,13 +283,13 @@ export async function renderPeopleView({ api, session, params }) {
         className: 'btn btn--sm btn--danger',
         type: 'button',
         onclick: confirmPurgeAll
-    }, [icon('trash'), el('span', { textContent: 'Elimina tutti' })]) : null;
+    }, [icon('trash'), el('span', { textContent: t('people.eliminaTutti', 'Elimina tutti') })]) : null;
 
     const addBtn = canManage ? el('button', {
         className: 'btn btn--primary btn--sm',
         type: 'button',
         onclick: () => go('people', 'new')
-    }, [icon('plus'), el('span', { textContent: 'Nuova persona' })]) : null;
+    }, [icon('plus'), el('span', { textContent: t('people.nuovaPersona', 'Nuova persona') })]) : null;
 
     const toolbar = el('div', { className: 'row row--tight' }, [unknownToggle]);
     toolbar.setAttribute('hidden', 'hidden');
@@ -316,21 +317,21 @@ export async function renderPeopleView({ api, session, params }) {
     const tabPeopleBtn = el('button', {
         className: 'seg__btn seg__btn--on',
         type: 'button',
-        textContent: 'Catalogo persone',
+        textContent: t('people.catalogoPersone', 'Catalogo persone'),
         onclick: () => selectTab('people')
     });
 
     const tabLogsBtn = el('button', {
         className: 'seg__btn',
         type: 'button',
-        textContent: 'Transiti e forense',
+        textContent: t('people.transitiEForense', 'Transiti e forense'),
         onclick: () => selectTab('logs')
     });
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
             el('div', { className: 'stack stack--tight' }, [
-                el('h1', { className: 'view__title', textContent: 'Catalogo persone e volti' }),
+                el('h1', { className: 'view__title', textContent: t('people.catalogoPersoneEVolti', 'Catalogo persone e volti') }),
                 countBadge
             ]),
             el('div', { className: 'row row--tight' }, [addBtn, purgeBtn].filter(Boolean))

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -39,7 +40,7 @@ export function createPersonPicker({ people = [], excludeId = null, selectedId =
     const searchInput = el('input', {
         className: 'input',
         type: 'search',
-        placeholder: 'Cerca per nome, ruolo o reparto…',
+        placeholder: t('people.cercaPerNomeRuoloORepart', 'Cerca per nome, ruolo o reparto…'),
         autocomplete: 'off'
     });
 

@@ -74,11 +74,20 @@ export async function loadNamespace(namespace) {
     }
 }
 
-export function t(path, params = {}) {
+export function t(path, defaultOrParams, paramsObj) {
     if (!path || typeof path !== 'string') return '';
     const dotIndex = path.indexOf('.');
     const namespace = dotIndex !== -1 ? path.slice(0, dotIndex) : 'common';
     const key = dotIndex !== -1 ? path.slice(dotIndex + 1) : path;
+
+    let fallback = null;
+    let params = {};
+    if (typeof defaultOrParams === 'string') {
+        fallback = defaultOrParams;
+        params = paramsObj || {};
+    } else if (defaultOrParams && typeof defaultOrParams === 'object') {
+        params = defaultOrParams;
+    }
 
     const catalogKey = activeLocale + ':' + namespace;
     const catalog = catalogs.get(catalogKey);
@@ -90,6 +99,9 @@ export function t(path, params = {}) {
     }
 
     if (typeof value !== 'string') {
+        if (fallback !== null) return fallback.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, placeholder) => {
+            return params[placeholder] !== undefined ? String(params[placeholder]) : '{' + placeholder + '}';
+        });
         return path;
     }
 

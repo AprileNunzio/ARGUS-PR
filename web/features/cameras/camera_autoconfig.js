@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -17,7 +18,7 @@ const PATCH_LABELS = Object.freeze({
 
 function stepRow(label) {
     const badge = chip('in attesa', 'info');
-    const detail = el('span', { className: 'section__hint', textContent: 'non ancora eseguito' });
+    const detail = el('span', { className: 'section__hint', textContent: t('cameras.nonAncoraEseguito', 'non ancora eseguito') });
     const glyph = el('span', { className: 'auto-step__icon' }, [icon('clock')]);
 
     const node = el('div', { className: 'auto-step' }, [
@@ -52,7 +53,7 @@ export async function renderAutoconfigurePage({ api, cameraId }) {
 
     if (!camera) {
         return el('div', { className: 'view' }, [
-            pageHead({ title: 'Autoconfigurazione', back: backLink('Torna all elenco', 'cameras') }),
+            pageHead({ title: t('cameras.autoconfigurazione', 'Autoconfigurazione'), back: backLink('Torna all elenco', 'cameras') }),
             notice('warn', 'Il canale richiesto non esiste piu.')
         ]);
     }
@@ -61,8 +62,8 @@ export async function renderAutoconfigurePage({ api, cameraId }) {
     const stepHost = el('div', { className: 'stack stack--tight' });
     const feedback = el('div', { hidden: 'hidden' });
 
-    const startButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Avvia autoconfigurazione' });
-    const applyButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Applica e salva', hidden: 'hidden' });
+    const startButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.avviaAutoconfigurazione', 'Avvia autoconfigurazione') });
+    const applyButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.applicaESalva', 'Applica e salva'), hidden: 'hidden' });
 
     let finalPatch = {};
 

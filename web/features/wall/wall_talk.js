@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { icon } from '/assets/icons.js';
 
 const TARGET_RATE = 8000;
@@ -55,7 +56,7 @@ export function createClipMenu({ cameraId, onNotice, listClips, sendClip }) {
         if (clips.length === 0) {
             element.replaceChildren(node('p', {
                 className: 'console__clips-empty',
-                textContent: 'Nessun messaggio registrato. Caricali in Sistema, Audio e messaggi.'
+                textContent: t('wall.nessunMessaggioRegistratoC', 'Nessun messaggio registrato. Caricali in Sistema, Audio e messaggi.')
             }));
             return;
         }

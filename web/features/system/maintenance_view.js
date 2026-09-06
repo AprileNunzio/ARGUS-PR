@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, confirmPanel, pageHead, formatBytes, formatDuration } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, optionRow, metricTile } from '/assets/ui.js';
@@ -24,7 +25,7 @@ function remedyBlock(command) {
 
     const copy = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('archive'),
-        el('span', { textContent: 'Copia il comando' })
+        el('span', { textContent: t('system.copiaIlComando', 'Copia il comando') })
     ]);
 
     copy.addEventListener('click', async () => {
@@ -38,7 +39,7 @@ function remedyBlock(command) {
     return el('div', { className: 'remedy' }, [
         el('div', { className: 'remedy__head' }, [
             icon('shield'),
-            el('span', { textContent: 'Esegui una volta sola, come root, sulla macchina' })
+            el('span', { textContent: t('system.eseguiUnaVoltaSolaComeRo', 'Esegui una volta sola, come root, sulla macchina') })
         ]),
         code,
         el('div', { className: 'row row--end' }, [copy])
@@ -69,7 +70,7 @@ export async function renderMaintenance({ api }) {
             : 0;
 
         return card({
-            title: 'Stato della macchina',
+            title: t('system.statoDellaMacchina', 'Stato della macchina'),
             subtitle: `${machine.hostname} · ${machine.platform}`,
             iconName: 'server',
             tone: 'cyan',
@@ -83,11 +84,11 @@ export async function renderMaintenance({ api }) {
                 ]),
                 el('div', { className: 'spec-grid' }, [
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'Directory dati' }),
+                        el('span', { className: 'spec__k', textContent: t('system.directoryDati', 'Directory dati') }),
                         el('span', { className: 'spec__v break', textContent: machine.dataDir })
                     ]),
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'Directory registrazioni' }),
+                        el('span', { className: 'spec__k', textContent: t('system.directoryRegistrazioni', 'Directory registrazioni') }),
                         el('span', { className: 'spec__v break', textContent: machine.mediaDir })
                     ])
                 ])
@@ -99,8 +100,8 @@ export async function renderMaintenance({ api }) {
         const count = capabilities?.suggestions?.length ?? 0;
 
         return card({
-            title: 'Capacita di questa macchina',
-            subtitle: 'Cosa il tuo hardware mette a disposizione e cosa puoi decidere di abilitare',
+            title: t('system.capacitaDiQuestaMacchina', 'Capacita di questa macchina'),
+            subtitle: t('system.cosaIlTuoHardwareMetteAD', 'Cosa il tuo hardware mette a disposizione e cosa puoi decidere di abilitare'),
             iconName: 'cpu',
             tone: count > 0 ? 'amber' : 'emerald',
             badge: chip(count > 0 ? `${count} suggerimenti` : 'Tutto sfruttato', count > 0 ? 'warn' : 'ok'),
@@ -109,8 +110,8 @@ export async function renderMaintenance({ api }) {
     };
 
     const servicesCard = () => card({
-        title: 'Servizi di sistema',
-        subtitle: 'Riavvio dei demoni gestiti da systemd senza toccare il terminale',
+        title: t('system.serviziDiSistema', 'Servizi di sistema'),
+        subtitle: t('system.riavvioDeiDemoniGestitiDa', 'Riavvio dei demoni gestiti da systemd senza toccare il terminale'),
         iconName: 'activity',
         tone: 'blue',
         body: data.services.map((service) => optionRow({
@@ -135,7 +136,7 @@ export async function renderMaintenance({ api }) {
                         say('warn', result.message ?? `Riavvio di ${service.label} avviato.`);
                         if (service.id !== 'argus-pr') await refresh();
                     }
-                }, [icon('refresh'), el('span', { textContent: 'Riavvia' })])
+                }, [icon('refresh'), el('span', { textContent: t('system.riavvia', 'Riavvia') })])
             ])
         }))
     });
@@ -170,8 +171,8 @@ export async function renderMaintenance({ api }) {
         const rights = data.powerRights ?? { ready: true, grant: 'root', detail: null, remedy: null };
 
         return card({
-            title: 'Alimentazione della macchina',
-            subtitle: 'Riavvio e spegnimento ordinato del server, con arresto pulito dei registratori',
+            title: t('system.alimentazioneDellaMacchina', 'Alimentazione della macchina'),
+            subtitle: t('system.riavvioESpegnimentoOrdinato', 'Riavvio e spegnimento ordinato del server, con arresto pulito dei registratori'),
             iconName: 'power',
             tone: rights.ready ? 'amber' : 'red',
             badge: chip(
@@ -203,13 +204,13 @@ export async function renderMaintenance({ api }) {
                 title: scope.label,
                 hint: scope.hint,
                 iconName: scope.icon,
-                control: el('label', { className: 'row row--tight' }, [checkbox, el('span', { textContent: 'Includi' })])
+                control: el('label', { className: 'row row--tight' }, [checkbox, el('span', { textContent: t('system.includi', 'Includi') })])
             });
         });
 
         const runButton = el('button', { className: 'btn btn--primary', type: 'button' }, [
             icon('trash'),
-            el('span', { textContent: 'Svuota le cache selezionate' })
+            el('span', { textContent: t('system.svuotaLeCacheSelezionate', 'Svuota le cache selezionate') })
         ]);
 
         runButton.addEventListener('click', async () => {
@@ -237,8 +238,8 @@ export async function renderMaintenance({ api }) {
         });
 
         return card({
-            title: 'Pulizia cache e manutenzione dati',
-            subtitle: 'Libera spazio senza toccare le registrazioni: i filmati archiviati non vengono mai eliminati da qui',
+            title: t('system.puliziaCacheEManutenzioneD', 'Pulizia cache e manutenzione dati'),
+            subtitle: t('system.liberaSpazioSenzaToccareLe', 'Libera spazio senza toccare le registrazioni: i filmati archiviati non vengono mai eliminati da qui'),
             iconName: 'trash',
             tone: 'emerald',
             body: rows,
@@ -252,7 +253,7 @@ export async function renderMaintenance({ api }) {
     const render = () => {
         if (data.failure) {
             root.replaceChildren(
-                pageHead({ title: 'Gestione Macchina & Manutenzione', hint: 'Servizi, alimentazione e pulizia delle cache' }),
+                pageHead({ title: t('system.gestioneMacchinaManutenzio', 'Gestione Macchina & Manutenzione'), hint: 'Servizi, alimentazione e pulizia delle cache' }),
                 notice('error', `Impossibile leggere lo stato della macchina: ${data.failure.message}`)
             );
             return;
@@ -260,14 +261,14 @@ export async function renderMaintenance({ api }) {
 
         root.replaceChildren(
             pageHead({
-                title: 'Gestione Macchina & Manutenzione',
+                title: t('system.gestioneMacchinaManutenzio', 'Gestione Macchina & Manutenzione'),
                 hint: 'Riavvio dei servizi, alimentazione del server, pulizia delle cache e stato delle risorse',
                 actions: [
                     el('button', {
                         className: 'btn',
                         type: 'button',
                         onclick: refresh
-                    }, [icon('refresh'), el('span', { textContent: 'Aggiorna stato' })])
+                    }, [icon('refresh'), el('span', { textContent: t('system.aggiornaStato', 'Aggiorna stato') })])
                 ]
             }),
             feedback,

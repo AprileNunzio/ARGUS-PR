@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice, pageHead, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -22,8 +23,8 @@ function ruleRow({ rule, channels, onDelete }) {
             })
         ]),
         el('div', { className: 'row row--tight' }, [
-            el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Modifica', onclick: () => go('automation', 'rules', rule.id) }),
-            el('button', { className: 'btn btn--sm btn--danger', type: 'button', textContent: 'Elimina', onclick: () => onDelete(rule) })
+            el('button', { className: 'btn btn--sm', type: 'button', textContent: t('automation.modifica', 'Modifica'), onclick: () => go('automation', 'rules', rule.id) }),
+            el('button', { className: 'btn btn--sm btn--danger', type: 'button', textContent: t('automation.elimina', 'Elimina'), onclick: () => onDelete(rule) })
         ])
     ]);
 }
@@ -81,7 +82,7 @@ async function renderList({ api }) {
 
     const armWidget = el('section', { className: 'panel' }, [
         el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: 'Stato Impianto di Sicurezza' })
+            el('span', { className: 'panel__title', textContent: t('automation.statoImpiantoDiSicurezza', 'Stato Impianto di Sicurezza') })
         ]),
         el('div', { className: 'panel__body' }, [
             el('div', { className: 'row schedule-presets' }, armBtns)
@@ -107,16 +108,16 @@ async function renderList({ api }) {
 
     outlet.append(
         pageHead({
-            title: 'Automazioni',
+            title: t('automation.automazioni', 'Automazioni'),
             hint: 'Cosa deve succedere quando il sistema riconosce qualcosa',
             actions: [
                 el('button', { className: 'btn', type: 'button', onclick: () => go('automation', 'channels', 'new') }, [
                     icon('plus'),
-                    el('span', { textContent: 'Nuovo canale' })
+                    el('span', { textContent: t('automation.nuovoCanale', 'Nuovo canale') })
                 ]),
                 el('button', { className: 'btn btn--primary', type: 'button', onclick: () => go('automation', 'rules', 'new') }, [
                     icon('plus'),
-                    el('span', { textContent: 'Nuova regola' })
+                    el('span', { textContent: t('automation.nuovaRegola', 'Nuova regola') })
                 ])
             ]
         }),
@@ -137,7 +138,7 @@ async function renderList({ api }) {
                     : channels.map((channel) => channelRow({ api, channel, onDelete: (entity) => askDelete('channel', entity) })))
         ]),
         el('section', { className: 'panel' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Ultime esecuzioni' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('automation.ultimeEsecuzioni', 'Ultime esecuzioni') })]),
             el('div', { className: 'panel__body stack stack--tight' },
                 (runsData.runs ?? []).length === 0
                     ? [empty('Nessuna esecuzione registrata.')]

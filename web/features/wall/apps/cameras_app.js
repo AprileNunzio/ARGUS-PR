@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented } from '/assets/ui.js';
@@ -31,7 +32,7 @@ export async function renderCamerasApp({ api, payload }) {
         host.replaceChildren(
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
-                    el('span', { className: 'xrow__hint', textContent: 'Le scelte valgono per lo schermo:' }),
+                    el('span', { className: 'xrow__hint', textContent: t('apps.leScelteValgonoPerLoScher', 'Le scelte valgono per lo schermo:') }),
                     segmented(
                         config.screens.map((entry) => ({ value: entry.id, label: entry.label, icon: 'monitor' })),
                         screen.id,
@@ -45,7 +46,7 @@ export async function renderCamerasApp({ api, payload }) {
             ]),
             autosaveBar(saver.element),
             card({
-                title: 'Telecamere e qualita del flusso',
+                title: t('apps.telecamereEQualitaDelFluss', 'Telecamere e qualita del flusso'),
                 subtitle: `Escludi i canali che non devono comparire su ${screen.label} e scegli Main HD o Sub SD per ognuno`,
                 iconName: 'camera',
                 tone: 'emerald',

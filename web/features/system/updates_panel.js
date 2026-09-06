@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -61,7 +62,7 @@ export function renderUpdatesPanel({ api }) {
                 await api.post('/api/updates/check').catch(() => undefined);
                 await paint();
             }
-        }, [icon('refresh'), el('span', { textContent: 'Cerca aggiornamenti' })]);
+        }, [icon('refresh'), el('span', { textContent: t('system.cercaAggiornamenti', 'Cerca aggiornamenti') })]);
 
         const applyButton = available && latest && status.supported
             ? el('button', {
@@ -130,7 +131,7 @@ export function renderUpdatesPanel({ api }) {
                         }
                     }));
                 }
-            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento' })])
+            }, [icon('refresh'), el('span', { textContent: t('system.forzaAggiornamento', 'Forza aggiornamento') })])
             : null;
 
         const messages = [
@@ -171,7 +172,7 @@ export function renderUpdatesPanel({ api }) {
                             href: latest.url,
                             target: '_blank',
                             rel: 'noreferrer noopener',
-                            textContent: 'Note di rilascio complete su GitHub'
+                            textContent: t('system.noteDiRilascioCompleteSuG', 'Note di rilascio complete su GitHub')
                         })
                     ])
                     : null

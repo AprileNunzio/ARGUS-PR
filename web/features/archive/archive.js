@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { createTimeline } from './timeline.js';
@@ -201,7 +202,7 @@ export async function renderArchive({ api, session, params = [] }) {
                     el('div', { className: 'panel__body stack stack--tight' }, [
                         timeline.element,
                         segmentInfo,
-                        el('p', { className: 'section__hint', textContent: 'Rotella per ingrandire, trascina per scorrere, doppio clic per stringere sul punto. Spazio riproduce, frecce spostano di un secondo, virgola e punto di un fotogramma.' }),
+                        el('p', { className: 'section__hint', textContent: t('archive.rotellaPerIngrandireTrasci', 'Rotella per ingrandire, trascina per scorrere, doppio clic per stringere sul punto. Spazio riproduce, frecce spostano di un secondo, virgola e punto di un fotogramma.') }),
                         feedback
                     ])
                 ]),

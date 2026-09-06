@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, field, notice, pageHead } from '/assets/dom.js';
 import { go } from '/assets/router.js';
 import { backLink } from '/features/cameras/camera_wizard.js';
@@ -48,20 +49,20 @@ const COLOR_OPTIONS = Object.freeze([
 ]);
 
 function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
-    const name = el('input', { className: 'input', type: 'text', value: rule?.name ?? '', placeholder: 'Persona di notte sul retro' });
+    const name = el('input', { className: 'input', type: 'text', value: rule?.name ?? '', placeholder: t('automation.personaDiNotteSulRetro', 'Persona di notte sul retro') });
     const trigger = selectFrom(catalog.triggers.map((kind) => [kind, TRIGGER_LABELS[kind] ?? kind]), rule?.triggerKind);
     const camera = selectFrom([['', 'Tutte le telecamere'], ...cameras.map((entry) => [entry.id, entry.name])], rule?.cameraId ?? '');
     const className = selectFrom(CLASS_OPTIONS, rule?.className ?? '');
     const plateScope = selectFrom(catalog.plateScopes.map((scope) => [scope, PLATE_LABELS[scope] ?? scope]), rule?.plateScope);
     const personScope = selectFrom(catalog.personScopes.map((scope) => [scope, PERSON_LABELS[scope] ?? scope]), rule?.personScope);
 
-    const targetPlate = el('input', { className: 'input', type: 'text', value: rule?.targetPlate ?? '', placeholder: 'Targa esatta (es. AB123CD)' });
+    const targetPlate = el('input', { className: 'input', type: 'text', value: rule?.targetPlate ?? '', placeholder: t('automation.targaEsattaEsAB123CD', 'Targa esatta (es. AB123CD)') });
     const targetPerson = selectFrom([['', 'Qualsiasi persona registrata'], ...(people ?? []).map((p) => [p.id, p.name])], rule?.targetPersonId ?? '');
     const upperColor = selectFrom(COLOR_OPTIONS, rule?.upperColor ?? '');
     const minOccurrences = el('input', { className: 'input', type: 'number', min: '1', max: '1000', value: String(rule?.minOccurrences ?? 1) });
     const occurrenceWindow = el('input', { className: 'input', type: 'number', min: '1', max: '10080', value: String(rule?.occurrenceWindowMinutes ?? 60) });
 
-    const minDwell = el('input', { className: 'input', type: 'number', min: '0', max: '86400', value: String(rule?.minDwellSeconds ?? 0), placeholder: '0 = immediato' });
+    const minDwell = el('input', { className: 'input', type: 'number', min: '0', max: '86400', value: String(rule?.minDwellSeconds ?? 0), placeholder: t('automation.0Immediato', '0 = immediato') });
     const solarMode = selectFrom([
         ['none', 'Nessun vincolo solare'],
         ['night_solar', 'Dal tramonto all alba (crepuscolare solare)'],
@@ -73,16 +74,16 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
     const armAway = el('input', { type: 'checkbox', checked: rule?.armStates ? rule.armStates.includes('armed_away') : true });
 
     const armHost = el('div', { className: 'row row--tight' }, [
-        el('label', { className: 'row row--tight' }, [armDisarmed, el('span', { textContent: 'Disarmato' })]),
-        el('label', { className: 'row row--tight' }, [armHome, el('span', { textContent: 'Notte / In casa' })]),
-        el('label', { className: 'row row--tight' }, [armAway, el('span', { textContent: 'Armato totale' })])
+        el('label', { className: 'row row--tight' }, [armDisarmed, el('span', { textContent: t('automation.disarmato', 'Disarmato') })]),
+        el('label', { className: 'row row--tight' }, [armHome, el('span', { textContent: t('automation.notteInCasa', 'Notte / In casa') })]),
+        el('label', { className: 'row row--tight' }, [armAway, el('span', { textContent: t('automation.armatoTotale', 'Armato totale') })])
     ]);
 
     const messageTemplate = el('textarea', {
         className: 'input',
         rows: '2',
         value: rule?.messageTemplate ?? '',
-        placeholder: 'Es. Allarme su {camera}: {class} {plate} staziona da {dwell_formatted}!'
+        placeholder: t('automation.esAllarmeSuCameraClas', 'Es. Allarme su {camera}: {class} {plate} staziona da {dwell_formatted}!')
     });
 
     const confidence = el('input', {
@@ -97,7 +98,7 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
     confidence.addEventListener('input', () => { confidenceBadge.textContent = `${confidence.value}%`; });
 
     const cooldown = el('input', { className: 'input', type: 'number', min: '0', max: '86400', value: String(rule?.cooldownSeconds ?? 60) });
-    const dailyLimit = el('input', { className: 'input', type: 'number', min: '1', max: '10000', value: rule?.dailyLimit ? String(rule.dailyLimit) : '', placeholder: 'nessuno' });
+    const dailyLimit = el('input', { className: 'input', type: 'number', min: '1', max: '10000', value: rule?.dailyLimit ? String(rule.dailyLimit) : '', placeholder: t('automation.nessuno', 'nessuno') });
 
     const schedule = selectFrom([
         ['always', 'Sempre'],
@@ -114,7 +115,7 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
     }));
 
     const feedback = el('div', { hidden: 'hidden' });
-    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva regola' });
+    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('automation.salvaRegola', 'Salva regola') });
 
     saveButton.addEventListener('click', async () => {
         saveButton.disabled = true;
@@ -200,14 +201,14 @@ function ruleEditor({ api, catalog, cameras, channels, people, rule }) {
                 field('Limite giornaliero', dailyLimit)
             ]),
             el('div', { className: 'stack stack--tight' }, [
-                el('strong', { textContent: 'Cosa fare' }),
+                el('strong', { textContent: t('automation.cosaFare', 'Cosa fare') }),
                 channels.length === 0
                     ? notice('warn', 'Nessun canale configurato: creane uno prima di salvare la regola.')
                     : actionHost
             ]),
             feedback,
             el('div', { className: 'row row--end' }, [
-                el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: () => go('automation') }),
+                el('button', { className: 'btn', type: 'button', textContent: t('automation.annulla', 'Annulla'), onclick: () => go('automation') }),
                 saveButton
             ])
         ])

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { icon } from '/assets/icons.js';
 import { DEFAULT_CLOCK, formatWallTime, formatWallDate } from './wall_clock.js';
 
@@ -31,7 +32,7 @@ function el(tag, props = {}, children = []) {
 }
 
 export function createStatusBar(onLayoutChange) {
-    const endpoint = el('span', { className: 'statusbar__ip', textContent: 'localhost' });
+    const endpoint = el('span', { className: 'statusbar__ip', textContent: t('wall.localhost', 'localhost') });
     const channels = el('span', { className: 'statusbar__value', textContent: '0' });
     const recording = el('span', { className: 'statusbar__value', textContent: '0' });
     const cpu = el('span', { className: 'statusbar__value', textContent: '--' });
@@ -41,7 +42,7 @@ export function createStatusBar(onLayoutChange) {
     const version = el('span', { className: 'statusbar__value', textContent: '--' });
     const clockTime = el('span', { className: 'statusbar__clock', textContent: '--:--:--' });
     const linkDot = el('span', { className: 'statusbar__link-dot' });
-    const linkLabel = el('span', { className: 'statusbar__value', textContent: 'attesa' });
+    const linkLabel = el('span', { className: 'statusbar__value', textContent: t('wall.attesa', 'attesa') });
     const clockDate = el('span', { className: 'statusbar__date' });
 
     let activeLayout = 'auto';
@@ -80,11 +81,11 @@ export function createStatusBar(onLayoutChange) {
     const element = el('footer', { className: 'statusbar' }, [
         slots.brand = el('span', { className: 'statusbar__brand' }, [
             el('span', { className: 'statusbar__mark' }, [icon('shield')]),
-            el('span', { textContent: 'ARGUS-PR' })
+            el('span', { textContent: t('wall.aRGUSPR', 'ARGUS-PR') })
         ]),
         item('endpoint', 'IP Server', endpoint),
-        slots.sync = el('span', { className: 'statusbar__item', title: 'Sincronizzazione live della configurazione' }, [
-            el('span', { className: 'statusbar__label', textContent: 'Sync' }),
+        slots.sync = el('span', { className: 'statusbar__item', title: t('wall.sincronizzazioneLiveDellaCo', 'Sincronizzazione live della configurazione') }, [
+            el('span', { className: 'statusbar__label', textContent: t('wall.sync', 'Sync') }),
             linkDot,
             linkLabel
         ]),

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from './dom.js';
 import { icon } from './icons.js';
 
@@ -10,14 +11,14 @@ export function startVersionWatch(api) {
     const banner = el('div', { className: 'version-banner', hidden: 'hidden' }, [
         el('span', { className: 'version-banner__icon' }, [icon('download')]),
         el('div', { className: 'version-banner__text' }, [
-            el('strong', { className: 'version-banner__title', textContent: 'Nuova versione installata' }),
+            el('strong', { className: 'version-banner__title', textContent: t('common.nuovaVersioneInstallata', 'Nuova versione installata') }),
             el('span', { className: 'version-banner__detail' })
         ]),
         el('button', {
             className: 'btn btn--sm btn--primary',
             type: 'button',
             onclick: () => location.reload()
-        }, [icon('refresh'), el('span', { textContent: 'Ricarica adesso' })])
+        }, [icon('refresh'), el('span', { textContent: t('common.ricaricaAdesso', 'Ricarica adesso') })])
     ]);
 
     document.body.append(banner);

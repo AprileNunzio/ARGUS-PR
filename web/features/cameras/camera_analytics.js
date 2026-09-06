@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -124,11 +125,11 @@ function capabilityCard({ capability, entry, onChange, register, requestPrerequi
 
     const controls = el('div', { className: 'cap-card__controls' }, [
         el('div', { className: 'field' }, [
-            el('label', { textContent: 'Modello & Algoritmo' }),
+            el('label', { textContent: t('cameras.modelloAlgoritmo', 'Modello & Algoritmo') }),
             engineSelect
         ]),
         el('div', { className: 'field' }, [
-            el('label', { textContent: 'Confidenza minima rilevamento' }),
+            el('label', { textContent: t('cameras.confidenzaMinimaRilevamento', 'Confidenza minima rilevamento') }),
             el('div', { className: 'slider-wrap' }, [threshold, thresholdBadge])
         ])
     ]);
@@ -155,7 +156,7 @@ export function renderCameraAnalytics({ api, camera, session }) {
         const draft = new Map(profile.capabilities.map((entry) => [entry.capability, { ...entry }]));
 
         const feedback = el('div', { hidden: 'hidden' });
-        const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Applica profilo' });
+        const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.applicaProfilo', 'Applica profilo') });
 
         saveButton.addEventListener('click', async () => {
             saveButton.disabled = true;
@@ -217,7 +218,7 @@ export function renderCameraAnalytics({ api, camera, session }) {
 
         const missing = profile.missingModels ?? [];
         const installButton = canInstall && missing.length > 0
-            ? el('button', { className: 'btn', type: 'button' }, [icon('download'), el('span', { textContent: 'Scarica i modelli mancanti' })])
+            ? el('button', { className: 'btn', type: 'button' }, [icon('download'), el('span', { textContent: t('cameras.scaricaIModelliMancanti', 'Scarica i modelli mancanti') })])
             : null;
 
         if (installButton) {

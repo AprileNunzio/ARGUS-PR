@@ -15,6 +15,15 @@ Record your IP cameras on your own hardware. No subscription, no external servic
 </div>
 
 ---
+## What's new in version 1.0.1
+
+- **Complete Internationalization (i18n):** All frontend modules (Dashboard, Setup, Settings, etc.) now fully support the dynamic translation system. Hardcoded static strings were extracted and mapped to translation keys for flexible switching between English and Italian.
+- **Locales Autonomy & Resilience:** The interface automatically detects the presence of language files. If a language directory is missing, it dynamically hides the option from the selector, preventing UI crashes. Real-time fallback gracefully handles missing keys.
+- **Language Selector UI Fix:** Fixed a DOM reassignment loop bug that caused the language selector to unexpectedly expand the topbar's height.
+- **Credits & Artifacts Cleanup:** Removed spurious files (`claude.md`, `handover.md`), enforced strict header updates, and ensured all authorship points to `AprileNunzio` with the contact email `info@nunziotech.com`.
+- **100% Code Safety:** Maintained strict adherence to project constraints. Zero comments in source code, lightweight files, and all 271 integrated tests successfully passed.
+
+---
 ## What it is
 
 ARGUS-PR turns a PC — even an old one — into a complete network video recorder. A Node.js daemon pulls RTSP streams from your cameras, records them to disk, and makes them searchable through a web interface that opens on any device on the network: computer, tablet or phone.

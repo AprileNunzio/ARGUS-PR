@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { api } from '/assets/api.js';
 import { el, field, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
@@ -8,7 +9,7 @@ export function renderChangePassword({ session, onComplete }) {
     const confirm = el('input', { className: 'input', type: 'password', autocomplete: 'new-password' });
 
     const feedback = el('div', {});
-    const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: 'Aggiorna password' });
+    const submit = el('button', { className: 'btn btn--primary', type: 'submit', textContent: t('account.aggiornaPassword', 'Aggiorna password') });
 
     const form = el('form', {
         className: 'stack',
@@ -42,7 +43,7 @@ export function renderChangePassword({ session, onComplete }) {
             await onComplete();
         }
     }, [
-        el('h2', { className: 'view__title', textContent: 'Cambia la password' }),
+        el('h2', { className: 'view__title', textContent: t('account.cambiaLaPassword', 'Cambia la password') }),
         el('p', { className: 'view__sub', textContent: `La password di ${session.username} deve essere sostituita prima di usare il sistema.` }),
         field('Password attuale', current),
         field('Nuova password', next),
@@ -55,8 +56,8 @@ export function renderChangePassword({ session, onComplete }) {
         el('div', { className: 'login__brand' }, [
             el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('div', {}, [
-                el('h1', { className: 'login__title', textContent: 'ARGUS-PR' }),
-                el('p', { className: 'login__sub', textContent: 'Network Video Recorder by NunzioTech' })
+                el('h1', { className: 'login__title', textContent: t('account.aRGUSPR', 'ARGUS-PR') }),
+                el('p', { className: 'login__sub', textContent: t('account.networkVideoRecorderByNunz', 'Network Video Recorder by NunzioTech') })
             ])
         ]),
         form

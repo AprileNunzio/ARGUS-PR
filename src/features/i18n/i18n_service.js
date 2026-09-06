@@ -35,7 +35,11 @@ export function readManifest() {
     if (!fs.existsSync(manifestPath)) {
         throw new AppError(ErrorCode.NOT_FOUND, 'Locales manifest not found', { status: 404, exposable: true });
     }
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (Array.isArray(manifest.supportedLocales)) {
+        manifest.supportedLocales = manifest.supportedLocales.filter(loc => fs.existsSync(path.join(LOCALES_ROOT, loc.code)));
+    }
+    return manifest;
 }
 
 export function readCatalog(locale, namespace) {

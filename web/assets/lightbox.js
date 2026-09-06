@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -23,16 +24,16 @@ export function openLightbox({ src, title = '', caption = '', downloadName = nul
     const zoomButton = el('button', {
         type: 'button',
         className: 'btn btn--sm',
-        title: 'Alterna fra adatta alla finestra e dimensione reale',
+        title: t('common.alternaFraAdattaAllaFinest', 'Alterna fra adatta alla finestra e dimensione reale'),
         onclick: () => {
             actual = !actual;
             image.classList.toggle('lightbox__image--actual', actual);
             const label = zoomButton.querySelector('span');
             if (label) label.textContent = actual ? 'Adatta' : 'Dimensione reale';
         }
-    }, [icon('search'), el('span', { textContent: 'Dimensione reale' })]);
+    }, [icon('search'), el('span', { textContent: t('common.dimensioneReale', 'Dimensione reale') })]);
 
-    const meta = el('span', { className: 'section__hint mono', textContent: 'caricamento…' });
+    const meta = el('span', { className: 'section__hint mono', textContent: t('common.caricamento', 'caricamento…') });
     image.addEventListener('load', () => {
         meta.textContent = `${image.naturalWidth} × ${image.naturalHeight} px`;
     });
@@ -46,15 +47,15 @@ export function openLightbox({ src, title = '', caption = '', downloadName = nul
             className: 'btn btn--sm',
             href: src,
             download: downloadName,
-            title: 'Scarica l\'immagine originale'
-        }, [icon('download'), el('span', { textContent: 'Scarica' })]));
+            title: t('common.scaricaL', "Scarica l'immagine originale")
+        }, [icon('download'), el('span', { textContent: t('common.scarica', 'Scarica') })]));
     }
     actions.push(el('button', {
         type: 'button',
         className: 'btn btn--sm btn--ghost',
         onclick: close,
-        title: 'Chiudi (Esc)'
-    }, [icon('close'), el('span', { textContent: 'Chiudi' })]));
+        title: t('common.chiudiEsc', 'Chiudi (Esc)')
+    }, [icon('close'), el('span', { textContent: t('common.chiudi', 'Chiudi') })]));
 
     const frame = el('div', { className: 'lightbox__frame' }, [
         el('div', { className: 'lightbox__bar row row--tight' }, [
@@ -73,3 +74,4 @@ export function openLightbox({ src, title = '', caption = '', downloadName = nul
     document.body.append(host);
     document.addEventListener('keydown', onKey);
 }
+

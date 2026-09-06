@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card } from '/assets/ui.js';
@@ -23,7 +24,7 @@ function userCard(user, onOpen) {
 
     const open = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('edit'),
-        el('span', { textContent: 'Apri scheda' })
+        el('span', { textContent: t('system.apriScheda', 'Apri scheda') })
     ]);
 
     open.addEventListener('click', () => onOpen(user));
@@ -62,22 +63,22 @@ export async function renderUsers({ api, params = [], session }) {
 
     const create = el('button', { className: 'btn btn--primary', type: 'button' }, [
         icon('plus'),
-        el('span', { textContent: 'Nuovo utente' })
+        el('span', { textContent: t('system.nuovoUtente', 'Nuovo utente') })
     ]);
 
     create.addEventListener('click', () => go('users', 'nuovo'));
 
     const recovery = el('button', { className: 'btn', type: 'button' }, [
         icon('lock'),
-        el('span', { textContent: 'Server di recupero' })
+        el('span', { textContent: t('system.serverDiRecupero', 'Server di recupero') })
     ]);
 
     recovery.addEventListener('click', () => go('users', 'recupero'));
 
     const identity = catalogue.device
         ? card({
-            title: 'Identita di questo impianto',
-            subtitle: 'Compare fra parentesi nel nome del codice a sei cifre, per distinguerlo dagli altri impianti nell app di autenticazione',
+            title: t('system.identitaDiQuestoImpianto', 'Identita di questo impianto'),
+            subtitle: t('system.compareFraParentesiNelNome', 'Compare fra parentesi nel nome del codice a sei cifre, per distinguerlo dagli altri impianti nell app di autenticazione'),
             iconName: 'shield',
             tone: 'purple',
             badge: chip(catalogue.device.shortId, 'info'),
@@ -103,8 +104,8 @@ export async function renderUsers({ api, params = [], session }) {
             el('div', { className: 'row row--tight' }, [recovery, create])
         ]),
         card({
-            title: 'Utenti dell impianto',
-            subtitle: 'Ogni scheda raccoglie anagrafica, recapiti, ruolo, permessi e notifiche',
+            title: t('system.utentiDellImpianto', 'Utenti dell impianto'),
+            subtitle: t('system.ogniSchedaRaccoglieAnagrafi', 'Ogni scheda raccoglie anagrafica, recapiti, ruolo, permessi e notifiche'),
             iconName: 'users',
             tone: 'cyan',
             body: users.length === 0

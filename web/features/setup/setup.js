@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { api } from '/assets/api.js';
 import { el, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
@@ -20,8 +21,8 @@ export function renderSetup({ status, onComplete }) {
     const stage = el('div', { className: 'wizard__stage' });
     const feedback = el('div', {});
 
-    const back = el('button', { className: 'btn', type: 'button', textContent: 'Indietro' });
-    const next = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Continua' });
+    const back = el('button', { className: 'btn', type: 'button', textContent: t('setup.indietro', 'Indietro') });
+    const next = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('setup.continua', 'Continua') });
 
     const steps = [
         welcomeStep({ status }),
@@ -109,8 +110,8 @@ export function renderSetup({ status, onComplete }) {
             el('div', { className: 'wizard__brand' }, [
                 el('span', { className: 'brand__mark' }, [icon('shield')]),
                 el('div', {}, [
-                    el('strong', { textContent: 'ARGUS-PR' }),
-                    el('span', { className: 'wizard__brandsub', textContent: 'Network Video Recorder by NunzioTech' })
+                    el('strong', { textContent: t('setup.aRGUSPR', 'ARGUS-PR') }),
+                    el('span', { className: 'wizard__brandsub', textContent: t('setup.networkVideoRecorderByNunz', 'Network Video Recorder by NunzioTech') })
                 ])
             ]),
             railList

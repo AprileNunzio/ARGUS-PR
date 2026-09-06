@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { segmented, toggle } from '/assets/ui.js';
@@ -6,7 +7,7 @@ export function renderCameraRoster({ cameras, config, onExclude, onQuality }) {
     if (cameras.length === 0) {
         return el('div', { className: 'empty' }, [
             icon('camera', { className: 'icon--xl' }),
-            el('p', { textContent: 'Nessuna telecamera registrata. Aggiungine una da Sistema › Telecamere.' })
+            el('p', { textContent: t('wall.nessunaTelecameraRegistrata', 'Nessuna telecamera registrata. Aggiungine una da Sistema › Telecamere.') })
         ]);
     }
 
@@ -38,7 +39,7 @@ export function renderCameraRoster({ cameras, config, onExclude, onQuality }) {
             ]),
             warning ? el('p', { className: 'roster__warning' }, [
                 icon('warning'),
-                el('span', { textContent: 'Questa telecamera non espone un sub-stream: il muro usera il flusso principale, con piu carico su CPU e rete.' })
+                el('span', { textContent: t('wall.questaTelecameraNonEsponeU', 'Questa telecamera non espone un sub-stream: il muro usera il flusso principale, con piu carico su CPU e rete.') })
             ]) : null
         ]);
     }));

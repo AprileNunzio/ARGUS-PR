@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, toggle, optionRow } from '/assets/ui.js';
@@ -37,7 +38,7 @@ export async function renderUserCreate({ api }) {
 
     const usernameInput = el('input', {
         className: 'input',
-        placeholder: 'Da 3 a 32 caratteri: lettere, numeri, punto, trattino',
+        placeholder: t('system.da3A32CaratteriLettere', 'Da 3 a 32 caratteri: lettere, numeri, punto, trattino'),
         autocomplete: 'off'
     });
 
@@ -51,9 +52,9 @@ export async function renderUserCreate({ api }) {
     });
 
     const passwordField = el('div', { className: 'field' }, [
-        el('label', { textContent: 'Password iniziale' }),
+        el('label', { textContent: t('system.passwordIniziale', 'Password iniziale') }),
         passwordInput,
-        el('span', { className: 'field__hint', textContent: 'Almeno dodici caratteri. L utente dovra comunque cambiarla al primo accesso' })
+        el('span', { className: 'field__hint', textContent: t('system.almenoDodiciCaratteriLUte', 'Almeno dodici caratteri. L utente dovra comunque cambiarla al primo accesso') })
     ]);
 
     passwordField.hidden = true;
@@ -62,7 +63,7 @@ export async function renderUserCreate({ api }) {
 
     const submit = el('button', { className: 'btn btn--primary', type: 'button' }, [
         icon('check'),
-        el('span', { textContent: 'Crea utente' })
+        el('span', { textContent: t('system.creaUtente', 'Crea utente') })
     ]);
 
     submit.addEventListener('click', async () => {
@@ -82,7 +83,7 @@ export async function renderUserCreate({ api }) {
 
         const open = el('button', { className: 'btn btn--sm', type: 'button' }, [
             icon('edit'),
-            el('span', { textContent: 'Apri la scheda' })
+            el('span', { textContent: t('system.apriLaScheda', 'Apri la scheda') })
         ]);
 
         open.addEventListener('click', () => go('users', result.user.id));
@@ -93,8 +94,8 @@ export async function renderUserCreate({ api }) {
                 ? el('div', { className: 'xrow' }, [
                     el('span', { className: 'xrow__icon' }, [icon('lock')]),
                     el('div', { className: 'xrow__body' }, [
-                        el('span', { className: 'xrow__title', textContent: 'Password provvisoria' }),
-                        el('span', { className: 'xrow__hint', textContent: 'Consegnala di persona: non viene mostrata una seconda volta' })
+                        el('span', { className: 'xrow__title', textContent: t('system.passwordProvvisoria', 'Password provvisoria') }),
+                        el('span', { className: 'xrow__hint', textContent: t('system.consegnalaDiPersonaNonVie', 'Consegnala di persona: non viene mostrata una seconda volta') })
                     ]),
                     el('code', { className: 'mono', textContent: result.temporaryPassword })
                 ])
@@ -105,7 +106,7 @@ export async function renderUserCreate({ api }) {
 
     const back = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('chevronLeft'),
-        el('span', { textContent: 'Utenti' })
+        el('span', { textContent: t('system.utenti', 'Utenti') })
     ]);
 
     back.addEventListener('click', () => go('users'));
@@ -119,18 +120,18 @@ export async function renderUserCreate({ api }) {
             feedback,
             output,
             card({
-                title: 'Credenziali di accesso',
-                subtitle: 'Il nome utente serve per entrare, l email per recuperare la password',
+                title: t('system.credenzialiDiAccesso', 'Credenziali di accesso'),
+                subtitle: t('system.ilNomeUtenteServePerEntra', 'Il nome utente serve per entrare, l email per recuperare la password'),
                 iconName: 'lock',
                 tone: 'emerald',
                 body: [
                     el('div', { className: 'field' }, [
-                        el('label', { textContent: 'Nome utente' }),
+                        el('label', { textContent: t('system.nomeUtente', 'Nome utente') }),
                         usernameInput,
-                        el('span', { className: 'field__hint', textContent: 'Viene convertito in minuscolo e non si potra piu cambiare' })
+                        el('span', { className: 'field__hint', textContent: t('system.vieneConvertitoInMinuscolo', 'Viene convertito in minuscolo e non si potra piu cambiare') })
                     ]),
                     optionRow({
-                        title: 'Password provvisoria generata dal sistema',
+                        title: t('system.passwordProvvisoriaGenerata', 'Password provvisoria generata dal sistema'),
                         hint: 'Venti caratteri casuali mostrati una sola volta, molto piu robusti di una scelta a mano',
                         iconName: 'sparkles',
                         control: toggle(generatePassword, (value) => {
@@ -146,8 +147,8 @@ export async function renderUserCreate({ api }) {
                 ]
             }),
             fieldGroup({
-                title: 'Anagrafica',
-                subtitle: 'Identifica la persona con certezza: serve per i recuperi e per il registro delle azioni',
+                title: t('system.anagrafica', 'Anagrafica'),
+                subtitle: t('system.identificaLaPersonaConCert', 'Identifica la persona con certezza: serve per i recuperi e per il registro delle azioni'),
                 iconName: 'users',
                 tone: 'cyan',
                 definitions: IDENTITY_FIELDS,
@@ -155,8 +156,8 @@ export async function renderUserCreate({ api }) {
                 onInput
             }),
             fieldGroup({
-                title: 'Recapiti',
-                subtitle: 'Senza email questa persona non potra recuperare la password da sola',
+                title: t('system.recapiti', 'Recapiti'),
+                subtitle: t('system.senzaEmailQuestaPersonaNon', 'Senza email questa persona non potra recuperare la password da sola'),
                 iconName: 'globe',
                 tone: 'purple',
                 definitions: CONTACT_FIELDS,
@@ -164,8 +165,8 @@ export async function renderUserCreate({ api }) {
                 onInput
             }),
             fieldGroup({
-                title: 'Residenza',
-                subtitle: 'Facoltativa, utile per le verifiche formali',
+                title: t('system.residenza', 'Residenza'),
+                subtitle: t('system.facoltativaUtilePerLeVeri', 'Facoltativa, utile per le verifiche formali'),
                 iconName: 'pin',
                 tone: 'amber',
                 definitions: ADDRESS_FIELDS,
@@ -173,8 +174,8 @@ export async function renderUserCreate({ api }) {
                 onInput
             }),
             fieldGroup({
-                title: 'Posizione nell organizzazione',
-                subtitle: 'Mansione e reparto, per capire chi ha fatto cosa',
+                title: t('system.posizioneNellOrganizzazione', 'Posizione nell organizzazione'),
+                subtitle: t('system.mansioneERepartoPerCapire', 'Mansione e reparto, per capire chi ha fatto cosa'),
                 iconName: 'tag',
                 tone: 'cyan',
                 definitions: WORK_FIELDS,
@@ -182,8 +183,8 @@ export async function renderUserCreate({ api }) {
                 onInput
             }),
             card({
-                title: 'Preferenze',
-                subtitle: 'Lingua delle comunicazioni indirizzate a questa persona',
+                title: t('system.preferenze', 'Preferenze'),
+                subtitle: t('system.linguaDelleComunicazioniInd', 'Lingua delle comunicazioni indirizzate a questa persona'),
                 iconName: 'settings',
                 tone: 'emerald',
                 body: [languageRow(draft.language, (value) => {

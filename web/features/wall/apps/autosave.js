@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -6,7 +7,7 @@ const DEBOUNCE_MS = 500;
 export function createAutoSaver({ api, path = '/api/wall/config', onApplied }) {
     const indicator = el('span', { className: 'autosave' }, [
         el('span', { className: 'autosave__dot' }),
-        el('span', { className: 'autosave__text', textContent: 'Modifiche salvate automaticamente' })
+        el('span', { className: 'autosave__text', textContent: t('apps.modificheSalvateAutomaticame', 'Modifiche salvate automaticamente') })
     ]);
 
     let timer = null;

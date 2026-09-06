@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import {
     IDENTITY_FIELDS,
@@ -18,7 +19,7 @@ export function profileStep({ state }) {
     const deviceInput = el('input', {
         className: 'input',
         value: state.deviceLabel ?? '',
-        placeholder: 'Esempio: Sede Centrale, Magazzino Nord'
+        placeholder: t('setup.esempioSedeCentraleMagazz', 'Esempio: Sede Centrale, Magazzino Nord')
     });
 
     deviceInput.addEventListener('input', () => {
@@ -32,27 +33,27 @@ export function profileStep({ state }) {
     ]);
 
     return {
-        title: 'Chi sei',
+        title: t('setup.chiSei', 'Chi sei'),
         summary: 'Anagrafica e recapiti dell amministratore',
         body: el('div', { className: 'stack' }, [
             el('p', {
                 className: 'setup-section__hint',
-                textContent: 'Nome, cognome ed email sono obbligatori: senza email nessuno potra recuperare la password di questo account, e sarebbe l unico amministratore.'
+                textContent: t('setup.nomeCognomeEdEmailSonoOb', 'Nome, cognome ed email sono obbligatori: senza email nessuno potra recuperare la password di questo account, e sarebbe l unico amministratore.')
             }),
             feedback,
             group('Anagrafica', 'Serve a identificare con certezza chi governa l impianto.', IDENTITY_FIELDS),
             group('Recapiti', 'L email riceve il recupero della password e le comunicazioni di servizio.', CONTACT_FIELDS),
             group('Residenza', 'Facoltativa, utile per le verifiche formali.', ADDRESS_FIELDS),
             el('section', { className: 'stack' }, [
-                el('h3', { className: 'setup-section__title', textContent: 'Nome di questo impianto' }),
+                el('h3', { className: 'setup-section__title', textContent: t('setup.nomeDiQuestoImpianto', 'Nome di questo impianto') }),
                 el('p', {
                     className: 'setup-section__hint',
-                    textContent: 'Compare fra parentesi nell app di autenticazione, accanto alla tua email, cosi riconosci subito quale impianto stai sbloccando quando ne gestisci piu di uno.'
+                    textContent: t('setup.compareFraParentesiNellApp', 'Compare fra parentesi nell app di autenticazione, accanto alla tua email, cosi riconosci subito quale impianto stai sbloccando quando ne gestisci piu di uno.')
                 }),
                 el('div', { className: 'field' }, [
-                    el('label', { textContent: 'Nome dell impianto' }),
+                    el('label', { textContent: t('setup.nomeDellImpianto', 'Nome dell impianto') }),
                     deviceInput,
-                    el('span', { className: 'field__hint', textContent: 'Facoltativo: senza, resta solo il codice breve generato dal sistema' })
+                    el('span', { className: 'field__hint', textContent: t('setup.facoltativoSenzaRestaSolo', 'Facoltativo: senza, resta solo il codice breve generato dal sistema') })
                 ])
             ])
         ]),

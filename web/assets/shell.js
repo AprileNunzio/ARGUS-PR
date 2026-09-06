@@ -32,7 +32,7 @@ export function setActiveRoute(name, routes, params = []) {
             breadcrumbNode.append(
                 el('span', { className: 'breadcrumb__current' }, [
                     icon('grid'),
-                    el('span', { textContent: 'Cockpit Hub' })
+                    el('span', { textContent: t('common.cockpitHub', 'Cockpit Hub') })
                 ])
             );
             return;
@@ -43,11 +43,11 @@ export function setActiveRoute(name, routes, params = []) {
             el('button', {
                 type: 'button',
                 className: 'breadcrumb__link',
-                title: 'Torna all Hub centrale',
+                title: t('common.tornaAllHubCentrale', 'Torna all Hub centrale'),
                 onclick: () => { location.hash = '#/dashboard'; }
             }, [
                 icon('grid'),
-                el('span', { textContent: 'Hub' })
+                el('span', { textContent: t('common.hub', 'Hub') })
             ]),
             el('span', { className: 'breadcrumb__sep', textContent: '›' }),
             el('span', { className: 'breadcrumb__current' }, [
@@ -65,11 +65,11 @@ export function setActiveRoute(name, routes, params = []) {
         el('button', {
             type: 'button',
             className: 'breadcrumb__link',
-            title: 'Torna all Hub centrale',
+            title: t('common.tornaAllHubCentrale', 'Torna all Hub centrale'),
             onclick: () => { location.hash = '#/dashboard'; }
         }, [
             icon('grid'),
-            el('span', { textContent: 'Hub' })
+            el('span', { textContent: t('common.hub', 'Hub') })
         ]),
         el('span', { className: 'breadcrumb__sep', textContent: '›' })
     );
@@ -126,19 +126,19 @@ export function renderShell({ session, routes, onNavigate, onLogout }) {
     const hubBtn = el('button', {
         type: 'button',
         className: 'hub-nav-btn',
-        title: 'Centro di Controllo (Hub)',
+        title: t('common.centroDiControlloHub', 'Centro di Controllo (Hub)'),
         onclick: () => onNavigate('dashboard')
     }, [
         icon('grid'),
-        el('span', { textContent: 'Hub' })
+        el('span', { textContent: t('common.hub', 'Hub') })
     ]);
 
     const header = el('header', { className: 'topbar' }, [
         el('div', { className: 'brand', onclick: () => onNavigate('dashboard') }, [
             el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('span', { className: 'brand__text' }, [
-                el('span', { className: 'brand__name', textContent: 'ARGUS-PR' }),
-                el('span', { className: 'brand__role', textContent: 'by NunzioTech' })
+                el('span', { className: 'brand__name', textContent: t('common.aRGUSPR', 'ARGUS-PR') }),
+                el('span', { className: 'brand__role', textContent: t('common.byNunzioTech', 'by NunzioTech') })
             ])
         ]),
         breadcrumbNode,
@@ -152,7 +152,7 @@ export function renderShell({ session, routes, onNavigate, onLogout }) {
         session.username === '__kiosk__' ? el('button', {
             className: 'btn btn--sm btn--primary',
             type: 'button',
-            textContent: 'Accedi come Admin',
+            textContent: t('common.accediComeAdmin', 'Accedi come Admin'),
             onclick: onLogout
         }) : null,
         el('button', {
@@ -172,22 +172,22 @@ export function renderShell({ session, routes, onNavigate, onLogout }) {
             className: 'tabbar__item',
             type: 'button',
             onclick: () => onNavigate('dashboard')
-        }, [icon('grid', { className: 'icon--lg' }), el('span', { textContent: 'Hub' })]),
+        }, [icon('grid', { className: 'icon--lg' }), el('span', { textContent: t('common.hub', 'Hub') })]),
         el('button', {
             className: 'tabbar__item',
             type: 'button',
             onclick: () => onNavigate('live')
-        }, [icon('play', { className: 'icon--lg' }), el('span', { textContent: 'Diretta' })]),
+        }, [icon('play', { className: 'icon--lg' }), el('span', { textContent: t('common.diretta', 'Diretta') })]),
         el('button', {
             className: 'tabbar__item',
             type: 'button',
             onclick: () => onNavigate('archive')
-        }, [icon('archive', { className: 'icon--lg' }), el('span', { textContent: 'Archivio' })]),
+        }, [icon('archive', { className: 'icon--lg' }), el('span', { textContent: t('common.archivio', 'Archivio') })]),
         el('button', {
             className: 'tabbar__item',
             type: 'button',
             onclick: () => onNavigate('settings')
-        }, [icon('settings', { className: 'icon--lg' }), el('span', { textContent: 'Impostazioni' })])
+        }, [icon('settings', { className: 'icon--lg' }), el('span', { textContent: t('common.impostazioni', 'Impostazioni') })])
     ]);
 
     const main = el('main', { className: 'shell__main' }, [el('div', { id: 'outlet' })]);

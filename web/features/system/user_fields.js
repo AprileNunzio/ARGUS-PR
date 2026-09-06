@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, toggle, optionRow, segmented } from '/assets/ui.js';
@@ -78,8 +79,8 @@ export function fieldGroup({ title, subtitle, iconName, tone, definitions, value
 
 export function notificationCard({ values, onChange, badge = null }) {
     return card({
-        title: 'Notifiche',
-        subtitle: 'Cosa deve ricevere questa persona. Le email partono dal server SMTP configurato nelle automazioni',
+        title: t('system.notifiche', 'Notifiche'),
+        subtitle: t('system.cosaDeveRicevereQuestaPers', 'Cosa deve ricevere questa persona. Le email partono dal server SMTP configurato nelle automazioni'),
         iconName: 'alarm',
         tone: 'amber',
         badge,
@@ -94,7 +95,7 @@ export function notificationCard({ values, onChange, badge = null }) {
 
 export function languageRow(value, onChange) {
     return optionRow({
-        title: 'Lingua preferita',
+        title: t('system.linguaPreferita', 'Lingua preferita'),
         hint: 'Usata nelle comunicazioni indirizzate a questa persona',
         iconName: 'globe',
         control: segmented(LANGUAGES, value ?? 'it', onChange, { compact: true })
@@ -110,7 +111,7 @@ export function roleRow(roles, value, onChange, { disabled = false } = {}) {
     }));
 
     return optionRow({
-        title: 'Ruolo e permessi',
+        title: t('system.ruoloEPermessi', 'Ruolo e permessi'),
         hint: disabled
             ? 'Il ruolo del proprio account non si modifica da qui, per non restare fuori dal sistema'
             : 'Il ruolo decide cosa questa persona puo vedere e toccare, senza eccezioni',

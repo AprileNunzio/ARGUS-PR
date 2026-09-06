@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -48,7 +49,7 @@ function buildIdentityPanel(person) {
     ];
 
     return el('div', { className: 'panel stack' }, [
-        el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Scheda identità' })]),
+        el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('people.schedaIdentit', 'Scheda identità') })]),
         el('div', { className: 'panel__body' }, [
             el('dl', { className: 'person-facts' }, rows.flatMap(([label, value]) => [
                 el('dt', { textContent: label }),
@@ -61,14 +62,14 @@ function buildIdentityPanel(person) {
 function buildPermissionsPanel(person) {
     const permissions = person.specialPermissions ?? [];
     return el('div', { className: 'panel stack' }, [
-        el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Privilegi e note' })]),
+        el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('people.privilegiENote', 'Privilegi e note') })]),
         el('div', { className: 'panel__body stack stack--tight' }, [
             permissions.length > 0
                 ? el('div', { className: 'row row--wrap row--tight' }, permissions.map((permission) => chip(PERMISSION_LABELS[permission] ?? permission, 'info')))
-                : el('span', { className: 'section__hint', textContent: 'Nessun privilegio speciale assegnato.' }),
+                : el('span', { className: 'section__hint', textContent: t('people.nessunPrivilegioSpecialeAss', 'Nessun privilegio speciale assegnato.') }),
             person.notes
                 ? el('p', { className: 'person-notes', textContent: person.notes })
-                : el('span', { className: 'section__hint', textContent: 'Nessuna nota operativa.' })
+                : el('span', { className: 'section__hint', textContent: t('people.nessunaNotaOperativa', 'Nessuna nota operativa.') })
         ])
     ]);
 }
@@ -76,7 +77,7 @@ function buildPermissionsPanel(person) {
 function buildRawPanel(person) {
     return el('details', { className: 'panel person-raw' }, [
         el('summary', { className: 'panel__head cursor-pointer' }, [
-            el('span', { className: 'panel__title mono', textContent: 'Dati grezzi del profilo (JSON)' })
+            el('span', { className: 'panel__title mono', textContent: t('people.datiGrezziDelProfiloJSON', 'Dati grezzi del profilo (JSON)') })
         ]),
         el('div', { className: 'panel__body' }, [
             el('pre', { className: 'mono section__hint raw-json-box' }, [
@@ -94,7 +95,7 @@ export async function renderPersonDetailsView({ api, session, personId }) {
         className: 'page-back',
         type: 'button',
         onclick: () => go('people')
-    }, [icon('chevronLeft'), el('span', { textContent: 'Torna al catalogo' })]);
+    }, [icon('chevronLeft'), el('span', { textContent: t('people.tornaAlCatalogo', 'Torna al catalogo') })]);
 
     const headerHost = el('div', { className: 'view__head' });
     const bodyHost = el('div', { className: 'stack' });
@@ -145,7 +146,7 @@ export async function renderPersonDetailsView({ api, session, personId }) {
                 go('people');
             }
         }))
-    }, [icon('trash'), el('span', { textContent: 'Elimina' })]) : null;
+    }, [icon('trash'), el('span', { textContent: t('people.elimina', 'Elimina') })]) : null;
 
     const mergeBtn = canManage ? el('button', {
         className: 'btn btn--sm btn--ghost',
@@ -188,7 +189,7 @@ export async function renderPersonDetailsView({ api, session, personId }) {
             ]));
             picker.focus();
         }
-    }, [icon('move'), el('span', { textContent: 'Unisci…' })]) : null;
+    }, [icon('move'), el('span', { textContent: t('people.unisci', 'Unisci…') })]) : null;
 
     headerHost.replaceChildren(
         el('div', { className: 'stack stack--tight person-hero' }, [
@@ -228,7 +229,7 @@ export async function renderPersonDetailsView({ api, session, personId }) {
 
     const modelPanel = el('div', { className: 'panel stack' }, [
         el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: 'Modello 3D e posa' }),
+            el('span', { className: 'panel__title', textContent: t('people.modello3DEPosa', 'Modello 3D e posa') }),
             el('span', { className: 'section__hint mono', textContent: modelHint })
         ]),
         el('div', { className: 'panel__body stack stack--tight person-model' }, [
@@ -268,9 +269,9 @@ export async function renderPersonDetailsView({ api, session, personId }) {
         const deleteLogBtn = canManage ? el('button', {
             className: 'btn btn--sm btn--danger btn--full',
             type: 'button',
-            textContent: 'Elimina transito',
+            textContent: t('people.eliminaTransito', 'Elimina transito'),
             onclick: () => openDialog(confirmPanel({
-                title: 'Eliminare questo transito?',
+                title: t('people.eliminareQuestoTransito', 'Eliminare questo transito?'),
                 message: `Rilevamento del ${new Date(log.createdAt).toLocaleString()} su ${log.cameraName ?? log.cameraId}.`,
                 confirmLabel: 'Elimina',
                 onCancel: closeDialog,
@@ -298,7 +299,7 @@ export async function renderPersonDetailsView({ api, session, personId }) {
 
     const logsPanel = el('div', { className: 'panel stack' }, [
         el('div', { className: 'panel__head' }, [
-            el('span', { className: 'panel__title', textContent: 'Transiti registrati' }),
+            el('span', { className: 'panel__title', textContent: t('people.transitiRegistrati', 'Transiti registrati') }),
             el('span', { className: 'section__hint mono', textContent: `${logs.length} eventi` })
         ]),
         logsHost

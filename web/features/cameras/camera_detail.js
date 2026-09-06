@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, notice, chip, empty, pageHead, confirmPanel } from '/assets/dom.js';
 import { setBreadcrumbDetail } from '/assets/shell.js';
 import { icon } from '/assets/icons.js';
@@ -34,7 +35,7 @@ function generalTab({ api, camera }) {
     const feedback = el('div', { hidden: 'hidden' });
     const confirmHost = el('div', {});
 
-    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva modifiche' });
+    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.salvaModifiche', 'Salva modifiche') });
 
     saveButton.addEventListener('click', async () => {
         saveButton.disabled = true;
@@ -56,7 +57,7 @@ function generalTab({ api, camera }) {
         feedback.removeAttribute('hidden');
     });
 
-    const deleteButton = el('button', { className: 'btn btn--danger', type: 'button', textContent: 'Elimina canale' });
+    const deleteButton = el('button', { className: 'btn btn--danger', type: 'button', textContent: t('cameras.eliminaCanale', 'Elimina canale') });
 
     deleteButton.addEventListener('click', () => {
         deleteButton.disabled = true;
@@ -119,7 +120,7 @@ function recordingTab({ api, camera, recorder }) {
 function diagnosticsTab({ api, camera }) {
     const result = el('div', {});
 
-    const probeButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Verifica sorgente' });
+    const probeButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('cameras.verificaSorgente', 'Verifica sorgente') });
 
     probeButton.addEventListener('click', async () => {
         probeButton.disabled = true;
@@ -154,8 +155,8 @@ function diagnosticsTab({ api, camera }) {
                 className: 'btn',
                 type: 'button',
                 onclick: () => go('cameras', camera.id, 'autoconfig')
-            }, [icon('sparkles'), el('span', { textContent: 'Autoconfigurazione guidata' })]),
-            el('button', { className: 'btn', type: 'button', textContent: 'Apri in Diretta', onclick: () => go('live') })
+            }, [icon('sparkles'), el('span', { textContent: t('cameras.autoconfigurazioneGuidata', 'Autoconfigurazione guidata') })]),
+            el('button', { className: 'btn', type: 'button', textContent: t('cameras.apriInDiretta', 'Apri in Diretta'), onclick: () => go('live') })
         ]),
         result
     ]);

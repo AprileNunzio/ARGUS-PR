@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card } from '/assets/ui.js';
@@ -33,13 +34,13 @@ export async function renderAudioLibrary({ api }) {
     };
 
     const uploadCard = () => {
-        const nameInput = el('input', { className: 'input', placeholder: 'Esempio: Area videosorvegliata, allontanarsi' });
-        const descriptionInput = el('input', { className: 'input', placeholder: 'Quando usarlo, a chi e rivolto' });
+        const nameInput = el('input', { className: 'input', placeholder: t('system.esempioAreaVideosorvegliata', 'Esempio: Area videosorvegliata, allontanarsi') });
+        const descriptionInput = el('input', { className: 'input', placeholder: t('system.quandoUsarloAChiERivolto', 'Quando usarlo, a chi e rivolto') });
         const fileInput = el('input', { className: 'input', type: 'file', accept: ACCEPT });
 
         const submit = el('button', { className: 'btn btn--primary', type: 'button' }, [
             icon('plus'),
-            el('span', { textContent: 'Aggiungi il messaggio' })
+            el('span', { textContent: t('system.aggiungiIlMessaggio', 'Aggiungi il messaggio') })
         ]);
 
         submit.addEventListener('click', async () => {
@@ -86,14 +87,14 @@ export async function renderAudioLibrary({ api }) {
         });
 
         return card({
-            title: 'Aggiungi un messaggio',
-            subtitle: 'WAV, MP3, OGG, Opus o FLAC fino a quattro megabyte. Viene riconvertito in G.711 al momento dell invio',
+            title: t('system.aggiungiUnMessaggio', 'Aggiungi un messaggio'),
+            subtitle: t('system.wAVMP3OGGOpusOFLACFin', 'WAV, MP3, OGG, Opus o FLAC fino a quattro megabyte. Viene riconvertito in G.711 al momento dell invio'),
             iconName: 'speaker',
             tone: 'cyan',
             body: [
-                el('div', { className: 'field' }, [el('label', { textContent: 'Nome' }), nameInput]),
-                el('div', { className: 'field' }, [el('label', { textContent: 'Descrizione' }), descriptionInput]),
-                el('div', { className: 'field' }, [el('label', { textContent: 'File audio' }), fileInput]),
+                el('div', { className: 'field' }, [el('label', { textContent: t('system.nome', 'Nome') }), nameInput]),
+                el('div', { className: 'field' }, [el('label', { textContent: t('system.descrizione', 'Descrizione') }), descriptionInput]),
+                el('div', { className: 'field' }, [el('label', { textContent: t('system.fileAudio', 'File audio') }), fileInput]),
                 el('div', { className: 'row row--end' }, [submit])
             ]
         });
@@ -102,7 +103,7 @@ export async function renderAudioLibrary({ api }) {
     const clipRow = (clip) => {
         const remove = el('button', { className: 'btn btn--sm btn--danger', type: 'button' }, [
             icon('trash'),
-            el('span', { textContent: 'Elimina' })
+            el('span', { textContent: t('system.elimina', 'Elimina') })
         ]);
 
         remove.addEventListener('click', async () => {
@@ -131,8 +132,8 @@ export async function renderAudioLibrary({ api }) {
     };
 
     const capabilityCard = () => card({
-        title: 'Telecamere raggiungibili',
-        subtitle: 'Il messaggio parte solo verso le telecamere che dichiarano un canale audio in ingresso ONVIF',
+        title: t('system.telecamereRaggiungibili', 'Telecamere raggiungibili'),
+        subtitle: t('system.ilMessaggioParteSoloVerso', 'Il messaggio parte solo verso le telecamere che dichiarano un canale audio in ingresso ONVIF'),
         iconName: 'camera',
         tone: 'emerald',
         badge: chip(`${cameras.filter((entry) => entry.supported).length}/${cameras.length} pronte`, 'info'),
@@ -158,8 +159,8 @@ export async function renderAudioLibrary({ api }) {
             feedback,
             uploadCard(),
             card({
-                title: 'Messaggi in libreria',
-                subtitle: 'Compaiono nella barra di ogni riquadro del muro, sotto il pulsante altoparlante',
+                title: t('system.messaggiInLibreria', 'Messaggi in libreria'),
+                subtitle: t('system.compaionoNellaBarraDiOgni', 'Compaiono nella barra di ogni riquadro del muro, sotto il pulsante altoparlante'),
                 iconName: 'archive',
                 tone: 'purple',
                 badge: chip(`${clips.length} messaggi`, clips.length > 0 ? 'ok' : 'info'),

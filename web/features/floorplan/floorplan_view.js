@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -97,7 +98,7 @@ export async function renderFloorplanView({ api, session }) {
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Planimetria Interattiva' }),
+            el('h1', { className: 'view__title', textContent: t('floorplan.planimetriaInterattiva', 'Planimetria Interattiva') }),
             el('div', { className: 'row row--tight' }, [planSelect])
         ]),
         el('section', { className: 'panel' }, [

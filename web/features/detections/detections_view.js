@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, field, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -60,7 +61,7 @@ export async function renderDetectionsView({ api, session }) {
         const topColors = stats.colors?.slice(0, 5) ?? [];
 
         const plateRows = topPlates.length === 0
-            ? [el('span', { className: 'section__hint', textContent: 'Nessun transito targa recente' })]
+            ? [el('span', { className: 'section__hint', textContent: t('detections.nessunTransitoTargaRecente', 'Nessun transito targa recente') })]
             : topPlates.map((p) => el('button', {
                 type: 'button',
                 className: 'device-row row--spread',
@@ -75,7 +76,7 @@ export async function renderDetectionsView({ api, session }) {
             ]));
 
         const colorRows = topColors.length === 0
-            ? [el('span', { className: 'section__hint', textContent: 'Nessun attributo abbigliamento registrato' })]
+            ? [el('span', { className: 'section__hint', textContent: t('detections.nessunAttributoAbbigliamento', 'Nessun attributo abbigliamento registrato') })]
             : topColors.map((c) => el('button', {
                 type: 'button',
                 className: 'device-row row--spread',
@@ -92,13 +93,13 @@ export async function renderDetectionsView({ api, session }) {
         statsHost.replaceChildren(
             el('section', { className: 'panel' }, [
                 el('div', { className: 'panel__head' }, [
-                    el('strong', { className: 'panel__title', textContent: 'Frequenza Veicoli & Targhe' })
+                    el('strong', { className: 'panel__title', textContent: t('detections.frequenzaVeicoliTarghe', 'Frequenza Veicoli & Targhe') })
                 ]),
                 el('div', { className: 'panel__body stack stack--tight' }, plateRows)
             ]),
             el('section', { className: 'panel' }, [
                 el('div', { className: 'panel__head' }, [
-                    el('strong', { className: 'panel__title', textContent: 'Frequenza Abbigliamento Persone' })
+                    el('strong', { className: 'panel__title', textContent: t('detections.frequenzaAbbigliamentoPerson', 'Frequenza Abbigliamento Persone') })
                 ]),
                 el('div', { className: 'panel__body stack stack--tight' }, colorRows)
             ])
@@ -163,7 +164,7 @@ export async function renderDetectionsView({ api, session }) {
                     const atMs = new Date(ev.startedAt).getTime();
                     go('archive', ev.cameraId, atMs);
                 }
-            }, [icon('play'), el('span', { textContent: 'Vedi nel Video' })]);
+            }, [icon('play'), el('span', { textContent: t('detections.vediNelVideo', 'Vedi nel Video') })]);
 
             const snapshotUrl = ev.snapshotPath ? `/api/detections/${encodeURIComponent(ev.id)}/snapshot` : null;
             const caption = [
@@ -246,7 +247,7 @@ export async function renderDetectionsView({ api, session }) {
     const plateInput = el('input', {
         type: 'text',
         className: 'input input--sm',
-        placeholder: 'Filtra targa (es. AB123CD)',
+        placeholder: t('detections.filtraTargaEsAB123CD', 'Filtra targa (es. AB123CD)'),
         oninput: (e) => {
             plateFilter = e.target.value;
             loadEvents();
@@ -260,14 +261,14 @@ export async function renderDetectionsView({ api, session }) {
             loadEvents();
         }
     }, [
-        el('option', { value: '', textContent: 'Tutti i colori' }),
-        el('option', { value: 'white', textContent: 'Maglia Bianca' }),
-        el('option', { value: 'black', textContent: 'Abito Nero' }),
-        el('option', { value: 'gray', textContent: 'Abito Grigio' }),
-        el('option', { value: 'red', textContent: 'Abito Rosso' }),
-        el('option', { value: 'blue', textContent: 'Abito Blu' }),
-        el('option', { value: 'green', textContent: 'Abito Verde' }),
-        el('option', { value: 'yellow', textContent: 'Abito Giallo' })
+        el('option', { value: '', textContent: t('detections.tuttiIColori', 'Tutti i colori') }),
+        el('option', { value: 'white', textContent: t('detections.magliaBianca', 'Maglia Bianca') }),
+        el('option', { value: 'black', textContent: t('detections.abitoNero', 'Abito Nero') }),
+        el('option', { value: 'gray', textContent: t('detections.abitoGrigio', 'Abito Grigio') }),
+        el('option', { value: 'red', textContent: t('detections.abitoRosso', 'Abito Rosso') }),
+        el('option', { value: 'blue', textContent: t('detections.abitoBlu', 'Abito Blu') }),
+        el('option', { value: 'green', textContent: t('detections.abitoVerde', 'Abito Verde') }),
+        el('option', { value: 'yellow', textContent: t('detections.abitoGiallo', 'Abito Giallo') })
     ]);
 
     const refreshBtn = el('button', {
@@ -277,11 +278,11 @@ export async function renderDetectionsView({ api, session }) {
             loadStats();
             loadEvents();
         }
-    }, [icon('refresh'), el('span', { textContent: 'Aggiorna' })]);
+    }, [icon('refresh'), el('span', { textContent: t('detections.aggiorna', 'Aggiorna') })]);
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Ricerca Forense & Statistiche Passaggi' }),
+            el('h1', { className: 'view__title', textContent: t('detections.ricercaForenseStatistiche', 'Ricerca Forense & Statistiche Passaggi') }),
             el('div', { className: 'row row--tight' }, [plateInput, colorSelect, refreshBtn])
         ]),
         statsHost,

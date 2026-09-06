@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, toggle, optionRow } from '/assets/ui.js';
@@ -87,12 +88,12 @@ export async function renderRecoveryMailer({ api }) {
     };
 
     const testCard = () => {
-        const target = el('input', { className: 'input', type: 'email', placeholder: 'Indirizzo dove ricevere la prova' });
+        const target = el('input', { className: 'input', type: 'email', placeholder: t('system.indirizzoDoveRicevereLaPro', 'Indirizzo dove ricevere la prova') });
         const output = el('div', {});
 
         const run = el('button', { className: 'btn btn--sm btn--primary', type: 'button' }, [
             icon('play'),
-            el('span', { textContent: 'Invia una prova' })
+            el('span', { textContent: t('system.inviaUnaProva', 'Invia una prova') })
         ]);
 
         run.addEventListener('click', async () => {
@@ -107,13 +108,13 @@ export async function renderRecoveryMailer({ api }) {
         });
 
         return card({
-            title: 'Prova di consegna',
-            subtitle: 'Verifica che il server risponda davvero prima di contare su di lui in un emergenza',
+            title: t('system.provaDiConsegna', 'Prova di consegna'),
+            subtitle: t('system.verificaCheIlServerRispond', 'Verifica che il server risponda davvero prima di contare su di lui in un emergenza'),
             iconName: 'activity',
             tone: ready ? 'emerald' : 'amber',
             badge: chip(ready ? 'Pronto' : 'Non configurato', ready ? 'ok' : 'warn'),
             body: [
-                el('div', { className: 'field' }, [el('label', { textContent: 'Destinatario della prova' }), target]),
+                el('div', { className: 'field' }, [el('label', { textContent: t('system.destinatarioDellaProva', 'Destinatario della prova') }), target]),
                 el('div', { className: 'row row--end' }, [run]),
                 output
             ]
@@ -122,7 +123,7 @@ export async function renderRecoveryMailer({ api }) {
 
     const back = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('chevronLeft'),
-        el('span', { textContent: 'Utenti' })
+        el('span', { textContent: t('system.utenti', 'Utenti') })
     ]);
 
     back.addEventListener('click', () => go('users'));
@@ -136,14 +137,14 @@ export async function renderRecoveryMailer({ api }) {
             feedback,
             autosaveBar(saver.element),
             card({
-                title: 'Server SMTP dedicato al recupero',
-                subtitle: 'Separato da quello delle automazioni: se un attaccante compromette le notifiche non ottiene anche la strada per reimpostare le password',
+                title: t('system.serverSMTPDedicatoAlRecupe', 'Server SMTP dedicato al recupero'),
+                subtitle: t('system.separatoDaQuelloDelleAutom', 'Separato da quello delle automazioni: se un attaccante compromette le notifiche non ottiene anche la strada per reimpostare le password'),
                 iconName: 'lock',
                 tone: 'purple',
                 badge: mailer.hasPassword ? chip('Password memorizzata', 'ok') : null,
                 body: [
                     optionRow({
-                        title: 'Recupero della password attivo',
+                        title: t('system.recuperoDellaPasswordAttivo', 'Recupero della password attivo'),
                         hint: 'Spento, nessuno puo reimpostare la password da solo: serve sempre un amministratore',
                         iconName: 'shield',
                         control: toggle(mailer.enabled === true, (value) => {
@@ -154,18 +155,18 @@ export async function renderRecoveryMailer({ api }) {
                     el('div', { className: 'grid grid--fields' }, [
                         ...FIELDS.map(field),
                         el('div', { className: 'field' }, [
-                            el('label', { textContent: 'Porta' }),
+                            el('label', { textContent: t('system.porta', 'Porta') }),
                             portInput(),
-                            el('span', { className: 'field__hint', textContent: '587 con STARTTLS, 465 con TLS diretto' })
+                            el('span', { className: 'field__hint', textContent: t('system.587ConSTARTTLS465ConTLS', '587 con STARTTLS, 465 con TLS diretto') })
                         ]),
                         el('div', { className: 'field' }, [
-                            el('label', { textContent: 'Password SMTP' }),
+                            el('label', { textContent: t('system.passwordSMTP', 'Password SMTP') }),
                             passwordInput(),
-                            el('span', { className: 'field__hint', textContent: 'Conservata cifrata: non viene mai restituita dall interfaccia' })
+                            el('span', { className: 'field__hint', textContent: t('system.conservataCifrataNonViene', 'Conservata cifrata: non viene mai restituita dall interfaccia') })
                         ])
                     ]),
                     optionRow({
-                        title: 'TLS diretto',
+                        title: t('system.tLSDiretto', 'TLS diretto'),
                         hint: 'Da attivare solo sulla porta 465. Sulle altre si usa STARTTLS',
                         iconName: 'lock',
                         control: toggle(mailer.secure === true, (value) => {
@@ -174,7 +175,7 @@ export async function renderRecoveryMailer({ api }) {
                         })
                     }),
                     optionRow({
-                        title: 'Pretendi STARTTLS',
+                        title: t('system.pretendiSTARTTLS', 'Pretendi STARTTLS'),
                         hint: 'Spegnerlo lascia passare la password in chiaro: fallo solo su una rete che controlli interamente',
                         iconName: 'shield',
                         control: toggle(mailer.startTls !== false, (value) => {
@@ -185,7 +186,7 @@ export async function renderRecoveryMailer({ api }) {
                     el('p', { className: 'xcard__note' }, [
                         icon('info'),
                         el('span', {
-                            textContent: 'Il collegamento di recupero vale trenta minuti, si usa una volta sola e chiude tutte le sessioni aperte dell utente. Il codice a sei cifre resta obbligatorio anche dopo: recuperare la password non aggira il secondo fattore.'
+                            textContent: t('system.ilCollegamentoDiRecuperoVa', 'Il collegamento di recupero vale trenta minuti, si usa una volta sola e chiude tutte le sessioni aperte dell utente. Il codice a sei cifre resta obbligatorio anche dopo: recuperare la password non aggira il secondo fattore.')
                         })
                     ])
                 ]

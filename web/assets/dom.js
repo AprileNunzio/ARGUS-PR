@@ -2,6 +2,7 @@
 
 export function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
+    let deferredValue = undefined;
 
     for (const [key, value] of Object.entries(props)) {
         if (value === null || value === undefined) continue;
@@ -9,7 +10,11 @@ export function el(tag, props = {}, children = []) {
             node.addEventListener(key.slice(2), value);
             continue;
         }
-        if (key === 'className' || key === 'id' || key === 'type' || key === 'value' || key === 'checked') {
+        if (key === 'value') {
+            deferredValue = value;
+            continue;
+        }
+        if (key === 'className' || key === 'id' || key === 'type' || key === 'checked') {
             node[key] = value;
             continue;
         }
@@ -23,6 +28,10 @@ export function el(tag, props = {}, children = []) {
     for (const child of [].concat(children)) {
         if (child === null || child === undefined) continue;
         node.append(child);
+    }
+
+    if (deferredValue !== undefined) {
+        node.value = deferredValue;
     }
 
     return node;

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, field, notice, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -45,7 +46,7 @@ export function renderPerformancePanel({ api }) {
                 el('span', { className: 'stat__icon' }, [icon('zap', { className: 'icon--lg' })]),
                 el('div', { className: 'stat__body' }, [
                     el('span', { className: 'stat__value', textContent: perf.hwaccelBackend.toUpperCase() }),
-                    el('span', { className: 'stat__label', textContent: 'Accelerazione Video GPU' }),
+                    el('span', { className: 'stat__label', textContent: t('system.accelerazioneVideoGPU', 'Accelerazione Video GPU') }),
                     el('span', { className: 'stat__hint', textContent: hw.accelerators.join(', ') || 'Nessuna GPU rilevata' })
                 ])
             ]),
@@ -53,42 +54,42 @@ export function renderPerformancePanel({ api }) {
                 el('span', { className: 'stat__icon' }, [icon('sparkles', { className: 'icon--lg' })]),
                 el('div', { className: 'stat__body' }, [
                     el('span', { className: 'stat__value', textContent: perf.aiExecutionProvider.replace('ExecutionProvider', '') }),
-                    el('span', { className: 'stat__label', textContent: 'Motore di Inferenza AI' }),
-                    el('span', { className: 'stat__hint', textContent: 'YOLOX, YuNet, SFace, ANPR' })
+                    el('span', { className: 'stat__label', textContent: t('system.motoreDiInferenzaAI', 'Motore di Inferenza AI') }),
+                    el('span', { className: 'stat__hint', textContent: t('system.yOLOXYuNetSFaceANPR', 'YOLOX, YuNet, SFace, ANPR') })
                 ])
             ])
         ]);
 
         const hwaccelSelect = el('select', { className: 'input' }, [
-            el('option', { value: 'auto', textContent: 'Auto (Consigliato: usa GPU se disponibile)' }),
-            el('option', { value: 'cuda', textContent: 'NVIDIA CUDA (Massime prestazioni GPU)' }),
-            el('option', { value: 'qsv', textContent: 'Intel QuickSync (QSV)' }),
-            el('option', { value: 'd3d11va', textContent: 'DirectX 11 (D3D11VA Windows)' }),
-            el('option', { value: 'vaapi', textContent: 'Linux VAAPI' }),
-            el('option', { value: 'videotoolbox', textContent: 'Apple VideoToolbox (macOS/Metal)' }),
-            el('option', { value: 'amf', textContent: 'AMD AMF' }),
-            el('option', { value: 'none', textContent: 'Disabilitato (Solo CPU)' })
+            el('option', { value: 'auto', textContent: t('system.autoConsigliatoUsaGPUSe', 'Auto (Consigliato: usa GPU se disponibile)') }),
+            el('option', { value: 'cuda', textContent: t('system.nVIDIACUDAMassimePrestazio', 'NVIDIA CUDA (Massime prestazioni GPU)') }),
+            el('option', { value: 'qsv', textContent: t('system.intelQuickSyncQSV', 'Intel QuickSync (QSV)') }),
+            el('option', { value: 'd3d11va', textContent: t('system.directX11D3D11VAWindows', 'DirectX 11 (D3D11VA Windows)') }),
+            el('option', { value: 'vaapi', textContent: t('system.linuxVAAPI', 'Linux VAAPI') }),
+            el('option', { value: 'videotoolbox', textContent: t('system.appleVideoToolboxMacOSMeta', 'Apple VideoToolbox (macOS/Metal)') }),
+            el('option', { value: 'amf', textContent: t('system.aMDAMF', 'AMD AMF') }),
+            el('option', { value: 'none', textContent: t('system.disabilitatoSoloCPU', 'Disabilitato (Solo CPU)') })
         ]);
         hwaccelSelect.value = perf.hwaccelBackend;
 
         const encoderSelect = el('select', { className: 'input' }, [
-            el('option', { value: 'auto', textContent: 'Auto (Seleziona encoder GPU prioritario)' }),
-            el('option', { value: 'h264_nvenc', textContent: 'NVIDIA NVENC (h264_nvenc)' }),
-            el('option', { value: 'h264_qsv', textContent: 'Intel QuickSync (h264_qsv)' }),
-            el('option', { value: 'h264_amf', textContent: 'AMD AMF (h264_amf)' }),
-            el('option', { value: 'h264_vaapi', textContent: 'Linux VAAPI (h264_vaapi)' }),
-            el('option', { value: 'h264_videotoolbox', textContent: 'Apple VideoToolbox (h264_videotoolbox)' }),
-            el('option', { value: 'libx264', textContent: 'CPU Software (libx264 veryfast)' })
+            el('option', { value: 'auto', textContent: t('system.autoSelezionaEncoderGPUPr', 'Auto (Seleziona encoder GPU prioritario)') }),
+            el('option', { value: 'h264_nvenc', textContent: t('system.nVIDIANVENCH264Nvenc', 'NVIDIA NVENC (h264_nvenc)') }),
+            el('option', { value: 'h264_qsv', textContent: t('system.intelQuickSyncH264Qsv', 'Intel QuickSync (h264_qsv)') }),
+            el('option', { value: 'h264_amf', textContent: t('system.aMDAMFH264Amf', 'AMD AMF (h264_amf)') }),
+            el('option', { value: 'h264_vaapi', textContent: t('system.linuxVAAPIH264Vaapi', 'Linux VAAPI (h264_vaapi)') }),
+            el('option', { value: 'h264_videotoolbox', textContent: t('system.appleVideoToolboxH264Video', 'Apple VideoToolbox (h264_videotoolbox)') }),
+            el('option', { value: 'libx264', textContent: t('system.cPUSoftwareLibx264Veryfast', 'CPU Software (libx264 veryfast)') })
         ]);
         encoderSelect.value = perf.videoEncoder;
 
         const aiSelect = el('select', { className: 'input' }, [
-            el('option', { value: 'auto', textContent: 'Auto (Priorità CUDA > DirectML > CPU)' }),
-            el('option', { value: 'CUDAExecutionProvider', textContent: 'NVIDIA CUDA / Tensor Core' }),
-            el('option', { value: 'TensorrtExecutionProvider', textContent: 'NVIDIA TensorRT' }),
-            el('option', { value: 'DmlExecutionProvider', textContent: 'DirectML (Tutte le GPU su Windows)' }),
-            el('option', { value: 'OpenVINOExecutionProvider', textContent: 'Intel OpenVINO (iGPU / NPU)' }),
-            el('option', { value: 'CPUExecutionProvider', textContent: 'CPU Multithread' })
+            el('option', { value: 'auto', textContent: t('system.autoPrioritCUDADirectML', 'Auto (Priorità CUDA > DirectML > CPU)') }),
+            el('option', { value: 'CUDAExecutionProvider', textContent: t('system.nVIDIACUDATensorCore', 'NVIDIA CUDA / Tensor Core') }),
+            el('option', { value: 'TensorrtExecutionProvider', textContent: t('system.nVIDIATensorRT', 'NVIDIA TensorRT') }),
+            el('option', { value: 'DmlExecutionProvider', textContent: t('system.directMLTutteLeGPUSuWind', 'DirectML (Tutte le GPU su Windows)') }),
+            el('option', { value: 'OpenVINOExecutionProvider', textContent: t('system.intelOpenVINOIGPUNPU', 'Intel OpenVINO (iGPU / NPU)') }),
+            el('option', { value: 'CPUExecutionProvider', textContent: t('system.cPUMultithread', 'CPU Multithread') })
         ]);
         aiSelect.value = perf.aiExecutionProvider;
 
@@ -101,30 +102,30 @@ export function renderPerformancePanel({ api }) {
         });
 
         const sqliteCacheSelect = el('select', { className: 'input' }, [
-            el('option', { value: '64', textContent: '64 MB RAM' }),
-            el('option', { value: '128', textContent: '128 MB RAM (Default bilanciato)' }),
-            el('option', { value: '256', textContent: '256 MB RAM (Alte prestazioni)' }),
-            el('option', { value: '512', textContent: '512 MB RAM (Server dedicato)' }),
-            el('option', { value: '1024', textContent: '1024 MB RAM (Massime prestazioni)' }),
-            el('option', { value: '2048', textContent: '2048 MB RAM (Extreme)' })
+            el('option', { value: '64', textContent: t('system.64MBRAM', '64 MB RAM') }),
+            el('option', { value: '128', textContent: t('system.128MBRAMDefaultBilanciato', '128 MB RAM (Default bilanciato)') }),
+            el('option', { value: '256', textContent: t('system.256MBRAMAltePrestazioni', '256 MB RAM (Alte prestazioni)') }),
+            el('option', { value: '512', textContent: t('system.512MBRAMServerDedicato', '512 MB RAM (Server dedicato)') }),
+            el('option', { value: '1024', textContent: t('system.1024MBRAMMassimePrestazio', '1024 MB RAM (Massime prestazioni)') }),
+            el('option', { value: '2048', textContent: t('system.2048MBRAMExtreme', '2048 MB RAM (Extreme)') })
         ]);
         sqliteCacheSelect.value = String(perf.sqliteCacheSizeMb);
 
         const sqliteMmapSelect = el('select', { className: 'input' }, [
             el('option', { value: '128', textContent: '128 MB' }),
             el('option', { value: '256', textContent: '256 MB' }),
-            el('option', { value: '512', textContent: '512 MB (Default)' }),
+            el('option', { value: '512', textContent: t('system.512MBDefault', '512 MB (Default)') }),
             el('option', { value: '1024', textContent: '1024 MB' }),
-            el('option', { value: '2048', textContent: '2048 MB (Extreme I/O)' }),
-            el('option', { value: '4096', textContent: '4096 MB (Massimo)' })
+            el('option', { value: '2048', textContent: t('system.2048MBExtremeIO', '2048 MB (Extreme I/O)') }),
+            el('option', { value: '4096', textContent: t('system.4096MBMassimo', '4096 MB (Massimo)') })
         ]);
         sqliteMmapSelect.value = String(perf.sqliteMmapSizeMb);
 
         const ringBufferSelect = el('select', { className: 'input' }, [
-            el('option', { value: '2048', textContent: '2 MB (Risparmio RAM)' }),
-            el('option', { value: '4096', textContent: '4 MB (Default fluido)' }),
-            el('option', { value: '8192', textContent: '8 MB (Massima stabilità stream)' }),
-            el('option', { value: '16384', textContent: '16 MB (Multi-client pesante)' })
+            el('option', { value: '2048', textContent: t('system.2MBRisparmioRAM', '2 MB (Risparmio RAM)') }),
+            el('option', { value: '4096', textContent: t('system.4MBDefaultFluido', '4 MB (Default fluido)') }),
+            el('option', { value: '8192', textContent: t('system.8MBMassimaStabilitStream', '8 MB (Massima stabilità stream)') }),
+            el('option', { value: '16384', textContent: t('system.16MBMultiClientPesante', '16 MB (Multi-client pesante)') })
         ]);
         ringBufferSelect.value = String(perf.streamRingBufferKb);
 
@@ -161,23 +162,23 @@ export function renderPerformancePanel({ api }) {
                 className: 'btn btn--sm',
                 type: 'button',
                 onclick: () => applyPreset('max_performance')
-            }, [icon('zap'), el('span', { textContent: 'Massime Prestazioni (Full GPU + RAM)' })]),
+            }, [icon('zap'), el('span', { textContent: t('system.massimePrestazioniFullGPU', 'Massime Prestazioni (Full GPU + RAM)') })]),
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
                 onclick: () => applyPreset('balanced')
-            }, [icon('activity'), el('span', { textContent: 'Bilanciato' })]),
+            }, [icon('activity'), el('span', { textContent: t('system.bilanciato', 'Bilanciato') })]),
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
                 onclick: () => applyPreset('power_saving')
-            }, [icon('sun'), el('span', { textContent: 'Risparmio Energetico' })])
+            }, [icon('sun'), el('span', { textContent: t('system.risparmioEnergetico', 'Risparmio Energetico') })])
         ];
 
         const saveBtn = el('button', {
             className: 'btn btn--primary',
             type: 'submit',
-            textContent: 'Salva & Applica Ottimizzazioni'
+            textContent: t('system.salvaApplicaOttimizzazioni', 'Salva & Applica Ottimizzazioni')
         });
 
         const form = el('form', { className: 'stack' }, [

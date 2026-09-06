@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty, field, notice, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -11,24 +12,24 @@ export async function renderAccessView({ api, session }) {
 
     function renderRuleForm() {
         const patternInput = el('input', { className: 'input input--mono', type: 'text', placeholder: 'AB123CD o AB*', required: 'required' });
-        const labelInput = el('input', { className: 'input', type: 'text', placeholder: 'Dipendente / Fornitore / Sospetto', required: 'required' });
+        const labelInput = el('input', { className: 'input', type: 'text', placeholder: t('access.dipendenteFornitoreSospe', 'Dipendente / Fornitore / Sospetto'), required: 'required' });
         const listTypeSelect = el('select', { className: 'input' }, [
-            el('option', { value: 'whitelist', textContent: 'Lista Bianca (Consenti accesso)' }),
-            el('option', { value: 'blacklist', textContent: 'Lista Nera (Blocca e allarma)' }),
-            el('option', { value: 'monitored', textContent: 'Monitorato (Registra transito)' })
+            el('option', { value: 'whitelist', textContent: t('access.listaBiancaConsentiAccesso', 'Lista Bianca (Consenti accesso)') }),
+            el('option', { value: 'blacklist', textContent: t('access.listaNeraBloccaEAllarma', 'Lista Nera (Blocca e allarma)') }),
+            el('option', { value: 'monitored', textContent: t('access.monitoratoRegistraTransito', 'Monitorato (Registra transito)') })
         ]);
         const feedback = el('div', { hidden: 'hidden' });
 
-        const saveBtn = el('button', { className: 'btn btn--primary', type: 'submit', textContent: 'Salva Regola' });
+        const saveBtn = el('button', { className: 'btn btn--primary', type: 'submit', textContent: t('access.salvaRegola', 'Salva Regola') });
         const cancelBtn = el('button', {
             className: 'btn',
             type: 'button',
-            textContent: 'Annulla',
+            textContent: t('access.annulla', 'Annulla'),
             onclick: () => formHost.setAttribute('hidden', 'hidden')
         });
 
         const form = el('form', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Nuova Regola Targa' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('access.nuovaRegolaTarga', 'Nuova Regola Targa') })]),
             el('div', { className: 'panel__body stack' }, [
                 field('Pattern Targa (supporta * e ?)', patternInput),
                 field('Descrizione / Etichetta', labelInput),
@@ -81,7 +82,7 @@ export async function renderAccessView({ api, session }) {
                 const deleteBtn = canManage ? el('button', {
                     className: 'btn btn--sm btn--danger',
                     type: 'button',
-                    textContent: 'Elimina',
+                    textContent: t('access.elimina', 'Elimina'),
                     onclick: () => {
                         confirmHost.replaceChildren(confirmPanel({
                             title: `Eliminare la regola per ${r.platePattern}?`,
@@ -142,20 +143,20 @@ export async function renderAccessView({ api, session }) {
             formHost.removeAttribute('hidden');
             formHost.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [icon('plus'), el('span', { textContent: 'Nuova Regola' })]) : null;
+    }, [icon('plus'), el('span', { textContent: t('access.nuovaRegola', 'Nuova Regola') })]) : null;
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Targhe' }),
+            el('h1', { className: 'view__title', textContent: t('access.targhe', 'Targhe') }),
             el('div', { className: 'row row--tight' }, [addRuleBtn])
         ]),
         formHost,
         el('section', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Regole' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('access.regole', 'Regole') })]),
             el('div', { className: 'panel__body' }, [confirmHost, rulesHost])
         ]),
         el('section', { className: 'panel stack' }, [
-            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: 'Transiti' })]),
+            el('div', { className: 'panel__head' }, [el('span', { className: 'panel__title', textContent: t('access.transiti', 'Transiti') })]),
             el('div', { className: 'panel__body' }, [eventsHost])
         ])
     );

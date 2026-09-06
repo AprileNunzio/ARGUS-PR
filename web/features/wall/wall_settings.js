@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, metricTile } from '/assets/ui.js';
@@ -12,7 +13,7 @@ import { renderVisionApp } from './apps/vision_app.js';
 const SUB_APPS = [
     {
         id: 'screens',
-        title: 'Schermi e uscite',
+        title: t('wall.schermiEUscite', 'Schermi e uscite'),
         desc: 'Un profilo per ogni uscita video: HDMI, DisplayPort, VGA e muro web, ognuno con la propria griglia',
         icon: 'monitor',
         tone: 'cyan',
@@ -20,7 +21,7 @@ const SUB_APPS = [
     },
     {
         id: 'tiles',
-        title: 'Assegnazione riquadri',
+        title: t('wall.assegnazioneRiquadri', 'Assegnazione riquadri'),
         desc: 'Disponi le telecamere sul display di uno schermo: automatico, canale fisso oppure riquadro vuoto',
         icon: 'crop',
         tone: 'purple',
@@ -28,7 +29,7 @@ const SUB_APPS = [
     },
     {
         id: 'cameras',
-        title: 'Telecamere e qualita',
+        title: t('wall.telecamereEQualita', 'Telecamere e qualita'),
         desc: 'Escludi i canali dal muro e scegli Main HD o Sub SD per ognuno',
         icon: 'camera',
         tone: 'emerald',
@@ -36,7 +37,7 @@ const SUB_APPS = [
     },
     {
         id: 'appearance',
-        title: 'Aspetto e orologio',
+        title: t('wall.aspettoEOrologio', 'Aspetto e orologio'),
         desc: 'Accendi o spegni ogni elemento della barra di stato e dei riquadri, e imposta il formato dell orologio',
         icon: 'sliders',
         tone: 'amber',
@@ -44,7 +45,7 @@ const SUB_APPS = [
     },
     {
         id: 'ai',
-        title: 'Riconoscimento oggetti',
+        title: t('wall.riconoscimentoOggetti', 'Riconoscimento oggetti'),
         desc: 'Contorni AI sul video, algoritmi disponibili e telemetria del motore di visione',
         icon: 'eye',
         tone: 'blue',
@@ -78,7 +79,7 @@ export async function renderWallSettings({ api, params = [] }) {
 
     if (payload.failure) {
         root.replaceChildren(
-            pageHead({ title: 'Regia & Configurazione Muro', hint: 'Schermi, riquadri, qualita e aspetto del muro video' }),
+            pageHead({ title: t('wall.regiaConfigurazioneMuro', 'Regia & Configurazione Muro'), hint: 'Schermi, riquadri, qualita e aspetto del muro video' }),
             notice('error', `Impossibile caricare la configurazione del muro: ${payload.failure.message}`)
         );
         return root;
@@ -105,7 +106,7 @@ export async function renderWallSettings({ api, params = [] }) {
                     className: 'page-back',
                     type: 'button',
                     onclick: () => go('wall-settings')
-                }, [icon('chevronLeft'), el('span', { textContent: 'Regia del muro' })])
+                }, [icon('chevronLeft'), el('span', { textContent: t('wall.regiaDelMuro', 'Regia del muro') })])
             }),
             view
         );
@@ -121,14 +122,14 @@ export async function renderWallSettings({ api, params = [] }) {
 
     root.replaceChildren(
         pageHead({
-            title: 'Regia & Configurazione Muro',
+            title: t('wall.regiaConfigurazioneMuro', 'Regia & Configurazione Muro'),
             hint: 'Ogni sezione si apre come pagina indipendente: configuri una cosa alla volta, senza caricare tutto insieme',
             actions: [
                 el('button', {
                     className: 'btn',
                     type: 'button',
                     onclick: () => window.open('/wall', '_blank')
-                }, [icon('monitor'), el('span', { textContent: 'Apri Muro Video' })])
+                }, [icon('monitor'), el('span', { textContent: t('wall.apriMuroVideo', 'Apri Muro Video') })])
             ]
         }),
         el('div', { className: 'grid grid--stats' }, [
@@ -143,8 +144,8 @@ export async function renderWallSettings({ api, params = [] }) {
             })
         ]),
         card({
-            title: 'Sezioni della regia',
-            subtitle: 'Ognuna ha il proprio indirizzo: puoi aprirla in una scheda separata o condividerne il collegamento',
+            title: t('wall.sezioniDellaRegia', 'Sezioni della regia'),
+            subtitle: t('wall.ognunaHaIlProprioIndirizzo', 'Ognuna ha il proprio indirizzo: puoi aprirla in una scheda separata o condividerne il collegamento'),
             iconName: 'apps',
             tone: 'blue',
             badge: chip(`${SUB_APPS.length} sezioni`, 'info'),

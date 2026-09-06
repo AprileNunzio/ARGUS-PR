@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow, metricTile } from '/assets/ui.js';
@@ -74,8 +75,8 @@ export async function renderDateTime({ api }) {
         timer = setInterval(paint, 1000);
 
         return card({
-            title: 'Formato di data e ora',
-            subtitle: 'Notazione usata nell interfaccia, nei referti e nelle esportazioni',
+            title: t('system.formatoDiDataEOra', 'Formato di data e ora'),
+            subtitle: t('system.notazioneUsataNellInterfacc', 'Notazione usata nell interfaccia, nei referti e nelle esportazioni'),
             iconName: 'clock',
             tone: 'blue',
             badge: chip(data.effectiveTimezone, 'info'),
@@ -85,7 +86,7 @@ export async function renderDateTime({ api }) {
                     el('div', { className: 'clock-preview__body' }, [time, date])
                 ]),
                 optionRow({
-                    title: 'Formato orario',
+                    title: t('system.formatoOrario', 'Formato orario'),
                     hint: '24 ore in notazione europea oppure 12 ore con indicatore AM e PM',
                     iconName: 'clock',
                     control: segmented(CLOCK_FORMAT_OPTIONS.map((option) => ({ ...option, icon: 'clock' })), draft.format, (value) => {
@@ -94,7 +95,7 @@ export async function renderDateTime({ api }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Stile della data',
+                    title: t('system.stileDellaData', 'Stile della data'),
                     hint: 'Determina come compare la data accanto all orario',
                     iconName: 'timeline',
                     control: segmented(DATE_STYLE_OPTIONS.map((option) => ({ ...option, icon: 'timeline' })), draft.dateStyle, (value) => {
@@ -103,7 +104,7 @@ export async function renderDateTime({ api }) {
                     }, { compact: true })
                 }),
                 optionRow({
-                    title: 'Mostra i secondi',
+                    title: t('system.mostraISecondi', 'Mostra i secondi'),
                     hint: 'Necessario per correlare gli eventi con i timestamp dei segmenti registrati',
                     iconName: 'activity',
                     control: toggle(draft.showSeconds, (value) => {
@@ -135,8 +136,8 @@ export async function renderDateTime({ api }) {
         const dst = data.dst;
 
         return card({
-            title: 'Fuso orario e ora legale',
-            subtitle: 'Il fuso IANA determina automaticamente il passaggio fra ora solare e ora legale',
+            title: t('system.fusoOrarioEOraLegale', 'Fuso orario e ora legale'),
+            subtitle: t('system.ilFusoIANADeterminaAutomat', 'Il fuso IANA determina automaticamente il passaggio fra ora solare e ora legale'),
             iconName: 'globe',
             tone: 'purple',
             badge: chip(dst.active ? 'Ora legale attiva' : 'Ora solare', dst.active ? 'warn' : 'ok'),
@@ -148,13 +149,13 @@ export async function renderDateTime({ api }) {
                     metricTile({ label: 'Ora legale osservata', value: dst.observed ? 'Si' : 'No', hint: dst.observed ? 'Questo fuso cambia ora due volte l anno' : 'Questo fuso mantiene sempre lo stesso scostamento', iconName: 'clock', tone: 'cyan' })
                 ]),
                 optionRow({
-                    title: 'Fuso orario del sito',
+                    title: t('system.fusoOrarioDelSito', 'Fuso orario del sito'),
                     hint: 'Su Linux la scelta viene applicata anche al sistema operativo tramite timedatectl',
                     iconName: 'globe',
                     control: select
                 }),
                 optionRow({
-                    title: 'Gestione dell ora legale',
+                    title: t('system.gestioneDellOraLegale', 'Gestione dell ora legale'),
                     hint: 'Automatica segue le regole ufficiali del fuso IANA. Disattivata mantiene sempre l ora solare, utile per registrazioni a scostamento fisso.',
                     iconName: 'sun',
                     control: segmented([
@@ -177,7 +178,7 @@ export async function renderDateTime({ api }) {
         const serversInput = el('input', {
             className: 'input input--mono',
             value: draft.ntpServers.join(', '),
-            placeholder: 'pool.ntp.org, time.google.com'
+            placeholder: t('system.poolNtpOrgTimeGoogleCom', 'pool.ntp.org, time.google.com')
         });
         serversInput.addEventListener('input', () => {
             draft.ntpServers = serversInput.value.split(',').map((entry) => entry.trim()).filter((entry) => entry.length > 0);
@@ -198,7 +199,7 @@ export async function renderDateTime({ api }) {
 
         const syncButton = el('button', { className: 'btn btn--primary', type: 'button' }, [
             icon('refresh'),
-            el('span', { textContent: 'Sincronizza adesso' })
+            el('span', { textContent: t('system.sincronizzaAdesso', 'Sincronizza adesso') })
         ]);
 
         syncButton.addEventListener('click', async () => {
@@ -221,8 +222,8 @@ export async function renderDateTime({ api }) {
         const tone = sync.synchronized ? 'ok' : (sync.available ? 'warn' : 'bad');
 
         return card({
-            title: 'Sincronizzazione NTP',
-            subtitle: 'Un orologio disallineato invalida i timestamp delle prove video: la sincronizzazione e parte della catena di custodia',
+            title: t('system.sincronizzazioneNTP', 'Sincronizzazione NTP'),
+            subtitle: t('system.unOrologioDisallineatoInval', 'Un orologio disallineato invalida i timestamp delle prove video: la sincronizzazione e parte della catena di custodia'),
             iconName: 'network',
             tone: sync.synchronized ? 'emerald' : 'amber',
             badge: chip(sync.synchronized ? 'Sincronizzato' : (sync.available ? 'Non sincronizzato' : 'Non disponibile'), tone),
@@ -230,24 +231,24 @@ export async function renderDateTime({ api }) {
             body: [
                 el('div', { className: 'spec-grid' }, [
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'Demone di tempo' }),
+                        el('span', { className: 'spec__k', textContent: t('system.demoneDiTempo', 'Demone di tempo') }),
                         el('span', { className: 'spec__v', textContent: sync.service })
                     ]),
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'NTP abilitato' }),
+                        el('span', { className: 'spec__k', textContent: t('system.nTPAbilitato', 'NTP abilitato') }),
                         el('span', { className: 'spec__v', textContent: sync.enabled ? 'si' : 'no' })
                     ]),
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'Fuso del sistema operativo' }),
+                        el('span', { className: 'spec__k', textContent: t('system.fusoDelSistemaOperativo', 'Fuso del sistema operativo') }),
                         el('span', { className: 'spec__v', textContent: sync.systemTimezone ?? data.systemTimezone })
                     ]),
                     el('div', { className: 'spec' }, [
-                        el('span', { className: 'spec__k', textContent: 'Ora del server' }),
+                        el('span', { className: 'spec__k', textContent: t('system.oraDelServer', 'Ora del server') }),
                         el('span', { className: 'spec__v', textContent: new Date(data.nowIso).toLocaleString('it-IT') })
                     ])
                 ]),
                 optionRow({
-                    title: 'Sincronizzazione automatica',
+                    title: t('system.sincronizzazioneAutomatica', 'Sincronizzazione automatica'),
                     hint: 'Mantiene l orologio allineato interrogando periodicamente i server NTP configurati',
                     iconName: 'refresh',
                     control: toggle(draft.ntpEnabled, (value) => {
@@ -256,12 +257,12 @@ export async function renderDateTime({ api }) {
                     })
                 }),
                 el('div', { className: 'field' }, [
-                    el('label', { textContent: 'Server NTP' }),
+                    el('label', { textContent: t('system.serverNTP', 'Server NTP') }),
                     serversInput,
-                    el('span', { className: 'xrow__hint', textContent: 'Elenco separato da virgole, in ordine di priorita. Massimo sei server.' })
+                    el('span', { className: 'xrow__hint', textContent: t('system.elencoSeparatoDaVirgoleIn', 'Elenco separato da virgole, in ordine di priorita. Massimo sei server.') })
                 ]),
                 el('div', { className: 'stack stack--tight' }, [
-                    el('span', { className: 'xrow__hint', textContent: 'Server suggeriti: un clic li aggiunge o li rimuove dall elenco.' }),
+                    el('span', { className: 'xrow__hint', textContent: t('system.serverSuggeritiUnClicLiA', 'Server suggeriti: un clic li aggiunge o li rimuove dall elenco.') }),
                     presets
                 ]),
                 sync.detail ? el('p', { className: 'xcard__note' }, [icon('info'), el('span', { textContent: sync.detail })]) : null
@@ -272,7 +273,7 @@ export async function renderDateTime({ api }) {
     const render = () => {
         if (data.failure) {
             root.replaceChildren(
-                pageHead({ title: 'Data, Ora & Sincronizzazione', hint: 'Formato orario, fuso, ora legale e allineamento NTP' }),
+                pageHead({ title: t('system.dataOraSincronizzazione', 'Data, Ora & Sincronizzazione'), hint: 'Formato orario, fuso, ora legale e allineamento NTP' }),
                 notice('error', `Impossibile leggere la configurazione temporale: ${data.failure.message}`)
             );
             return;
@@ -280,10 +281,10 @@ export async function renderDateTime({ api }) {
 
         root.replaceChildren(
             pageHead({
-                title: 'Data, Ora & Sincronizzazione',
+                title: t('system.dataOraSincronizzazione', 'Data, Ora & Sincronizzazione'),
                 hint: 'Formato 24h o AM/PM, fuso orario, ora legale automatica e sincronizzazione NTP con i server ufficiali',
                 actions: [
-                    el('button', { className: 'btn', type: 'button', onclick: reload }, [icon('refresh'), el('span', { textContent: 'Ricarica' })]),
+                    el('button', { className: 'btn', type: 'button', onclick: reload }, [icon('refresh'), el('span', { textContent: t('system.ricarica', 'Ricarica') })]),
                     el('button', {
                         className: dirty ? 'btn btn--primary' : 'btn',
                         type: 'button',

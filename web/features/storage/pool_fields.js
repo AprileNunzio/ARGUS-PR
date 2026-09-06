@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -106,7 +107,7 @@ export function targetPicker({ detected, selectedPath, onPick }) {
     if (entries.length === 0) {
         return el('div', { className: 'empty' }, [
             icon('disk', { className: 'icon--xl' }),
-            el('p', { textContent: 'Nessuna partizione montata rilevata: inserisci il percorso manualmente.' })
+            el('p', { textContent: t('storage.nessunaPartizioneMontataRil', 'Nessuna partizione montata rilevata: inserisci il percorso manualmente.') })
         ]);
     }
 
@@ -125,7 +126,7 @@ export function cameraPicker({ cameras, selected, onToggle }) {
     if (cameras.length === 0) {
         return el('div', { className: 'empty' }, [
             icon('camera', { className: 'icon--xl' }),
-            el('p', { textContent: 'Nessuna telecamera registrata da instradare.' })
+            el('p', { textContent: t('storage.nessunaTelecameraRegistrata', 'Nessuna telecamera registrata da instradare.') })
         ]);
     }
 
@@ -162,19 +163,19 @@ export function benchmarkReport(result) {
         el('div', { className: 'bench__grid' }, [
             el('div', { className: 'bench__item' }, [
                 el('span', { className: 'bench__value', textContent: `${result.writeMbPerSecond} MB/s` }),
-                el('span', { className: 'bench__label', textContent: 'Scrittura sequenziale' })
+                el('span', { className: 'bench__label', textContent: t('storage.scritturaSequenziale', 'Scrittura sequenziale') })
             ]),
             el('div', { className: 'bench__item' }, [
                 el('span', { className: 'bench__value', textContent: `${result.readMbPerSecond} MB/s` }),
-                el('span', { className: 'bench__label', textContent: 'Rilettura' })
+                el('span', { className: 'bench__label', textContent: t('storage.rilettura', 'Rilettura') })
             ]),
             el('div', { className: 'bench__item' }, [
                 el('span', { className: 'bench__value', textContent: `${result.openLatencyMs} ms` }),
-                el('span', { className: 'bench__label', textContent: 'Latenza di apertura' })
+                el('span', { className: 'bench__label', textContent: t('storage.latenzaDiApertura', 'Latenza di apertura') })
             ]),
             el('div', { className: 'bench__item' }, [
                 el('span', { className: 'bench__value', textContent: `${result.megabytes} MB` }),
-                el('span', { className: 'bench__label', textContent: 'Volume del test' })
+                el('span', { className: 'bench__label', textContent: t('storage.volumeDelTest', 'Volume del test') })
             ])
         ]),
         el('div', { className: `notice notice--${rating === 'ok' ? 'ok' : (rating === 'warn' ? 'warn' : 'error')}`, textContent: verdict })

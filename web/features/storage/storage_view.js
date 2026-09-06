@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, empty, pageHead, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, metricTile, optionRow } from '/assets/ui.js';
@@ -33,34 +34,34 @@ function poolCard(pool, { onEdit, onDelete }) {
             alarm.triggered ? chip('Spazio critico', 'bad') : null
         ]),
         actions: [
-            el('button', { className: 'btn btn--sm', type: 'button', onclick: () => onEdit(pool) }, [icon('edit'), el('span', { textContent: 'Modifica' })]),
-            pool.isDefault ? null : el('button', { className: 'btn btn--sm btn--danger', type: 'button', onclick: () => onDelete(pool) }, [icon('trash'), el('span', { textContent: 'Elimina' })])
+            el('button', { className: 'btn btn--sm', type: 'button', onclick: () => onEdit(pool) }, [icon('edit'), el('span', { textContent: t('storage.modifica', 'Modifica') })]),
+            pool.isDefault ? null : el('button', { className: 'btn btn--sm btn--danger', type: 'button', onclick: () => onDelete(pool) }, [icon('trash'), el('span', { textContent: t('storage.elimina', 'Elimina') })])
         ].filter(Boolean),
         body: [
             el('div', { className: 'stack stack--tight' }, [
                 el('div', { className: 'row row--between' }, [
-                    el('span', { className: 'section__hint', textContent: 'Utilizzo della destinazione' }),
+                    el('span', { className: 'section__hint', textContent: t('storage.utilizzoDellaDestinazione', 'Utilizzo della destinazione') }),
                     el('span', { className: 'section__hint mono', textContent: stats ? `${percent}% · ${formatBytes(stats.usedBytes)} di ${formatBytes(stats.totalBytes)}` : 'non misurabile' })
                 ]),
                 usageMeter(percent)
             ]),
             el('div', { className: 'spec-grid' }, [
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Tipo' }), el('span', { className: 'spec__v', textContent: pool.kind === 'nas' ? `NAS ${String(pool.networkProto ?? '').toUpperCase()}` : 'Locale' })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Spazio libero' }), el('span', { className: 'spec__v', textContent: stats ? formatBytes(stats.freeBytes) : '--' })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Quota assegnata' }), el('span', { className: 'spec__v', textContent: pool.maxBytes > 0 ? formatBytes(pool.maxBytes) : 'illimitata' })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Riserva minima' }), el('span', { className: 'spec__v', textContent: formatBytes(pool.minFreeBytes) })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Politica overflow' }), el('span', { className: 'spec__v', textContent: POLICY_LABELS[pool.retentionPolicy] ?? pool.retentionPolicy })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Ritenzione' }), el('span', { className: 'spec__v', textContent: `${pool.retentionDays} giorni` })]),
-                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Soglia di allarme' }), el('span', { className: 'spec__v', textContent: `${pool.alarmPercent}% libero` })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.tipo', 'Tipo') }), el('span', { className: 'spec__v', textContent: pool.kind === 'nas' ? `NAS ${String(pool.networkProto ?? '').toUpperCase()}` : 'Locale' })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.spazioLibero', 'Spazio libero') }), el('span', { className: 'spec__v', textContent: stats ? formatBytes(stats.freeBytes) : '--' })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.quotaAssegnata', 'Quota assegnata') }), el('span', { className: 'spec__v', textContent: pool.maxBytes > 0 ? formatBytes(pool.maxBytes) : 'illimitata' })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.riservaMinima', 'Riserva minima') }), el('span', { className: 'spec__v', textContent: formatBytes(pool.minFreeBytes) })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.politicaOverflow', 'Politica overflow') }), el('span', { className: 'spec__v', textContent: POLICY_LABELS[pool.retentionPolicy] ?? pool.retentionPolicy })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.ritenzione', 'Ritenzione') }), el('span', { className: 'spec__v', textContent: `${pool.retentionDays} giorni` })]),
+                el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.sogliaDiAllarme', 'Soglia di allarme') }), el('span', { className: 'spec__v', textContent: `${pool.alarmPercent}% libero` })]),
                 pool.kind === 'nas'
-                    ? el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: 'Share di rete' }), el('span', { className: 'spec__v truncate', textContent: `${pool.networkHost ?? '--'}/${pool.networkShare ?? '--'}${pool.smbVersion ? ` (SMB ${pool.smbVersion})` : ''}` })])
+                    ? el('div', { className: 'spec' }, [el('span', { className: 'spec__k', textContent: t('storage.shareDiRete', 'Share di rete') }), el('span', { className: 'spec__v truncate', textContent: `${pool.networkHost ?? '--'}/${pool.networkShare ?? '--'}${pool.smbVersion ? ` (SMB ${pool.smbVersion})` : ''}` })])
                     : null
             ].filter(Boolean)),
             el('div', { className: 'stack stack--tight' }, [
-                el('span', { className: 'section__hint', textContent: 'Telecamere instradate su questa destinazione' }),
+                el('span', { className: 'section__hint', textContent: t('storage.telecamereInstradateSuQuest', 'Telecamere instradate su questa destinazione') }),
                 el('div', { className: 'row row--tight row--wrap' }, (pool.assignedCameras ?? []).length > 0
                     ? pool.assignedCameras.map((camera) => chip(camera.name, 'info'))
-                    : [el('span', { className: 'section__hint muted', textContent: 'Nessun canale assegnato' })])
+                    : [el('span', { className: 'section__hint muted', textContent: t('storage.nessunCanaleAssegnato', 'Nessun canale assegnato') })])
             ]),
             alarm.triggered
                 ? notice('error', alarm.reason === 'quota'
@@ -91,7 +92,7 @@ function diskCard(disk) {
         body: [
             partitions.length > 0
                 ? el('div', { className: 'spec-grid' }, partitions)
-                : el('span', { className: 'section__hint muted', textContent: 'Nessuna partizione rilevata su questo disco.' })
+                : el('span', { className: 'section__hint muted', textContent: t('storage.nessunaPartizioneRilevataSu', 'Nessuna partizione rilevata su questo disco.') })
         ]
     });
 }
@@ -105,13 +106,13 @@ function raidCard(array) {
         badge: chip(array.isHealthy ? 'Stato ottimale' : 'Degradato', array.isHealthy ? 'ok' : 'bad'),
         body: [
             optionRow({
-                title: 'Dischi membri',
+                title: t('storage.dischiMembri', 'Dischi membri'),
                 hint: 'Dispositivi che compongono l array',
                 iconName: 'disk',
                 control: el('div', { className: 'row row--tight row--wrap' }, array.devices.map((device) => chip(device, 'info')))
             }),
             optionRow({
-                title: 'Stato riportato da mdstat',
+                title: t('storage.statoRiportatoDaMdstat', 'Stato riportato da mdstat'),
                 hint: 'Valore letto direttamente da /proc/mdstat',
                 iconName: 'activity',
                 control: chip(array.state, array.isHealthy ? 'ok' : 'warn')
@@ -161,7 +162,7 @@ export async function renderStorageView({ api, params = [] }) {
     const render = () => {
         if (data.failure) {
             root.replaceChildren(
-                pageHead({ title: 'Storage & Archiviazione', hint: 'Memorie fisiche, partizioni, RAID e destinazioni NAS' }),
+                pageHead({ title: t('storage.storageArchiviazione', 'Storage & Archiviazione'), hint: 'Memorie fisiche, partizioni, RAID e destinazioni NAS' }),
                 notice('error', `Impossibile caricare la telemetria storage: ${data.failure.message}`)
             );
             return;
@@ -174,11 +175,11 @@ export async function renderStorageView({ api, params = [] }) {
 
         root.replaceChildren(
             pageHead({
-                title: 'Storage & Archiviazione Registrazioni',
+                title: t('storage.storageArchiviazioneRegist', 'Storage & Archiviazione Registrazioni'),
                 hint: 'Configurazione multi-disco, volumi RAID, quote, politiche di ritenzione e destinazioni NAS con routing per telecamera',
                 actions: [
-                    el('button', { className: 'btn', type: 'button', onclick: refresh }, [icon('refresh'), el('span', { textContent: 'Aggiorna' })]),
-                    el('button', { className: 'btn btn--primary', type: 'button', onclick: () => openForm(null) }, [icon('plus'), el('span', { textContent: 'Aggiungi storage pool' })])
+                    el('button', { className: 'btn', type: 'button', onclick: refresh }, [icon('refresh'), el('span', { textContent: t('storage.aggiorna', 'Aggiorna') })]),
+                    el('button', { className: 'btn btn--primary', type: 'button', onclick: () => openForm(null) }, [icon('plus'), el('span', { textContent: t('storage.aggiungiStoragePool', 'Aggiungi storage pool') })])
                 ]
             }),
             feedback,
@@ -189,19 +190,19 @@ export async function renderStorageView({ api, params = [] }) {
                 metricTile({ label: 'Allarmi spazio', value: String(alarms), hint: alarms > 0 ? 'Destinazioni sotto soglia' : 'Tutte le destinazioni in salute', iconName: 'warning', tone: alarms > 0 ? 'red' : 'emerald' })
             ]),
             el('section', { className: 'xstack' }, [
-                el('h2', { className: 'section__title', textContent: 'Destinazioni di registrazione attive' }),
+                el('h2', { className: 'section__title', textContent: t('storage.destinazioniDiRegistrazione', 'Destinazioni di registrazione attive') }),
                 pools.length > 0
                     ? el('div', { className: 'xgrid xgrid--2' }, pools.map((pool) => poolCard(pool, { onEdit: openForm, onDelete: removePool })))
                     : empty('Nessuna destinazione dedicata configurata: le registrazioni usano il percorso standard di sistema.')
             ]),
             raid.length > 0
                 ? el('section', { className: 'xstack' }, [
-                    el('h2', { className: 'section__title', textContent: 'Volumi e array RAID rilevati' }),
+                    el('h2', { className: 'section__title', textContent: t('storage.volumiEArrayRAIDRilevati', 'Volumi e array RAID rilevati') }),
                     el('div', { className: 'xgrid xgrid--2' }, raid.map(raidCard))
                 ])
                 : null,
             el('section', { className: 'xstack' }, [
-                el('h2', { className: 'section__title', textContent: 'Dischi fisici e partizioni del server' }),
+                el('h2', { className: 'section__title', textContent: t('storage.dischiFisiciEPartizioniDel', 'Dischi fisici e partizioni del server') }),
                 disks.length > 0
                     ? el('div', { className: 'xgrid xgrid--2' }, disks.map(diskCard))
                     : empty('Nessun disco fisico rilevato su questa piattaforma.')

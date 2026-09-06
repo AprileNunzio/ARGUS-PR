@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented } from '/assets/ui.js';
@@ -65,7 +66,7 @@ export async function renderTilesApp({ api, payload, params = [] }) {
         host.replaceChildren(
             el('div', { className: 'row row--between' }, [
                 el('div', { className: 'row row--tight row--wrap' }, [
-                    el('span', { className: 'xrow__hint', textContent: 'Schermo in configurazione:' }),
+                    el('span', { className: 'xrow__hint', textContent: t('apps.schermoInConfigurazione', 'Schermo in configurazione:') }),
                     screenPicker
                 ]),
                 el('div', { className: 'row row--tight' }, [
@@ -76,13 +77,13 @@ export async function renderTilesApp({ api, payload, params = [] }) {
                             screen.tiles = [];
                             touch();
                         }
-                    }, [icon('refresh'), el('span', { textContent: 'Tutto automatico' })])
+                    }, [icon('refresh'), el('span', { textContent: t('apps.tuttoAutomatico', 'Tutto automatico') })])
                 ])
             ]),
             autosaveBar(saver.element),
             card({
                 title: `Display di ${screen.label}`,
-                subtitle: 'Ogni casella riproduce un riquadro reale del muro: scegli cosa mostrarci dentro',
+                subtitle: t('apps.ogniCasellaRiproduceUnRiqu', 'Ogni casella riproduce un riquadro reale del muro: scegli cosa mostrarci dentro'),
                 iconName: 'monitor',
                 tone: 'purple',
                 badge: chip(`Griglia ${screen.layout}`, 'info'),

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -122,8 +123,8 @@ export function buildRtspUrl({ host, port = 554, path }) {
 
 export function renderBrandProfilesPage() {
     const outlet = el('div', { className: 'view' });
-    const search = el('input', { className: 'input', type: 'search', placeholder: 'Filtra per marca o protocollo (Hikvision, Dahua, Reolink…)' });
-    const ipInput = el('input', { className: 'input mono', type: 'text', placeholder: 'IP telecamera (es. 192.168.1.64)', value: '192.168.1.64' });
+    const search = el('input', { className: 'input', type: 'search', placeholder: t('cameras.filtraPerMarcaOProtocollo', 'Filtra per marca o protocollo (Hikvision, Dahua, Reolink…)') });
+    const ipInput = el('input', { className: 'input mono', type: 'text', placeholder: t('cameras.iPTelecameraEs19216816', 'IP telecamera (es. 192.168.1.64)'), value: '192.168.1.64' });
 
     const grid = el('div', { className: 'stack' });
 
@@ -163,7 +164,7 @@ export function renderBrandProfilesPage() {
                         el('button', {
                             className: 'btn btn--sm btn--primary',
                             type: 'button',
-                            textContent: 'Usa questo canale',
+                            textContent: t('cameras.usaQuestoCanale', 'Usa questo canale'),
                             onclick: () => {
                                 stashPrefill({
                                     sourceKind: 'rtsp',
@@ -188,17 +189,17 @@ export function renderBrandProfilesPage() {
 
     outlet.append(
         pageHead({
-            title: 'Profili & Parametri Marche RTSP',
+            title: t('cameras.profiliParametriMarcheRTS', 'Profili & Parametri Marche RTSP'),
             hint: 'Database completo dei parametri RTSP, porte e percorsi per le principali marche di telecamere',
             back: backLink('Torna alle telecamere', 'cameras')
         }),
         el('div', { className: 'form-grid' }, [
             el('div', { className: 'field' }, [
-                el('label', { className: 'label', textContent: 'Filtra marche' }),
+                el('label', { className: 'label', textContent: t('cameras.filtraMarche', 'Filtra marche') }),
                 search
             ]),
             el('div', { className: 'field' }, [
-                el('label', { className: 'label', textContent: 'Indirizzo IP per generare gli URL' }),
+                el('label', { className: 'label', textContent: t('cameras.indirizzoIPPerGenerareGli', 'Indirizzo IP per generare gli URL') }),
                 ipInput
             ])
         ]),

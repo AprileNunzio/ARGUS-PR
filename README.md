@@ -15,6 +15,15 @@ Registra le tue telecamere IP su hardware tuo. Nessun abbonamento, nessun serviz
 </div>
 
 ---
+## Novità nella versione 1.0.1
+
+- **Internazionalizzazione completa (i18n):** Tutti i moduli frontend (Dashboard, Setup, Impostazioni, etc.) supportano il sistema di traduzione dinamico. Le stringhe statiche sono state rimosse e mappate a chiavi di traduzione per garantire flessibilità tra italiano e inglese.
+- **Autonomia e Resilienza Locales:** L'interfaccia rileva automaticamente la presenza dei file lingua. Se una cartella lingua non esiste, scompare dal selettore prevenendo rotture dell'interfaccia. La UI fallback gestisce in sicurezza le chiavi mancanti in tempo reale.
+- **Fix UI Selettore Lingua:** Corretto il bug del selettore lingua nella topbar che espandeva l'altezza causata da un loop di riassegnazione del DOM.
+- **Pulizia Credits & Artefatti:** Rimozione file spuri (`claude.md`, `handover.md`), aggiornamento rigoroso delle intestazioni, dell'autore (`AprileNunzio`) e della mail di contatto (`info@nunziotech.com`).
+- **Codice sicuro al 100%:** Conformità totale ai vincoli del progetto. Nessun commento nei sorgenti, file mantenuti snelli, e tutti i 271 test integrati superati con successo.
+
+---
 ## Che cos'è
 
 ARGUS-PR trasforma un PC — anche vecchio — in un videoregistratore di rete completo. Un demone Node.js acquisisce i flussi RTSP delle telecamere, li registra su disco e li rende consultabili da un'interfaccia web che si apre da qualsiasi dispositivo della rete: computer, tablet o telefono.

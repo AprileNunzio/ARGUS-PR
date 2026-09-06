@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, field, chip, notice, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -6,11 +7,11 @@ import { backLink } from '/features/cameras/camera_wizard.js';
 const FIELDS = Object.freeze({
     console: [],
     email: [
-        { key: 'host', label: 'Server SMTP', placeholder: 'smtp.dominio.it' },
+        { key: 'host', label: 'Server SMTP', placeholder: t('automation.smtpDominioIt', 'smtp.dominio.it') },
         { key: 'port', label: 'Porta', type: 'number', placeholder: '587' },
         { key: 'secure', label: 'TLS diretto (porta 465)', type: 'switch' },
-        { key: 'from', label: 'Mittente', placeholder: 'argus@dominio.it' },
-        { key: 'to', label: 'Destinatari (separati da virgola)', placeholder: 'io@dominio.it, guardia@dominio.it' },
+        { key: 'from', label: 'Mittente', placeholder: t('automation.argusDominioIt', 'argus@dominio.it') },
+        { key: 'to', label: 'Destinatari (separati da virgola)', placeholder: t('automation.ioDominioItGuardiaDominio', 'io@dominio.it, guardia@dominio.it') },
         { key: 'username', label: 'Utente SMTP' }
     ],
     telegram: [
@@ -18,17 +19,17 @@ const FIELDS = Object.freeze({
         { key: 'silent', label: 'Notifica silenziosa', type: 'switch' }
     ],
     webhook: [
-        { key: 'url', label: 'Indirizzo', placeholder: 'https://esempio.it/argus' }
+        { key: 'url', label: 'Indirizzo', placeholder: t('automation.httpsEsempioItArgus', 'https://esempio.it/argus') }
     ],
     mqtt: [
         { key: 'host', label: 'Broker', placeholder: '192.168.1.10' },
         { key: 'port', label: 'Porta', type: 'number', placeholder: '1883' },
         { key: 'tls', label: 'TLS', type: 'switch' },
-        { key: 'topic', label: 'Argomento', placeholder: 'argus/eventi' },
+        { key: 'topic', label: 'Argomento', placeholder: t('automation.argusEventi', 'argus/eventi') },
         { key: 'username', label: 'Utente' }
     ],
     gate: [
-        { key: 'url', label: 'Indirizzo del comando', placeholder: 'http://192.168.1.50/relay/0?turn=on' },
+        { key: 'url', label: 'Indirizzo del comando', placeholder: t('automation.http192168150Relay0Tu', 'http://192.168.1.50/relay/0?turn=on') },
         { key: 'method', label: 'Metodo', type: 'select', options: ['GET', 'POST', 'PUT'] },
         { key: 'username', label: 'Utente (facoltativo)' },
         { key: 'body', label: 'Corpo della richiesta (facoltativo)' }
@@ -36,7 +37,7 @@ const FIELDS = Object.freeze({
     onvif_relay: [
         { key: 'host', label: 'Indirizzo telecamera', placeholder: '192.168.1.64' },
         { key: 'port', label: 'Porta ONVIF', type: 'number', placeholder: '80' },
-        { key: 'token', label: 'Identificativo rele', placeholder: 'RelayOutputToken' },
+        { key: 'token', label: 'Identificativo rele', placeholder: t('automation.relayOutputToken', 'RelayOutputToken') },
         { key: 'mode', label: 'Modo', type: 'select', options: ['monostable', 'bistable'] },
         { key: 'holdMs', label: 'Durata impulso (ms)', type: 'number', placeholder: '1500' },
         { key: 'username', label: 'Utente telecamera' }
@@ -82,7 +83,7 @@ function channelEditor({ api, catalog, channel }) {
     const kindSelect = el('select', { className: 'select' }, kinds.map((entry) => el('option', { value: entry.kind, textContent: entry.label })));
     if (channel) kindSelect.value = channel.kind;
 
-    const name = el('input', { className: 'input', type: 'text', value: channel?.name ?? '', placeholder: 'Guardiania' });
+    const name = el('input', { className: 'input', type: 'text', value: channel?.name ?? '', placeholder: t('automation.guardiania', 'Guardiania') });
     const secret = el('input', { className: 'input', type: 'password', autocomplete: 'new-password', placeholder: channel?.hasSecret ? 'invariato' : '' });
     const fieldHost = el('div', { className: 'form-grid' });
     const feedback = el('div', { hidden: 'hidden' });
@@ -107,7 +108,7 @@ function channelEditor({ api, catalog, channel }) {
     kindSelect.addEventListener('change', paint);
     paint();
 
-    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva canale' });
+    const saveButton = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('automation.salvaCanale', 'Salva canale') });
 
     saveButton.addEventListener('click', async () => {
         saveButton.disabled = true;
@@ -160,7 +161,7 @@ function channelEditor({ api, catalog, channel }) {
                 fieldHost,
                 feedback,
                 el('div', { className: 'row row--end' }, [
-                    el('button', { className: 'btn', type: 'button', textContent: 'Annulla', onclick: () => go('automation') }),
+                    el('button', { className: 'btn', type: 'button', textContent: t('automation.annulla', 'Annulla'), onclick: () => go('automation') }),
                     saveButton
                 ])
             ])
@@ -178,7 +179,7 @@ export async function renderChannelPage({ api, channelId }) {
 }
 
 export function channelRow({ api, channel, onDelete }) {
-    const testButton = el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Prova' });
+    const testButton = el('button', { className: 'btn btn--sm', type: 'button', textContent: t('automation.prova', 'Prova') });
     const state = el('span', { className: 'section__hint', textContent: channel.hasSecret ? 'segreto memorizzato e cifrato' : 'nessun segreto' });
 
     testButton.addEventListener('click', async () => {
@@ -202,8 +203,8 @@ export function channelRow({ api, channel, onDelete }) {
         ]),
         el('div', { className: 'row row--tight' }, [
             testButton,
-            el('button', { className: 'btn btn--sm', type: 'button', textContent: 'Modifica', onclick: () => go('automation', 'channels', channel.id) }),
-            el('button', { className: 'btn btn--sm btn--danger', type: 'button', textContent: 'Elimina', onclick: () => onDelete(channel) })
+            el('button', { className: 'btn btn--sm', type: 'button', textContent: t('automation.modifica', 'Modifica'), onclick: () => go('automation', 'channels', channel.id) }),
+            el('button', { className: 'btn btn--sm btn--danger', type: 'button', textContent: t('automation.elimina', 'Elimina'), onclick: () => onDelete(channel) })
         ])
     ]);
 }

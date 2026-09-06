@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { go } from '/assets/router.js';
@@ -33,14 +34,14 @@ export function createPersonCard({ person, canManage, onDelete, onMerge }) {
     const deleteBtn = canManage ? el('button', {
         className: 'btn btn--sm btn--danger',
         type: 'button',
-        textContent: 'Elimina',
+        textContent: t('people.elimina', 'Elimina'),
         onclick: () => onDelete(person)
     }) : null;
 
     const mergeBtn = canManage ? el('button', {
         className: 'btn btn--sm btn--ghost',
         type: 'button',
-        textContent: 'Unisci…',
+        textContent: t('people.unisci', 'Unisci…'),
         onclick: () => onMerge(person)
     }) : null;
 

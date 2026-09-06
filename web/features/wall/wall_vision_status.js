@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, empty } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { metricTile } from '/assets/ui.js';
@@ -52,36 +53,36 @@ function cameraRow(entry) {
         ].filter(Boolean)),
         el('div', { className: 'spec-grid' }, [
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Fotogrammi al secondo' }),
+                el('span', { className: 'spec__k', textContent: t('wall.fotogrammiAlSecondo', 'Fotogrammi al secondo') }),
                 el('span', { className: 'spec__v', textContent: `${entry.framesPerSecond ?? 0}` })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Latenza di inferenza' }),
+                el('span', { className: 'spec__k', textContent: t('wall.latenzaDiInferenza', 'Latenza di inferenza') }),
                 el('span', { className: 'spec__v', textContent: entry.inferenceMs === null || entry.inferenceMs === undefined ? '--' : `${entry.inferenceMs} ms` })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Ultimo rilevamento' }),
+                el('span', { className: 'spec__k', textContent: t('wall.ultimoRilevamento', 'Ultimo rilevamento') }),
                 el('span', { className: 'spec__v', textContent: relative(entry.lastDetectionAt) })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Rilevamenti totali' }),
+                el('span', { className: 'spec__k', textContent: t('wall.rilevamentiTotali', 'Rilevamenti totali') }),
                 el('span', { className: 'spec__v', textContent: String(entry.detections ?? 0) })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Fotogrammi scartati' }),
+                el('span', { className: 'spec__k', textContent: t('wall.fotogrammiScartati', 'Fotogrammi scartati') }),
                 el('span', { className: 'spec__v', textContent: String(entry.droppedFrames ?? 0) })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Riavvii del worker' }),
+                el('span', { className: 'spec__k', textContent: t('wall.riavviiDelWorker', 'Riavvii del worker') }),
                 el('span', { className: 'spec__v', textContent: String(entry.restarts ?? 0) })
             ]),
             el('div', { className: 'spec' }, [
-                el('span', { className: 'spec__k', textContent: 'Attivo da' }),
+                el('span', { className: 'spec__k', textContent: t('wall.attivoDa', 'Attivo da') }),
                 el('span', { className: 'spec__v', textContent: `${entry.uptimeSeconds ?? 0} s` })
             ])
         ]),
         el('div', { className: 'row row--tight row--wrap' }, [
-            el('span', { className: 'xrow__hint', textContent: 'Classi analizzate:' }),
+            el('span', { className: 'xrow__hint', textContent: t('wall.classiAnalizzate', 'Classi analizzate:') }),
             ...(entry.classes ?? []).map((className) => chip(CLASS_LABELS[className] ?? className, 'info'))
         ]),
         entry.saturated

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, field, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -11,13 +12,13 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
     let exceptions = [];
 
     const feedback = el('div', { hidden: 'hidden' });
-    const saveBtn = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva pianificazione' });
+    const saveBtn = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('scheduling.salvaPianificazione', 'Salva pianificazione') });
 
     const modeSelect = el('select', { className: 'select' }, [
-        el('option', { value: 'continuous', textContent: 'Continua (24h / 7 giorni)' }),
-        el('option', { value: 'scheduled', textContent: 'Pianificata (secondo la griglia settimanale)' }),
-        el('option', { value: 'motion', textContent: 'Su Movimento (conservazione selettiva eventi)' }),
-        el('option', { value: 'off', textContent: 'Disattivata' })
+        el('option', { value: 'continuous', textContent: t('scheduling.continua24h7Giorni', 'Continua (24h / 7 giorni)') }),
+        el('option', { value: 'scheduled', textContent: t('scheduling.pianificataSecondoLaGrigli', 'Pianificata (secondo la griglia settimanale)') }),
+        el('option', { value: 'motion', textContent: t('scheduling.suMovimentoConservazioneSe', 'Su Movimento (conservazione selettiva eventi)') }),
+        el('option', { value: 'off', textContent: t('scheduling.disattivata', 'Disattivata') })
     ]);
 
     const gridContainer = el('div', { className: 'schedule-grid-host' });
@@ -44,7 +45,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
 
         const table = el('div', { className: 'schedule-table' });
         const headerRow = el('div', { className: 'schedule-row schedule-row--header' }, [
-            el('div', { className: 'schedule-day-label', textContent: 'Giorno' }),
+            el('div', { className: 'schedule-day-label', textContent: t('scheduling.giorno', 'Giorno') }),
             el('div', { className: 'schedule-slots-header' }, [
                 el('span', { textContent: '00:00' }),
                 el('span', { textContent: '06:00' }),
@@ -93,7 +94,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             const dayLabel = el('button', {
                 className: 'schedule-day-label btn btn--sm btn--ghost',
                 type: 'button',
-                title: 'Clicca per alternare tutto il giorno',
+                title: t('scheduling.cliccaPerAlternareTuttoIl', 'Clicca per alternare tutto il giorno'),
                 textContent: DAYS[day],
                 onclick: () => {
                     const daySlots = maskArray.slice(day * SLOTS_PER_DAY, (day + 1) * SLOTS_PER_DAY);
@@ -117,19 +118,19 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Tutto attivo (24/7)',
+                textContent: t('scheduling.tuttoAttivo247', 'Tutto attivo (24/7)'),
                 onclick: () => { maskArray.fill(1); updateGridDisplay(); }
             }),
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Tutto disattivo',
+                textContent: t('scheduling.tuttoDisattivo', 'Tutto disattivo'),
                 onclick: () => { maskArray.fill(0); updateGridDisplay(); }
             }),
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Ufficio (Lun-Ven 08-18)',
+                textContent: t('scheduling.ufficioLunVen0818', 'Ufficio (Lun-Ven 08-18)'),
                 onclick: () => {
                     maskArray.fill(0);
                     for (let day = 1; day <= 5; day += 1) {
@@ -143,7 +144,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Notturno (Tutti 20-06)',
+                textContent: t('scheduling.notturnoTutti2006', 'Notturno (Tutti 20-06)'),
                 onclick: () => {
                     maskArray.fill(0);
                     for (let day = 0; day < 7; day += 1) {
@@ -156,7 +157,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             el('button', {
                 className: 'btn btn--sm',
                 type: 'button',
-                textContent: 'Fine settimana (Sab-Dom 24h)',
+                textContent: t('scheduling.fineSettimanaSabDom24h', 'Fine settimana (Sab-Dom 24h)'),
                 onclick: () => {
                     maskArray.fill(0);
                     for (let s = 0; s < SLOTS_PER_DAY; s += 1) {
@@ -186,7 +187,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
     function renderExceptionsList() {
         exceptionsContainer.replaceChildren();
         if (exceptions.length === 0) {
-            exceptionsContainer.append(el('div', { className: 'section__hint', textContent: 'Nessuna eccezione configurata.' }));
+            exceptionsContainer.append(el('div', { className: 'section__hint', textContent: t('scheduling.nessunaEccezioneConfigurata', 'Nessuna eccezione configurata.') }));
             return;
         }
 
@@ -199,7 +200,7 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
                 el('button', {
                     className: 'btn btn--sm btn--danger',
                     type: 'button',
-                    textContent: 'Rimuovi',
+                    textContent: t('scheduling.rimuovi', 'Rimuovi'),
                     onclick: async () => {
                         await api.remove(`/api/cameras/${camera.id}/schedule/exceptions/${ex.day}`);
                         exceptions = exceptions.filter((e) => e.day !== ex.day);
@@ -213,15 +214,15 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
 
     const exDayInput = el('input', { className: 'input', type: 'date' });
     const exModeSelect = el('select', { className: 'select' }, [
-        el('option', { value: 'continuous', textContent: 'Continua' }),
-        el('option', { value: 'off', textContent: 'Disattivata' }),
-        el('option', { value: 'motion', textContent: 'Su Movimento' })
+        el('option', { value: 'continuous', textContent: t('scheduling.continua', 'Continua') }),
+        el('option', { value: 'off', textContent: t('scheduling.disattivata', 'Disattivata') }),
+        el('option', { value: 'motion', textContent: t('scheduling.suMovimento', 'Su Movimento') })
     ]);
-    const exNoteInput = el('input', { className: 'input', type: 'text', placeholder: 'Motivo (es. Festività)' });
+    const exNoteInput = el('input', { className: 'input', type: 'text', placeholder: t('scheduling.motivoEsFestivit', 'Motivo (es. Festività)') });
     const addExBtn = el('button', {
         className: 'btn btn--sm',
         type: 'button',
-        textContent: 'Aggiungi eccezione',
+        textContent: t('scheduling.aggiungiEccezione', 'Aggiungi eccezione'),
         onclick: async () => {
             if (!exDayInput.value) return;
             const res = await api.post(`/api/cameras/${camera.id}/schedule/exceptions`, {
@@ -291,12 +292,12 @@ export function renderScheduleEditor({ camera, api, onSaved, onCancel }) {
             field('Modalità di registrazione', modeSelect),
             gridContainer,
             el('hr', { className: 'divider' }),
-            el('div', { className: 'section__title' }, [icon('calendar'), el('span', { textContent: 'Eccezioni di calendario' })]),
+            el('div', { className: 'section__title' }, [icon('calendar'), el('span', { textContent: t('scheduling.eccezioniDiCalendario', 'Eccezioni di calendario') })]),
             exForm,
             exceptionsContainer,
             feedback,
             el('div', { className: 'row row--end' }, [
-                el('button', { className: 'btn', type: 'button', textContent: 'Chiudi', onclick: onCancel }),
+                el('button', { className: 'btn', type: 'button', textContent: t('scheduling.chiudi', 'Chiudi'), onclick: onCancel }),
                 saveBtn
             ])
         ])

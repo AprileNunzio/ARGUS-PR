@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, formatBytes, formatDuration } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { renderPerformancePanel } from './performance_panel.js';
@@ -30,7 +31,7 @@ export async function renderSystem({ api }) {
 
     outlet.replaceChildren(
         el('div', { className: 'view__head' }, [
-            el('h1', { className: 'view__title', textContent: 'Telemetria e Risorse di Sistema' }),
+            el('h1', { className: 'view__title', textContent: t('system.telemetriaERisorseDiSistem', 'Telemetria e Risorse di Sistema') }),
             chip(`v${info.version}`, 'info')
         ]),
 

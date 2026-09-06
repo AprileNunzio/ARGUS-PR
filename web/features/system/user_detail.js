@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, toggle, optionRow } from '/assets/ui.js';
@@ -74,8 +75,8 @@ export async function renderUserDetail({ api, userId, session }) {
         }, ['Attivo', 'Sospeso']);
 
         return card({
-            title: 'Accesso e permessi',
-            subtitle: 'Ruolo, stato dell account e cosa comporta in concreto',
+            title: t('system.accessoEPermessi', 'Accesso e permessi'),
+            subtitle: t('system.ruoloStatoDellAccountECo', 'Ruolo, stato dell account e cosa comporta in concreto'),
             iconName: 'shield',
             tone: user.active ? 'emerald' : 'rose',
             badge: user.mfaEnabled ? chip('Secondo fattore attivo', 'ok') : chip('Senza secondo fattore', 'warn'),
@@ -95,15 +96,15 @@ export async function renderUserDetail({ api, userId, session }) {
                     render();
                 }, { disabled: isSelf }),
                 optionRow({
-                    title: 'Account attivo',
+                    title: t('system.accountAttivo', 'Account attivo'),
                     hint: 'Sospendendolo le sessioni aperte vengono chiuse subito e il login viene rifiutato',
                     iconName: 'lock',
                     control: isSelf
-                        ? el('span', { className: 'chip chip--info', textContent: 'Il proprio account non si sospende da qui' })
+                        ? el('span', { className: 'chip chip--info', textContent: t('system.ilProprioAccountNonSiSosp', 'Il proprio account non si sospende da qui') })
                         : suspend
                 }),
                 el('div', { className: 'stack' }, [
-                    el('span', { className: 'xrow__title', textContent: 'Permessi effettivi' }),
+                    el('span', { className: 'xrow__title', textContent: t('system.permessiEffettivi', 'Permessi effettivi') }),
                     permissionList(user.permissions)
                 ])
             ]
@@ -113,7 +114,7 @@ export async function renderUserDetail({ api, userId, session }) {
     const securityCard = () => {
         const reset = el('button', { className: 'btn btn--sm btn--danger', type: 'button' }, [
             icon('refresh'),
-            el('span', { textContent: 'Genera una password provvisoria' })
+            el('span', { textContent: t('system.generaUnaPasswordProvvisori', 'Genera una password provvisoria') })
         ]);
 
         const output = el('div', {});
@@ -134,8 +135,8 @@ export async function renderUserDetail({ api, userId, session }) {
                 el('div', { className: 'xrow' }, [
                     el('span', { className: 'xrow__icon' }, [icon('lock')]),
                     el('div', { className: 'xrow__body' }, [
-                        el('span', { className: 'xrow__title', textContent: 'Password provvisoria' }),
-                        el('span', { className: 'xrow__hint', textContent: 'Consegnala di persona: non viene mostrata una seconda volta' })
+                        el('span', { className: 'xrow__title', textContent: t('system.passwordProvvisoria', 'Password provvisoria') }),
+                        el('span', { className: 'xrow__hint', textContent: t('system.consegnalaDiPersonaNonVie', 'Consegnala di persona: non viene mostrata una seconda volta') })
                     ]),
                     el('code', { className: 'mono', textContent: result.temporaryPassword })
                 ])
@@ -143,8 +144,8 @@ export async function renderUserDetail({ api, userId, session }) {
         });
 
         return card({
-            title: 'Sicurezza dell account',
-            subtitle: 'Il secondo fattore resta obbligatorio anche dopo un recupero della password',
+            title: t('system.sicurezzaDellAccount', 'Sicurezza dell account'),
+            subtitle: t('system.ilSecondoFattoreRestaObbli', 'Il secondo fattore resta obbligatorio anche dopo un recupero della password'),
             iconName: 'lock',
             tone: 'amber',
             actions: isSelf ? [] : [reset],
@@ -152,7 +153,7 @@ export async function renderUserDetail({ api, userId, session }) {
                 el('div', { className: 'xrow' }, [
                     el('span', { className: 'xrow__icon' }, [icon(user.mfaEnabled ? 'shield' : 'warning')]),
                     el('div', { className: 'xrow__body' }, [
-                        el('span', { className: 'xrow__title', textContent: 'Codice a sei cifre' }),
+                        el('span', { className: 'xrow__title', textContent: t('system.codiceASeiCifre', 'Codice a sei cifre') }),
                         el('span', {
                             className: 'xrow__hint',
                             textContent: user.mfaEnabled
@@ -165,7 +166,7 @@ export async function renderUserDetail({ api, userId, session }) {
                 el('div', { className: 'xrow' }, [
                     el('span', { className: 'xrow__icon' }, [icon(user.email ? 'globe' : 'warning')]),
                     el('div', { className: 'xrow__body' }, [
-                        el('span', { className: 'xrow__title', textContent: 'Email di recupero' }),
+                        el('span', { className: 'xrow__title', textContent: t('system.emailDiRecupero', 'Email di recupero') }),
                         el('span', {
                             className: 'xrow__hint',
                             textContent: user.email
@@ -182,14 +183,14 @@ export async function renderUserDetail({ api, userId, session }) {
 
     const back = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('chevronLeft'),
-        el('span', { textContent: 'Utenti' })
+        el('span', { textContent: t('system.utenti', 'Utenti') })
     ]);
 
     back.addEventListener('click', () => go('users'));
 
     const remove = el('button', { className: 'btn btn--sm btn--danger', type: 'button' }, [
         icon('trash'),
-        el('span', { textContent: 'Elimina utente' })
+        el('span', { textContent: t('system.eliminaUtente', 'Elimina utente') })
     ]);
 
     remove.addEventListener('click', async () => {
@@ -215,8 +216,8 @@ export async function renderUserDetail({ api, userId, session }) {
             autosaveBar(saver.element),
             accessCard(),
             fieldGroup({
-                title: 'Anagrafica',
-                subtitle: 'Serve a identificare la persona con certezza quando serve un recupero o una verifica',
+                title: t('system.anagrafica', 'Anagrafica'),
+                subtitle: t('system.serveAIdentificareLaPerson', 'Serve a identificare la persona con certezza quando serve un recupero o una verifica'),
                 iconName: 'users',
                 tone: 'cyan',
                 definitions: IDENTITY_FIELDS,
@@ -224,8 +225,8 @@ export async function renderUserDetail({ api, userId, session }) {
                 onInput
             }),
             fieldGroup({
-                title: 'Recapiti',
-                subtitle: 'L email e la strada del recupero password: senza, l utente dipende da un amministratore',
+                title: t('system.recapiti', 'Recapiti'),
+                subtitle: t('system.lEmailELaStradaDelRecupe', 'L email e la strada del recupero password: senza, l utente dipende da un amministratore'),
                 iconName: 'globe',
                 tone: 'emerald',
                 definitions: CONTACT_FIELDS,
@@ -234,8 +235,8 @@ export async function renderUserDetail({ api, userId, session }) {
                 badge: user.email ? chip('Recupero possibile', 'ok') : chip('Recupero impossibile', 'warn')
             }),
             fieldGroup({
-                title: 'Residenza',
-                subtitle: 'Dati facoltativi, utili per le verifiche formali e per le comunicazioni cartacee',
+                title: t('system.residenza', 'Residenza'),
+                subtitle: t('system.datiFacoltativiUtiliPerLe', 'Dati facoltativi, utili per le verifiche formali e per le comunicazioni cartacee'),
                 iconName: 'pin',
                 tone: 'purple',
                 definitions: ADDRESS_FIELDS,
@@ -243,8 +244,8 @@ export async function renderUserDetail({ api, userId, session }) {
                 onInput
             }),
             fieldGroup({
-                title: 'Posizione nell organizzazione',
-                subtitle: 'Aiuta a capire chi ha fatto cosa quando si legge il registro delle azioni',
+                title: t('system.posizioneNellOrganizzazione', 'Posizione nell organizzazione'),
+                subtitle: t('system.aiutaACapireChiHaFattoCo', 'Aiuta a capire chi ha fatto cosa quando si legge il registro delle azioni'),
                 iconName: 'tag',
                 tone: 'amber',
                 definitions: WORK_FIELDS,
@@ -252,8 +253,8 @@ export async function renderUserDetail({ api, userId, session }) {
                 onInput
             }),
             card({
-                title: 'Preferenze',
-                subtitle: 'Lingua e note interne su questa persona',
+                title: t('system.preferenze', 'Preferenze'),
+                subtitle: t('system.linguaENoteInterneSuQuest', 'Lingua e note interne su questa persona'),
                 iconName: 'settings',
                 tone: 'cyan',
                 body: [
@@ -262,13 +263,13 @@ export async function renderUserDetail({ api, userId, session }) {
                         touch({ redraw: true });
                     }),
                     el('div', { className: 'field' }, [
-                        el('label', { textContent: 'Note interne' }),
+                        el('label', { textContent: t('system.noteInterne', 'Note interne') }),
                         (() => {
                             const area = el('textarea', { className: 'input', rows: '3', textContent: profile.notes ?? '' });
                             area.addEventListener('input', () => onInput('notes', area.value));
                             return area;
                         })(),
-                        el('span', { className: 'field__hint', textContent: 'Visibili solo a chi gestisce gli utenti' })
+                        el('span', { className: 'field__hint', textContent: t('system.visibiliSoloAChiGestisceG', 'Visibili solo a chi gestisce gli utenti') })
                     ])
                 ]
             }),

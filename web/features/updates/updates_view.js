@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, confirmPanel, pageHead } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, toggle, optionRow } from '/assets/ui.js';
@@ -106,10 +107,10 @@ export async function renderUpdatesView({ api }) {
         const s4 = p === 'healthy' ? 'update-flow__step--done' : '';
 
         return el('div', { className: 'update-flow rise' }, [
-            el('div', { className: `update-flow__step ${s1}` }, [el('span', { className: 'update-flow__num', textContent: '1' }), el('span', { textContent: 'Verifica release' })]),
-            el('div', { className: `update-flow__step ${s2}` }, [el('span', { className: 'update-flow__num', textContent: '2' }), el('span', { textContent: 'Download & Patch' })]),
-            el('div', { className: `update-flow__step ${s3}` }, [el('span', { className: 'update-flow__num', textContent: '3' }), el('span', { textContent: 'Test 90s Watchdog' })]),
-            el('div', { className: `update-flow__step ${s4}` }, [el('span', { className: 'update-flow__num', textContent: '4' }), el('span', { textContent: 'Stabile & Confermato' })])
+            el('div', { className: `update-flow__step ${s1}` }, [el('span', { className: 'update-flow__num', textContent: '1' }), el('span', { textContent: t('updates.verificaRelease', 'Verifica release') })]),
+            el('div', { className: `update-flow__step ${s2}` }, [el('span', { className: 'update-flow__num', textContent: '2' }), el('span', { textContent: t('updates.downloadPatch', 'Download & Patch') })]),
+            el('div', { className: `update-flow__step ${s3}` }, [el('span', { className: 'update-flow__num', textContent: '3' }), el('span', { textContent: t('updates.test90sWatchdog', 'Test 90s Watchdog') })]),
+            el('div', { className: `update-flow__step ${s4}` }, [el('span', { className: 'update-flow__num', textContent: '4' }), el('span', { textContent: t('updates.stabileConfermato', 'Stabile & Confermato') })])
         ]);
     };
 
@@ -160,11 +161,11 @@ export async function renderUpdatesView({ api }) {
                         }
                     }));
                 }
-            }, [icon('refresh'), el('span', { textContent: 'Forza aggiornamento / Ripara installazione' })])
+            }, [icon('refresh'), el('span', { textContent: t('updates.forzaAggiornamentoRiparaI', 'Forza aggiornamento / Ripara installazione') })])
             : null;
 
         return card({
-            title: 'Canale di aggiornamento ufficiale GitHub',
+            title: t('updates.canaleDiAggiornamentoUffici', 'Canale di aggiornamento ufficiale GitHub'),
             subtitle: version.detail,
             iconName: 'download',
             tone: version.tone === 'ok' ? 'emerald' : (version.tone === 'warn' ? 'amber' : 'cyan'),
@@ -188,21 +189,21 @@ export async function renderUpdatesView({ api }) {
         });
 
         return card({
-            title: 'Protezione watchdog e ripristino automatico',
-            subtitle: 'Sorveglia i primi 90 secondi dopo un aggiornamento e ripristina la versione precedente se il servizio non si stabilizza',
+            title: t('updates.protezioneWatchdogERipristi', 'Protezione watchdog e ripristino automatico'),
+            subtitle: t('updates.sorvegliaIPrimi90SecondiD', 'Sorveglia i primi 90 secondi dopo un aggiornamento e ripristina la versione precedente se il servizio non si stabilizza'),
             iconName: 'shield',
             tone: watchdog.tone === 'ok' ? 'emerald' : (watchdog.tone === 'bad' ? 'red' : 'amber'),
             badge: chip(watchdog.label, watchdog.tone === 'ok' ? 'ok' : (watchdog.tone === 'bad' ? 'bad' : 'warn')),
             actions: watchdog.settled && !watchdog.quarantined ? [] : [resetButton],
             body: [
                 optionRow({
-                    title: 'Tentativi di avvio consumati',
+                    title: t('updates.tentativiDiAvvioConsumati', 'Tentativi di avvio consumati'),
                     hint: 'Il contatore torna a zero non appena il sistema resta stabile per la finestra di salute',
                     iconName: 'activity',
                     control: chip(`${watchdog.attempts}/${watchdog.maxAttempts}`, watchdog.attempts === 0 ? 'ok' : 'warn')
                 }),
                 optionRow({
-                    title: 'Versioni in quarantena',
+                    title: t('updates.versioniInQuarantena', 'Versioni in quarantena'),
                     hint: 'Release escluse dall aggiornamento automatico dopo un ripristino',
                     iconName: 'lock',
                     control: watchdog.quarantined
@@ -210,7 +211,7 @@ export async function renderUpdatesView({ api }) {
                         : chip('Nessuna', 'ok')
                 }),
                 optionRow({
-                    title: 'Versione precedente registrata',
+                    title: t('updates.versionePrecedenteRegistrata', 'Versione precedente registrata'),
                     hint: 'Punto di ripristino usato dal watchdog in caso di avvio fallito',
                     iconName: 'archive',
                     control: chip(status.previousVersion ? `v${status.previousVersion}` : 'Nessuna', 'info')
@@ -229,7 +230,7 @@ export async function renderUpdatesView({ api }) {
         const isWindow = () => (draft['updates.restartPolicy'] ?? 'ask') === 'window';
 
         const daysRow = optionRow({
-            title: 'Giorni consentiti per la manutenzione',
+            title: t('updates.giorniConsentitiPerLaManut', 'Giorni consentiti per la manutenzione'),
             hint: 'Giorni della settimana in cui e ammesso il riavvio per un aggiornamento',
             iconName: 'timeline',
             control: controlFor({ type: 'days', value: draft['updates.windowDays'] ?? [0, 1, 2, 3, 4, 5, 6] }, (value) => {
@@ -238,7 +239,7 @@ export async function renderUpdatesView({ api }) {
         });
 
         const hoursRow = optionRow({
-            title: 'Fascia oraria della finestra',
+            title: t('updates.fasciaOrariaDellaFinestra', 'Fascia oraria della finestra'),
             hint: 'Intervallo notturno o a basso traffico, ad esempio 03:00 - 05:00',
             iconName: 'clock',
             control: el('div', { className: 'row row--tight row--nowrap' }, [
@@ -258,19 +259,19 @@ export async function renderUpdatesView({ api }) {
         });
 
         return card({
-            title: 'Politiche di installazione e finestre di manutenzione',
-            subtitle: 'Decide quando ARGUS-PR puo cercare e applicare una nuova versione',
+            title: t('updates.politicheDiInstallazioneEF', 'Politiche di installazione e finestre di manutenzione'),
+            subtitle: t('updates.decideQuandoARGUSPRPuoCer', 'Decide quando ARGUS-PR puo cercare e applicare una nuova versione'),
             iconName: 'settings',
             tone: 'blue',
             body: [
                 optionRow({
-                    title: 'Cerca aggiornamenti automaticamente',
+                    title: t('updates.cercaAggiornamentiAutomatica', 'Cerca aggiornamenti automaticamente'),
                     hint: 'Controlla la presenza di nuove versioni su GitHub all avvio e ogni sei ore',
                     iconName: 'refresh',
                     control: toggle(draft['updates.autoCheck'] !== false, (value) => { draft['updates.autoCheck'] = value; })
                 }),
                 optionRow({
-                    title: 'Politica di riavvio',
+                    title: t('updates.politicaDiRiavvio', 'Politica di riavvio'),
                     hint: 'Determina se il riavvio richiede una conferma, attende una finestra oraria o avviene subito',
                     iconName: 'power',
                     control: segmented(RESTART_OPTIONS, draft['updates.restartPolicy'] ?? 'ask', (value) => {
@@ -289,7 +290,7 @@ export async function renderUpdatesView({ api }) {
     const render = () => {
         if (status.failure) {
             root.replaceChildren(
-                pageHead({ title: 'Aggiornamenti & Manutenzione', hint: 'Gestione del ciclo di vita del software e aggiornamenti OTA' }),
+                pageHead({ title: t('updates.aggiornamentiManutenzione', 'Aggiornamenti & Manutenzione'), hint: 'Gestione del ciclo di vita del software e aggiornamenti OTA' }),
                 notice('error', `Impossibile caricare lo stato degli aggiornamenti: ${status.failure.message}`)
             );
             return;
@@ -300,7 +301,7 @@ export async function renderUpdatesView({ api }) {
 
         root.replaceChildren(
             pageHead({
-                title: 'Aggiornamenti & Manutenzione',
+                title: t('updates.aggiornamentiManutenzione', 'Aggiornamenti & Manutenzione'),
                 hint: 'Versioni, auto-upgrade OTA da GitHub, watchdog di ripristino e finestre di manutenzione',
                 actions: headerActions()
             }),

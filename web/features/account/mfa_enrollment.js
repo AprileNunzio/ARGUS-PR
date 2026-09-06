@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { api } from '/assets/api.js';
 import { el, field, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
@@ -11,8 +12,8 @@ export function renderMfaEnrollment({ session, onComplete }) {
         el('div', { className: 'login__brand' }, [
             el('span', { className: 'brand__mark' }, [icon('shield')]),
             el('div', {}, [
-                el('h1', { className: 'login__title', textContent: 'Autenticazione a due fattori (MFA)' }),
-                el('p', { className: 'login__sub', textContent: 'Proteggi l account con un app di autenticazione' })
+                el('h1', { className: 'login__title', textContent: t('account.autenticazioneADueFattori', 'Autenticazione a due fattori (MFA)') }),
+                el('p', { className: 'login__sub', textContent: t('account.proteggiLAccountConUnApp', 'Proteggi l account con un app di autenticazione') })
             ])
         ]),
         content
@@ -52,12 +53,12 @@ export function renderMfaEnrollment({ session, onComplete }) {
         const verifyButton = el('button', {
             className: 'btn btn--primary',
             type: 'submit',
-            textContent: 'Verifica e attiva'
+            textContent: t('account.verificaEAttiva', 'Verifica e attiva')
         });
 
         const qrContainer = el('div', { className: 'qr-wrap' }, [renderQrSvg(uri, { size: 160 })]);
         const secretBox = el('div', { className: 'mfa-secret-box' }, [
-            el('span', { className: 'mfa-secret-label', textContent: 'Chiave manuale' }),
+            el('span', { className: 'mfa-secret-label', textContent: t('account.chiaveManuale', 'Chiave manuale') }),
             el('code', { className: 'mfa-secret-val', textContent: secret })
         ]);
         const qrPane = el('div', { className: 'mfa-qr-pane' }, [
@@ -116,12 +117,12 @@ export function renderMfaEnrollment({ session, onComplete }) {
         const proceedBtn = el('button', {
             className: 'btn btn--primary',
             type: 'button',
-            textContent: 'Ho conservato i codici, continua',
+            textContent: t('account.hoConservatoICodiciContin', 'Ho conservato i codici, continua'),
             onclick: () => onComplete()
         });
 
         content.replaceChildren(
-            el('h2', { className: 'view__title', textContent: 'Codici di recupero' }),
+            el('h2', { className: 'view__title', textContent: t('account.codiciDiRecupero', 'Codici di recupero') }),
             notice('warn', 'Salva questi 10 codici di emergenza in un luogo sicuro. Ognuno puo essere utilizzato una sola volta se perdi l accesso all app di autenticazione. Non verranno piu mostrati.'),
             codeGrid,
             el('div', { className: 'stack' }, [proceedBtn])

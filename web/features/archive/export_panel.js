@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, field, notice, formatBytes, confirmPanel } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -37,7 +38,7 @@ function exportRow({ record, api, onChanged, feedback }) {
                 ? notice('ok', `Esportazione integra: video, manifesto e sigillo corrispondono. Catena ${outcome.manifest.chainRoot.slice(0, 16)}…`)
                 : notice('error', `Verifica fallita: ${outcome.problems.join(' · ')}`));
         }
-    }, [icon('shield'), el('span', { textContent: 'Verifica' })]);
+    }, [icon('shield'), el('span', { textContent: t('archive.verifica', 'Verifica') })]);
 
     const [label, variant] = STATE[record.state] ?? [record.state, 'info'];
 
@@ -64,7 +65,7 @@ function exportRow({ record, api, onChanged, feedback }) {
                         type: 'button',
                         onclick: () => {
                             feedback.replaceChildren(confirmPanel({
-                                title: 'Eliminare questa esportazione?',
+                                title: t('archive.eliminareQuestaEsportazione', 'Eliminare questa esportazione?'),
                                 message: 'Il video esportato e il suo manifesto di custodia vengono rimossi dal disco.',
                                 confirmLabel: 'Elimina',
                                 onCancel: () => feedback.replaceChildren(),
@@ -95,7 +96,7 @@ export function renderExportPanel({ api, session, getContext }) {
 
     const fromField = el('input', { className: 'input', type: 'datetime-local' });
     const toField = el('input', { className: 'input', type: 'datetime-local' });
-    const reasonField = el('input', { className: 'input', type: 'text', placeholder: 'Motivo, es. richiesta autorita giudiziaria', maxlength: '300' });
+    const reasonField = el('input', { className: 'input', type: 'text', placeholder: t('archive.motivoEsRichiestaAutorita', 'Motivo, es. richiesta autorita giudiziaria'), maxlength: '300' });
 
     const refresh = async () => {
         const { exports } = await api.get('/api/exports').catch(() => ({ exports: [] }));
@@ -104,7 +105,7 @@ export function renderExportPanel({ api, session, getContext }) {
 
         if (exports.length === 0) {
             body.replaceChildren(el('tr', {}, [
-                el('td', { colspan: '5' }, [el('span', { className: 'section__hint', textContent: 'Nessuna esportazione richiesta finora.' })])
+                el('td', { colspan: '5' }, [el('span', { className: 'section__hint', textContent: t('archive.nessunaEsportazioneRichiesta', 'Nessuna esportazione richiesta finora.') })])
             ]));
         }
     };
@@ -112,7 +113,7 @@ export function renderExportPanel({ api, session, getContext }) {
     const submit = el('button', {
         className: 'btn btn--primary',
         type: 'submit'
-    }, [icon('download'), el('span', { textContent: 'Esporta' })]);
+    }, [icon('download'), el('span', { textContent: t('archive.esporta', 'Esporta') })]);
 
     const form = el('form', {
         className: 'form-grid',
@@ -165,7 +166,7 @@ export function renderExportPanel({ api, session, getContext }) {
             chip('prove', 'violet')
         ]),
         el('div', { className: 'panel__body stack' }, [
-            el('p', { className: 'section__hint', textContent: 'Il video viene unito senza ricodifica. Insieme al file trovi un manifesto firmato che elenca ogni segmento con il suo hash, chi ha esportato, quando e perche.' }),
+            el('p', { className: 'section__hint', textContent: t('archive.ilVideoVieneUnitoSenzaRic', 'Il video viene unito senza ricodifica. Insieme al file trovi un manifesto firmato che elenca ogni segmento con il suo hash, chi ha esportato, quando e perche.') }),
             form,
             feedback
         ]),
@@ -173,11 +174,11 @@ export function renderExportPanel({ api, session, getContext }) {
             el('table', {}, [
                 el('thead', {}, [
                     el('tr', {}, [
-                        el('th', { textContent: 'Esportazione' }),
-                        el('th', { textContent: 'Stato' }),
-                        el('th', { textContent: 'Dimensione' }),
-                        el('th', { textContent: 'SHA-256' }),
-                        el('th', { textContent: 'Azioni' })
+                        el('th', { textContent: t('archive.esportazione', 'Esportazione') }),
+                        el('th', { textContent: t('archive.stato', 'Stato') }),
+                        el('th', { textContent: t('archive.dimensione', 'Dimensione') }),
+                        el('th', { textContent: t('archive.sHA256', 'SHA-256') }),
+                        el('th', { textContent: t('archive.azioni', 'Azioni') })
                     ])
                 ]),
                 body

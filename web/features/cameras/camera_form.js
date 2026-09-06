@@ -1,12 +1,13 @@
+import { t } from '/assets/i18n.js';
 import { el, field, chip } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { BRAND_PROFILES, buildRtspUrl } from './camera_brand_profiles.js';
 
 export const SOURCE_KINDS = Object.freeze([
-    { id: 'rtsp', title: 'Telecamera IP (RTSP)', hint: 'ONVIF, Hikvision, Dahua, Reolink, Axis', glyph: 'camera' },
-    { id: 'mjpeg', title: 'Flusso MJPEG', hint: 'Webcam di rete, ESP32-CAM, DVR legacy', glyph: 'globe' },
-    { id: 'http', title: 'Flusso HTTP', hint: 'HLS, MP4 remoto, sorgenti generiche', glyph: 'network' },
-    { id: 'usb', title: 'Telecamera USB locale', hint: 'Webcam o acquisitore collegato al server', glyph: 'monitor' }
+    { id: 'rtsp', title: t('cameras.telecameraIPRTSP', 'Telecamera IP (RTSP)'), hint: 'ONVIF, Hikvision, Dahua, Reolink, Axis', glyph: 'camera' },
+    { id: 'mjpeg', title: t('cameras.flussoMJPEG', 'Flusso MJPEG'), hint: 'Webcam di rete, ESP32-CAM, DVR legacy', glyph: 'globe' },
+    { id: 'http', title: t('cameras.flussoHTTP', 'Flusso HTTP'), hint: 'HLS, MP4 remoto, sorgenti generiche', glyph: 'network' },
+    { id: 'usb', title: t('cameras.telecameraUSBLocale', 'Telecamera USB locale'), hint: 'Webcam o acquisitore collegato al server', glyph: 'monitor' }
 ]);
 
 const HWACCELS = Object.freeze([
@@ -80,10 +81,10 @@ function textOrNull(input) {
 
 function deviceSection({ api, camera }) {
     const deviceSelect = el('select', { className: 'select' }, [
-        el('option', { value: '', textContent: 'Nessun dispositivo rilevato' })
+        el('option', { value: '', textContent: t('cameras.nessunDispositivoRilevato', 'Nessun dispositivo rilevato') })
     ]);
-    const manual = textInput(camera?.deviceId ?? '', { mono: true, placeholder: 'Integrated Camera oppure /dev/video0' });
-    const state = el('div', { className: 'section__hint', textContent: 'Premi Rileva per elencare le periferiche del server.' });
+    const manual = textInput(camera?.deviceId ?? '', { mono: true, placeholder: t('cameras.integratedCameraOppureDev', 'Integrated Camera oppure /dev/video0') });
+    const state = el('div', { className: 'section__hint', textContent: t('cameras.premiRilevaPerElencareLeP', 'Premi Rileva per elencare le periferiche del server.') });
     const formatHost = el('div', { className: 'row row--tight' });
 
     let formatsByDevice = new Map();
@@ -99,7 +100,7 @@ function deviceSection({ api, camera }) {
 
     const scanButton = el('button', { className: 'btn btn--sm', type: 'button' }, [
         icon('refresh'),
-        el('span', { textContent: 'Rileva' })
+        el('span', { textContent: t('cameras.rileva', 'Rileva') })
     ]);
 
     scanButton.addEventListener('click', async () => {
@@ -133,7 +134,7 @@ function deviceSection({ api, camera }) {
 
     const node = el('div', { className: 'form-grid' }, [
         el('div', { className: 'span-all row row--between' }, [
-            el('span', { className: 'panel__title', textContent: 'Periferica di acquisizione' }),
+            el('span', { className: 'panel__title', textContent: t('cameras.perifericaDiAcquisizione', 'Periferica di acquisizione') }),
             scanButton
         ]),
         el('div', { className: 'span-all' }, [field('Periferiche rilevate', deviceSelect)]),
@@ -163,8 +164,8 @@ function captureSection(camera) {
 
 function networkSection({ api, camera, manufacturer, model }) {
     const ipInput = textInput('', { mono: true, placeholder: '192.168.1.64' });
-    const main = textInput(camera?.mainStreamUrl ?? '', { mono: true, placeholder: 'rtsp://192.168.1.64:554/Streaming/Channels/101' });
-    const sub = textInput(camera?.subStreamUrl ?? '', { mono: true, placeholder: 'facoltativo, usato per analisi e anteprima' });
+    const main = textInput(camera?.mainStreamUrl ?? '', { mono: true, placeholder: t('cameras.rtsp192168164554Stream', 'rtsp://192.168.1.64:554/Streaming/Channels/101') });
+    const sub = textInput(camera?.subStreamUrl ?? '', { mono: true, placeholder: t('cameras.facoltativoUsatoPerAnalisi', 'facoltativo, usato per analisi e anteprima') });
     const transport = selectFrom([['tcp', 'TCP (consigliato)'], ['udp', 'UDP']], camera?.transport ?? 'tcp');
     const username = textInput(camera?.username ?? '');
     const password = textInput('', {
@@ -185,11 +186,11 @@ function networkSection({ api, camera, manufacturer, model }) {
     function updateTemplates() {
         const profile = BRAND_PROFILES.find((p) => p.id === brandSelect.value);
         if (!profile) {
-            streamTemplateSelect.replaceChildren(el('option', { value: '', textContent: 'Seleziona prima una marca' }));
+            streamTemplateSelect.replaceChildren(el('option', { value: '', textContent: t('cameras.selezionaPrimaUnaMarca', 'Seleziona prima una marca') }));
             return;
         }
         streamTemplateSelect.replaceChildren(
-            el('option', { value: '', textContent: 'Seleziona modello / canale' }),
+            el('option', { value: '', textContent: t('cameras.selezionaModelloCanale', 'Seleziona modello / canale') }),
             ...profile.channels.map((ch, idx) => el('option', { value: String(idx), textContent: `${ch.label} (${ch.main})` }))
         );
     }
@@ -224,10 +225,10 @@ function networkSection({ api, camera, manufacturer, model }) {
         }
     }
 
-    const autoStatus = el('div', { className: 'section__hint', textContent: 'Inserisci l IP della telecamera, utente e password per rilevare automaticamente tutti i flussi.' });
+    const autoStatus = el('div', { className: 'section__hint', textContent: t('cameras.inserisciLIPDellaTelecamer', 'Inserisci l IP della telecamera, utente e password per rilevare automaticamente tutti i flussi.') });
     const autoButton = el('button', { className: 'btn btn--sm btn--primary', type: 'button' }, [
         icon('sparkles'),
-        el('span', { textContent: 'Riconosci flussi in automatico' })
+        el('span', { textContent: t('cameras.riconosciFlussiInAutomatico', 'Riconosci flussi in automatico') })
     ]);
 
     autoButton.addEventListener('click', async () => {
@@ -271,7 +272,7 @@ function networkSection({ api, camera, manufacturer, model }) {
 
     const node = el('div', { className: 'form-grid' }, [
         el('div', { className: 'span-all row row--between' }, [
-            el('span', { className: 'panel__title', textContent: 'Riconoscimento e profili marca' }),
+            el('span', { className: 'panel__title', textContent: t('cameras.riconoscimentoEProfiliMarca', 'Riconoscimento e profili marca') }),
             autoButton
         ]),
         el('div', { className: 'span-all' }, [field('Indirizzo IP telecamera', ipInput)]),
@@ -292,27 +293,27 @@ export function createCameraForm({ api, camera = null, kind }) {
     const sourceKind = kind ?? camera?.sourceKind ?? 'rtsp';
     const local = sourceKind === 'usb';
 
-    const name = textInput(camera?.name ?? '', { placeholder: 'Ingresso principale' });
-    const location = textInput(camera?.location ?? '', { placeholder: 'Cortile, reception, magazzino' });
-    const group = textInput(camera?.group ?? '', { placeholder: 'Perimetro, interni, varchi' });
+    const name = textInput(camera?.name ?? '', { placeholder: t('cameras.ingressoPrincipale', 'Ingresso principale') });
+    const location = textInput(camera?.location ?? '', { placeholder: t('cameras.cortileReceptionMagazzino', 'Cortile, reception, magazzino') });
+    const group = textInput(camera?.group ?? '', { placeholder: t('cameras.perimetroInterniVarchi', 'Perimetro, interni, varchi') });
     const manufacturer = textInput(camera?.manufacturer ?? '');
     const model = textInput(camera?.model ?? '');
     const retention = numberInput(camera?.retentionDays ?? null, 1, 3650, 'come impostazione globale');
     const hwaccel = selectFrom(HWACCELS, camera?.hwaccel ?? '');
     const storagePoolSelect = el('select', { className: 'select' }, [
-        el('option', { value: '', textContent: 'Storage Principale Predefinito' })
+        el('option', { value: '', textContent: t('cameras.storagePrincipalePredefinito', 'Storage Principale Predefinito') })
     ]);
     if (api) {
         api.get('/api/storage/pools').then((res) => {
             const pools = res?.pools || [];
             storagePoolSelect.replaceChildren(
-                el('option', { value: '', textContent: 'Storage Principale Predefinito' }),
+                el('option', { value: '', textContent: t('cameras.storagePrincipalePredefinito', 'Storage Principale Predefinito') }),
                 ...pools.map((p) => el('option', { value: p.id, textContent: `${p.name} (${p.path})` }))
             );
             if (camera?.storagePoolId) storagePoolSelect.value = camera.storagePoolId;
         }).catch(() => {});
     }
-    const notes = el('textarea', { className: 'textarea', rows: '2', placeholder: 'Note operative, posizione fisica, contatti' });
+    const notes = el('textarea', { className: 'textarea', rows: '2', placeholder: t('cameras.noteOperativePosizioneFisi', 'Note operative, posizione fisica, contatti') });
     notes.value = camera?.notes ?? '';
 
     const enabled = switchInput(camera ? camera.enabled : true);

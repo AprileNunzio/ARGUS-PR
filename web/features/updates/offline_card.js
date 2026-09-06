@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, chip, notice, confirmPanel, formatBytes } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { card, segmented, tabsBar } from '/assets/ui.js';
@@ -173,7 +174,7 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
                 className: 'btn btn--primary',
                 type: 'button',
                 onclick: () => fileInput.click()
-            }, [icon('download'), el('span', { textContent: 'Sfoglia file ZIP / Bundle' })]);
+            }, [icon('download'), el('span', { textContent: t('updates.sfogliaFileZIPBundle', 'Sfoglia file ZIP / Bundle') })]);
 
             const dropZone = el('div', {
                 className: 'dropzone-box rise',
@@ -183,8 +184,8 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
             }, [
                 fileInput,
                 el('div', { className: 'dropzone-box__icon' }, [icon('archive', { className: 'icon--xl' })]),
-                el('strong', { className: 'xrow__title', textContent: 'Trascina qui l archivio ZIP o selezionalo' }),
-                el('span', { className: 'section__hint text-center', textContent: 'Supporta file .zip (es. scaricati da GitHub Releases) o pacchetti .bundle Git fino a 512 MB' }),
+                el('strong', { className: 'xrow__title', textContent: t('updates.trascinaQuiLArchivioZIPO', 'Trascina qui l archivio ZIP o selezionalo') }),
+                el('span', { className: 'section__hint text-center', textContent: t('updates.supportaFileZipEsScaric', 'Supporta file .zip (es. scaricati da GitHub Releases) o pacchetti .bundle Git fino a 512 MB') }),
                 el('div', { className: 'row row--center' }, [chooseBtn])
             ]);
 
@@ -209,20 +210,20 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
             const urlInput = el('input', {
                 className: 'input input--mono',
                 value: remoteUrl,
-                placeholder: 'https://example.com/argus-pr-v0.40.0.zip'
+                placeholder: t('updates.httpsExampleComArgusPrV', 'https://example.com/argus-pr-v0.40.0.zip')
             });
             urlInput.addEventListener('input', () => { remoteUrl = urlInput.value; });
 
             const button = el('button', { className: 'btn', type: 'button', onclick: download }, [
                 icon('download'),
-                el('span', { textContent: 'Scarica e verifica' })
+                el('span', { textContent: t('updates.scaricaEVerifica', 'Scarica e verifica') })
             ]);
 
             return [
                 el('div', { className: 'field' }, [
-                    el('label', { textContent: 'Indirizzo del pacchetto' }),
+                    el('label', { textContent: t('updates.indirizzoDelPacchetto', 'Indirizzo del pacchetto') }),
                     urlInput,
-                    el('span', { className: 'xrow__hint', textContent: 'Sono ammessi ftp, ftps, http e https (.zip o .bundle).' })
+                    el('span', { className: 'xrow__hint', textContent: t('updates.sonoAmmessiFtpFtpsHttpE', 'Sono ammessi ftp, ftps, http e https (.zip o .bundle).') })
                 ]),
                 el('div', { className: 'row row--end' }, [button])
             ];
@@ -237,12 +238,12 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
 
         const button = el('button', { className: 'btn', type: 'button', onclick: () => scan(searchPath.trim()) }, [
             icon('search'),
-            el('span', { textContent: 'Cerca pacchetti' })
+            el('span', { textContent: t('updates.cercaPacchetti', 'Cerca pacchetti') })
         ]);
 
         return [
             el('div', { className: 'field' }, [
-                el('label', { textContent: 'Percorso aggiuntivo da esaminare' }),
+                el('label', { textContent: t('updates.percorsoAggiuntivoDaEsamina', 'Percorso aggiuntivo da esaminare') }),
                 pathInput,
                 el('span', { className: 'xrow__hint', textContent: HINTS[source] })
             ]),
@@ -270,11 +271,11 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
                         render();
                     }
                 }),
-                el('span', { className: 'section__hint', textContent: 'Forza l installazione (reinstalla anche se la versione coincide o per riparare i file)' })
+                el('span', { className: 'section__hint', textContent: t('updates.forzaLInstallazioneReinsta', 'Forza l installazione (reinstalla anche se la versione coincide o per riparare i file)') })
             ])
             : null;
 
-        const checksumInput = el('input', { className: 'input input--mono', value: checksum, placeholder: 'Impronta SHA-256 attesa (facoltativa)' });
+        const checksumInput = el('input', { className: 'input input--mono', value: checksum, placeholder: t('updates.improntaSHA256AttesaFacol', 'Impronta SHA-256 attesa (facoltativa)') });
         checksumInput.addEventListener('input', () => { checksum = checksumInput.value; });
 
         const installButton = el('button', {
@@ -287,26 +288,26 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
         return el('div', { className: 'stack stack--tight' }, [
             el('div', { className: 'spec-grid' }, [
                 el('div', { className: 'spec' }, [
-                    el('span', { className: 'spec__k', textContent: 'Versione nel pacchetto' }),
+                    el('span', { className: 'spec__k', textContent: t('updates.versioneNelPacchetto', 'Versione nel pacchetto') }),
                     el('span', { className: 'spec__v', textContent: verified.tag })
                 ]),
                 el('div', { className: 'spec' }, [
-                    el('span', { className: 'spec__k', textContent: 'Dimensione' }),
+                    el('span', { className: 'spec__k', textContent: t('updates.dimensione', 'Dimensione') }),
                     el('span', { className: 'spec__v', textContent: formatBytes(verified.sizeBytes) })
                 ]),
                 el('div', { className: 'spec' }, [
-                    el('span', { className: 'spec__k', textContent: 'Impronta SHA-256' }),
+                    el('span', { className: 'spec__k', textContent: t('updates.improntaSHA256', 'Impronta SHA-256') }),
                     el('span', { className: 'spec__v break', textContent: verified.sha256 })
                 ]),
                 el('div', { className: 'spec' }, [
-                    el('span', { className: 'spec__k', textContent: 'Formato' }),
+                    el('span', { className: 'spec__k', textContent: t('updates.formato', 'Formato') }),
                     el('span', { className: 'spec__v', textContent: verified.isZip ? 'Archivio ZIP' : 'Bundle Git' })
                 ])
             ]),
             el('div', { className: 'field' }, [
-                el('label', { textContent: 'Verifica di integrita' }),
+                el('label', { textContent: t('updates.verificaDiIntegrita', 'Verifica di integrita') }),
                 checksumInput,
-                el('span', { className: 'xrow__hint', textContent: 'Se compilata, l installazione viene rifiutata quando l impronta non coincide.' })
+                el('span', { className: 'xrow__hint', textContent: t('updates.seCompilataLInstallazione', 'Se compilata, l installazione viene rifiutata quando l impronta non coincide.') })
             ]),
             forceOption,
             el('div', { className: 'row row--end' }, [installButton])
@@ -325,7 +326,7 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
             verifiedPanel(),
             el('p', { className: 'xcard__note' }, [
                 icon('info'),
-                el('span', { textContent: 'Carica direttamente l archivio ZIP della release (scaricato da GitHub o preparato localmente) oppure posiziona i file .zip o .bundle su USB o share di rete.' })
+                el('span', { textContent: t('updates.caricaDirettamenteLArchivio', 'Carica direttamente l archivio ZIP della release (scaricato da GitHub o preparato localmente) oppure posiziona i file .zip o .bundle su USB o share di rete.') })
             ])
         );
     };
@@ -333,8 +334,8 @@ export function offlineUpdateCard({ api, currentVersion, onApplied }) {
     render();
 
     return card({
-        title: 'Installazione manuale (File ZIP, USB, SMB o FTP)',
-        subtitle: 'Aggiorna il server caricando direttamente l archivio ZIP o importando un pacchetto con lo stesso watchdog di ripristino',
+        title: t('updates.installazioneManualeFileZI', 'Installazione manuale (File ZIP, USB, SMB o FTP)'),
+        subtitle: t('updates.aggiornaIlServerCaricandoD', 'Aggiorna il server caricando direttamente l archivio ZIP o importando un pacchetto con lo stesso watchdog di ripristino'),
         iconName: 'archive',
         tone: 'purple',
         badge: chip('Offline & ZIP', 'info'),

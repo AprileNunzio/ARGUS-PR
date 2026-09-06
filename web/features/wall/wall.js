@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
 import { createStatusBar, presetById } from './wall_statusbar.js';
 import { connectWallEvents } from './wall_live.js';
@@ -153,7 +154,7 @@ function createGrid() {
             players.push(livePlayer);
         };
 
-        const bannerText = el('span', { className: 'console__playback-text', textContent: 'Riproduzione registrata' });
+        const bannerText = el('span', { className: 'console__playback-text', textContent: t('wall.riproduzioneRegistrata', 'Riproduzione registrata') });
 
         const banner = el('div', { className: 'console__playback', hidden: 'hidden' }, [
             icon('timeline'),
@@ -166,7 +167,7 @@ function createGrid() {
                     banner.hidden = true;
                     attachLive(camera.quality);
                 }
-            }, [icon('play'), el('span', { className: 'console__tool-label', textContent: 'Torna in diretta' })])
+            }, [icon('play'), el('span', { className: 'console__tool-label', textContent: t('wall.tornaInDiretta', 'Torna in diretta') })])
         ]);
 
         const toolbar = createToolbar({
@@ -210,8 +211,8 @@ function createGrid() {
             el('span', { className: 'console__brand-mark' }, [
                 el('span', { className: 'console__brand-glyph', textContent: 'A' })
             ]),
-            el('span', { className: 'console__brand-name', textContent: 'ARGUS-PR' }),
-            el('span', { className: 'console__brand-by', textContent: 'by NunzioTech' }),
+            el('span', { className: 'console__brand-name', textContent: t('wall.aRGUSPR', 'ARGUS-PR') }),
+            el('span', { className: 'console__brand-by', textContent: t('wall.byNunzioTech', 'by NunzioTech') }),
             el('span', { className: 'console__brand-slot', textContent: `Riquadro ${index + 1} · libero` })
         ])
     ]);

@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el, field, chip, notice } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 import { createLivePlayer, isPlaybackSupported } from '/features/live/player.js';
@@ -39,7 +40,7 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
     updateHint();
 
     const feedback = el('div', { hidden: 'hidden' });
-    const saveBtn = el('button', { className: 'btn btn--primary', type: 'button', textContent: 'Salva zone' });
+    const saveBtn = el('button', { className: 'btn btn--primary', type: 'button', textContent: t('motion.salvaZone', 'Salva zone') });
 
     const canvas = el('canvas', { className: 'zone-canvas' });
     const ctx = canvas.getContext('2d');
@@ -49,7 +50,7 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
 
     const previewState = el('span', { className: 'zone-preview__state' }, [
         icon('camera'),
-        el('span', { textContent: 'Collegamento alla telecamera…' })
+        el('span', { textContent: t('motion.collegamentoAllaTelecamera', 'Collegamento alla telecamera…') })
     ]);
 
     const player = isPlaybackSupported()
@@ -202,7 +203,7 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
     ];
 
     const presetBar = el('div', { className: 'zone-presets' }, [
-        el('span', { className: 'zone-presets__label', textContent: 'Preset rapidi:' }),
+        el('span', { className: 'zone-presets__label', textContent: t('motion.presetRapidi', 'Preset rapidi:') }),
         ...PRESETS.map((preset) => el('button', {
             className: 'btn btn--sm',
             type: 'button',
@@ -224,7 +225,7 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
         if (zones.length === 0) {
             zonesList.append(el('div', {
                 className: 'section__hint',
-                textContent: 'Nessuna zona definita. Clicca sul riquadro per tracciare i vertici e fai doppio clic per chiudere la zona.'
+                textContent: t('motion.nessunaZonaDefinitaClicca', 'Nessuna zona definita. Clicca sul riquadro per tracciare i vertici e fai doppio clic per chiudere la zona.')
             }));
             return;
         }
@@ -263,7 +264,7 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
             const deleteBtn = el('button', {
                 className: 'btn btn--sm btn--danger',
                 type: 'button',
-                textContent: 'Elimina',
+                textContent: t('motion.elimina', 'Elimina'),
                 onclick: () => {
                     zones.splice(index, 1);
                     selectedZoneIndex = -1;
@@ -282,10 +283,10 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
                         nameInput
                     ]),
                     el('div', { className: 'row' }, [
-                        el('span', { className: 'section__hint', textContent: 'Sensibilità area:' }),
+                        el('span', { className: 'section__hint', textContent: t('motion.sensibilitArea', 'Sensibilità area:') }),
                         sensSlider,
                         sensLabel,
-                        el('span', { className: 'section__hint', textContent: 'Attesa (sec):' }),
+                        el('span', { className: 'section__hint', textContent: t('motion.attesaSec', 'Attesa (sec):') }),
                         coolInput
                     ])
                 ]),
@@ -343,17 +344,17 @@ export function renderZoneEditor({ camera, api, onSaved, onCancel }) {
                         updateHint();
                         redraw();
                     }
-                }, [icon('close'), el('span', { textContent: 'Annulla vertici' })])
+                }, [icon('close'), el('span', { textContent: t('motion.annullaVertici', 'Annulla vertici') })])
             ]),
             el('hr', { className: 'divider' }),
-            el('div', { className: 'section__title' }, [icon('shield'), el('span', { textContent: 'Zone configurate' })]),
+            el('div', { className: 'section__title' }, [icon('shield'), el('span', { textContent: t('motion.zoneConfigurate', 'Zone configurate') })]),
             zonesList,
             feedback,
             el('div', { className: 'row row--end' }, [
                 el('button', {
                     className: 'btn',
                     type: 'button',
-                    textContent: 'Chiudi',
+                    textContent: t('motion.chiudi', 'Chiudi'),
                     onclick: () => {
                         player?.destroy();
                         onCancel();

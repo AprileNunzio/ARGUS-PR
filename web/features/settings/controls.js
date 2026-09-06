@@ -1,3 +1,4 @@
+import { t } from '/assets/i18n.js';
 import { el } from '/assets/dom.js';
 import { icon } from '/assets/icons.js';
 
@@ -104,13 +105,13 @@ function stepperControl(entry, onChange) {
     const minusBtn = el('button', {
         type: 'button',
         className: 'stepper__btn',
-        title: 'Diminuisci'
+        title: t('settings.diminuisci', 'Diminuisci')
     }, [icon('close')]);
 
     const plusBtn = el('button', {
         type: 'button',
         className: 'stepper__btn',
-        title: 'Aumenta'
+        title: t('settings.aumenta', 'Aumenta')
     }, [icon('plus')]);
 
     const update = (val) => {
@@ -262,7 +263,7 @@ export function controlFor(entry, onChange) {
         case 'cidrList':
         case 'hostList': return tagsControl(entry, onChange);
         case 'integer': return sliderControl(entry, onChange);
-        default: return el('span', { className: 'muted', textContent: 'Non supportato' });
+        default: return el('span', { className: 'muted', textContent: t('settings.nonSupportato', 'Non supportato') });
     }
 }
 
