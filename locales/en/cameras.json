@@ -1,0 +1,17 @@
+{
+    "title": "Cameras",
+    "subtitle": "Stream management, network parameters and diagnostics",
+    "addCamera": "Add Camera",
+    "name": "Camera Name",
+    "rtspUrl": "RTSP Stream URL",
+    "subStreamUrl": "Sub Stream URL",
+    "credentials": "Authentication",
+    "username": "Username",
+    "password": "Password",
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
+    "codec": "Video Codec",
+    "resolution": "Resolution",
+    "fps": "Frames Per Second",
+    "probeStream": "Test Stream"
+}

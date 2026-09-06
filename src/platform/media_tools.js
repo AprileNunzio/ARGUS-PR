@@ -1,0 +1,84 @@
+import { discoverFfmpeg, listHardwareAccelerators, detectRtspTimeoutOption } from './ffmpeg.js';
+import { detectUsableEncoders, detectUsableAccelerators } from './encoder_probe.js';
+import { installationSupported, installFfmpeg } from './dependencies/ffmpeg_installer.js';
+import { isFail } from '../kernel/result.js';
+import { internal } from '../kernel/errors.js';
+import { createLogger } from '../kernel/logger.js';
+
+const log = createLogger('media-tools');
+
+let tools = null;
+let lastConfig = null;
+
+export async function initMediaTools(config) {
+    lastConfig = config;
+
+    const found = await discoverFfmpeg({
+        ffmpegPath: config.ffmpegPath || undefined,
+        ffprobePath: config.ffprobePath || undefined
+    });
+
+    if (isFail(found)) {
+        log.warn('media tools unavailable', { message: found.error.message });
+        tools = { available: false, reason: found.error.message, ffmpeg: null, ffprobe: null, accelerators: [], encoders: [], rtspTimeoutOption: null };
+        return tools;
+    }
+
+    const compiled = await listHardwareAccelerators(found.value.ffmpeg.path);
+    const accelerators = await detectUsableAccelerators(found.value.ffmpeg.path, compiled);
+    const encoders = await detectUsableEncoders(found.value.ffmpeg.path, accelerators);
+    const rtspTimeoutOption = await detectRtspTimeoutOption(found.value.ffmpeg.path);
+
+    tools = {
+        available: true,
+        reason: null,
+        ffmpeg: found.value.ffmpeg,
+        ffprobe: found.value.ffprobe,
+        compiledAccelerators: compiled,
+        accelerators,
+        encoders,
+        rtspTimeoutOption
+    };
+
+    log.info('media tools ready', {
+        ffmpeg: tools.ffmpeg.version,
+        path: tools.ffmpeg.path,
+        compiledAccelerators: compiled,
+        accelerators,
+        encoders,
+        rtspTimeoutOption
+    });
+
+    return tools;
+}
+
+export async function provisionMediaTools() {
+    if (tools?.available) return mediaToolsStatus();
+
+    await installFfmpeg();
+    await initMediaTools(lastConfig ?? { ffmpegPath: '', ffprobePath: '' });
+
+    return mediaToolsStatus();
+}
+
+export function getMediaTools() {
+    if (!tools) throw internal('Media tools accessed before initialisation');
+    if (!tools.available) throw internal(`ffmpeg is not available: ${tools.reason}`);
+    return tools;
+}
+
+export function mediaToolsStatus() {
+    if (!tools) {
+        return { available: false, reason: 'not initialised', installable: installationSupported(), accelerators: [], compiledAccelerators: [], encoders: [] };
+    }
+    return {
+        available: tools.available,
+        reason: tools.reason,
+        installable: installationSupported(),
+        ffmpegVersion: tools.ffmpeg?.version ?? null,
+        ffmpegPath: tools.ffmpeg?.path ?? null,
+        accelerators: tools.accelerators,
+        compiledAccelerators: tools.compiledAccelerators ?? [],
+        encoders: tools.encoders ?? []
+    };
+}

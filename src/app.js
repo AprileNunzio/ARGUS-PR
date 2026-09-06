@@ -1,0 +1,212 @@
+import fs from 'node:fs';
+import { loadConfig } from './kernel/config.js';
+import { setLogLevel, createLogger } from './kernel/logger.js';
+import { installProcessGuard, onShutdown } from './kernel/process_guard.js';
+import { openDatabase } from './storage/database.js';
+import { initVault } from './security/vault.js';
+import { purgeExpiredSessions } from './security/sessions.js';
+import { purgeLockouts } from './security/lockout.js';
+import { initSecurityEvents } from './security/security_events.js';
+import { tlsStatus } from './platform/tls.js';
+import { initMediaTools } from './platform/media_tools.js';
+import { createHttpServer, createRedirectServer, listen, listenRedirect } from './http/server.js';
+import { attachEventSocket } from './http/websocket.js';
+import { prepareSetup } from './features/setup/setup_service.js';
+import { registerSetupRoutes } from './features/setup/setup_routes.js';
+import { registerAuthRoutes } from './features/auth/auth_routes.js';
+import { registerCameraRoutes } from './features/cameras/camera_routes.js';
+import { registerDiscoveryRoutes } from './features/discovery/discovery_routes.js';
+import { registerSystemRoutes } from './features/system/system_routes.js';
+import { registerTimeRoutes } from './features/system/time_routes.js';
+import { registerMaintenanceRoutes } from './features/system/maintenance_routes.js';
+import { registerSettingsRoutes } from './features/settings/settings_routes.js';
+import { seedFromConfig, readSetting } from './features/settings/settings_service.js';
+import { registerStreamRoutes } from './features/streaming/stream_routes.js';
+import { installStreamHub } from './features/streaming/stream_hub.js';
+import { registerRecordingRoutes } from './features/recording/recording_routes.js';
+import { registerPlaybackRoutes } from './features/recording/playback_routes.js';
+import { registerStorageRoutes } from './features/storage/storage_routes.js';
+import { installRecordingHub } from './features/recording/recording_hub.js';
+import { initLocalCapture } from './features/cameras/local_capture.js';
+import { setRtspTimeoutOption } from './features/cameras/camera_input.js';
+import { registerKioskRoutes } from './features/kiosk/kiosk_routes.js';
+import { registerWallRoutes } from './features/wall/wall_routes.js';
+import { registerPtzRoutes } from './features/ptz/ptz_routes.js';
+import { registerAlarmRoutes } from './features/alarm/alarm_routes.js';
+import { registerAudioRoutes } from './features/audio/audio_routes.js';
+import { registerUserRoutes } from './features/users/user_routes.js';
+import { registerRecoveryRoutes } from './features/auth/recovery_routes.js';
+import { initClipLibrary } from './features/audio/clip_library.js';
+import { registerExportRoutes } from './features/export/export_routes.js';
+import { registerUpdateRoutes } from './features/updates/update_routes.js';
+import { installUpdateWatchdog, onPeriodicCheck } from './features/updates/update_service.js';
+import { runAutomaticUpgrade, Outcome } from './features/updates/auto_update.js';
+import { registerSchedulingRoutes } from './features/scheduling/scheduling_routes.js';
+import { registerMotionRoutes } from './features/motion/motion_routes.js';
+import { installMotionHub } from './features/motion/motion_hub.js';
+import { registerDetectionRoutes } from './features/detections/detections_routes.js';
+import { registerAccessRoutes } from './features/access/access_routes.js';
+import { createAccessRepository } from './features/access/access_repository.js';
+import { registerPeopleRoutes } from './features/people/people_routes.js';
+import { createPeopleRepository } from './features/people/people_repository.js';
+import { installVisionHub } from './features/vision/vision_hub.js';
+import { registerAnalyticsRoutes } from './features/vision/analytics_routes.js';
+import { installAutomationHub } from './features/automation/automation_hub.js';
+import { registerAutomationRoutes } from './features/automation/automation_routes.js';
+import { registerFloorplanRoutes } from './features/automation/floorplan_routes.js';
+import { registerI18nRoutes } from './features/i18n/i18n_routes.js';
+import { listCameras } from './features/cameras/camera_repository.js';
+import { insertDetectionEvent } from './features/detections/detections_repository.js';
+import { readPackageVersion } from './platform/version.js';
+
+
+
+const log = createLogger('app');
+
+function registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub, visionHub }) {
+    registerSetupRoutes(router);
+    registerAuthRoutes(router);
+    registerCameraRoutes(router);
+    registerDiscoveryRoutes(router);
+    registerSystemRoutes(router);
+    registerTimeRoutes(router);
+    registerMaintenanceRoutes(router);
+    registerSettingsRoutes(router);
+    registerStreamRoutes(router);
+    registerRecordingRoutes(router);
+    registerPlaybackRoutes(router);
+    registerStorageRoutes(router);
+    registerKioskRoutes(router);
+    registerWallRoutes(router);
+    registerPtzRoutes(router);
+    registerAlarmRoutes(router);
+    registerAudioRoutes(router);
+    registerUserRoutes(router);
+    registerRecoveryRoutes(router);
+    registerExportRoutes(router);
+    registerUpdateRoutes(router);
+    registerSchedulingRoutes(router);
+    registerMotionRoutes(router);
+    registerDetectionRoutes(router);
+    registerAnalyticsRoutes(router, { config, visionHub });
+    registerAutomationRoutes(router, { hub: automationHub });
+    registerFloorplanRoutes(router);
+    registerI18nRoutes(router);
+    registerAccessRoutes({ router, accessRepository });
+    registerPeopleRoutes({ router, peopleRepository, db, config });
+}
+
+function startMaintenanceWatch(config) {
+    const timer = setInterval(() => {
+        if (readSetting('updates.restartPolicy') !== 'window') return;
+        runAutomaticUpgrade(config, 'window').catch((error) => log.debug('maintenance check failed', { message: error.message }));
+    }, 10 * 60 * 1000);
+
+    timer.unref();
+    onShutdown('maintenance-watch', () => clearInterval(timer));
+}
+
+function startSessionJanitor() {
+    const timer = setInterval(() => {
+        const removed = purgeExpiredSessions();
+        const unlocked = purgeLockouts();
+        if (removed > 0 || unlocked > 0) log.debug('security janitor', { removed, unlocked });
+    }, 15 * 60 * 1000);
+    timer.unref();
+    onShutdown('session-janitor', () => clearInterval(timer));
+}
+
+export async function bootstrap(overrides = {}) {
+    installProcessGuard();
+
+    const config = loadConfig(overrides);
+    setLogLevel(config.logLevel);
+
+    log.info('starting', {
+        version: readPackageVersion(),
+        node: process.version,
+        platform: process.platform,
+        dataDir: config.dataDir
+    });
+
+    initVault(config);
+    initSecurityEvents(config);
+    const db = openDatabase(config);
+
+    seedFromConfig(config);
+
+    if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() !== 0) {
+        try {
+            const unit = fs.readFileSync('/etc/systemd/system/argus-pr.service', 'utf8');
+            if (unit.includes('User=root')) {
+                log.warn('system unit upgraded to root, restarting to acquire privileges');
+                process.exit(75);
+            }
+        } catch {}
+    }
+
+    if (process.platform === 'win32') {
+        const { handleWindowsStartup } = await import('./features/updates/windows_updater.js');
+        handleWindowsStartup(config);
+    }
+
+    const upgrade = await runAutomaticUpgrade(config, 'startup');
+
+    if (upgrade.outcome === Outcome.UPGRADING) {
+        log.warn('startup interrupted to apply the upgrade', { target: upgrade.target });
+        return { config, upgrading: true, target: upgrade.target };
+    }
+
+    const setup = prepareSetup();
+    const media = await initMediaTools(config);
+    setRtspTimeoutOption(media.rtspTimeoutOption ?? null);
+
+    startSessionJanitor();
+    initLocalCapture(config);
+    initClipLibrary(config);
+    installStreamHub();
+    installRecordingHub(config);
+    installMotionHub(config);
+    installUpdateWatchdog(config);
+    onPeriodicCheck((current) => runAutomaticUpgrade(current, 'periodic'));
+    startMaintenanceWatch(config);
+
+    const accessRepository = createAccessRepository(db);
+    const peopleRepository = createPeopleRepository(db);
+
+    const visionHub = installVisionHub({
+        config,
+        cameraRepository: { list: listCameras },
+        detectionsRepository: { recordEvent: insertDetectionEvent },
+        peopleRepository,
+        accessRepository
+    });
+    onShutdown('vision-hub', () => visionHub.stop());
+
+
+
+    const automationHub = installAutomationHub({ cameraRepository: { list: listCameras } });
+
+    const { server } = createHttpServer(config, (router) => registerRoutes(router, { db, accessRepository, peopleRepository, config, automationHub, visionHub }));
+    attachEventSocket(server, config);
+    await listen(server, config);
+
+    let redirecting = false;
+    if (config.httpPort > 0 && config.httpPort !== config.port) {
+        redirecting = await listenRedirect(createRedirectServer(config), config);
+    }
+
+    const tls = tlsStatus();
+
+    log.info('security posture', {
+        autoUpdate: upgrade.outcome,
+        tls: tls.source,
+        certificateTrusted: tls.trusted,
+        remoteAccess: config.publicAccess,
+        trustedNetworks: config.trustedNetworkList.length,
+        redirect: redirecting
+    });
+
+    return { config, setup, tls, redirecting, upgrading: false, upgrade: upgrade.outcome };
+}
+

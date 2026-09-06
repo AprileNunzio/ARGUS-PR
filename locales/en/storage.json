@@ -1,0 +1,12 @@
+{
+    "title": "Storage & Disks",
+    "subtitle": "Disk space monitoring, recording targets and retention policies",
+    "retentionDays": "Retention days",
+    "totalSpace": "Total Space",
+    "usedSpace": "Used Space",
+    "freeSpace": "Free Space",
+    "mountPoint": "Mount point",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "protectRecordings": "Protect recordings from auto-purge"
+}

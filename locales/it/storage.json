@@ -1,0 +1,12 @@
+{
+    "title": "Storage & Dischi",
+    "subtitle": "Monitoraggio spazio, dischi di registrazione e criteri di ritenzione",
+    "retentionDays": "Giorni di ritenzione",
+    "totalSpace": "Spazio Totale",
+    "usedSpace": "Spazio Utilizzato",
+    "freeSpace": "Spazio Libero",
+    "mountPoint": "Punto di montaggio",
+    "healthy": "In salute",
+    "degraded": "Degradato",
+    "protectRecordings": "Proteggi registrazioni da eliminazione automatica"
+}

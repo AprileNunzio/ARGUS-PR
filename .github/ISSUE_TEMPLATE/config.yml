@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Documentation (IT / EN) / Documentazione"
+    url: https://github.com/AprileNunzio/ARGUS-PR#readme
+    about: "Read installation, administration, and architecture guides / Consulta le guide di installazione e uso."
+  - name: "Security Vulnerability Disclosure / Segnalazione Sicurezza"
+    url: https://github.com/AprileNunzio/ARGUS-PR/blob/main/SECURITY.md
+    about: "Privately and responsibly disclose security vulnerabilities / Segnala privatamente falle di sicurezza."

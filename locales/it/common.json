@@ -1,0 +1,18 @@
+{
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "refresh": "Aggiorna",
+    "loading": "Caricamento...",
+    "confirm": "Conferma",
+    "back": "Indietro",
+    "close": "Chiudi",
+    "search": "Cerca...",
+    "status": "Stato",
+    "actions": "Azioni",
+    "error": "Errore",
+    "success": "Operazione completata",
+    "empty": "Nessun elemento presente"
+}

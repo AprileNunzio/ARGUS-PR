@@ -1,0 +1,14 @@
+{
+    "title": "Video Wall Control",
+    "subtitle": "Layout configuration, tile grid and monitor outputs",
+    "layout": "Layout",
+    "display": "Video Output",
+    "resolution": "Resolution",
+    "quality": "Stream Quality",
+    "subStream": "Sub stream (low latency)",
+    "mainStream": "Main stream (high resolution)",
+    "emptyTile": "Empty tile",
+    "assignCamera": "Assign camera",
+    "autoRotate": "Auto rotate",
+    "intervalSeconds": "Interval (seconds)"
+}

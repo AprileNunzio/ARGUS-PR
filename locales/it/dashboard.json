@@ -1,0 +1,9 @@
+{
+    "title": "Riepilogo Impianto",
+    "onlineCameras": "Telecamere Attive",
+    "recordingStatus": "Stato Registrazione",
+    "storageUsage": "Utilizzo Disco",
+    "activeAlerts": "Allarmi Attivi",
+    "recentEvents": "Eventi Recenti",
+    "systemUptime": "Tempo di Attività"
+}

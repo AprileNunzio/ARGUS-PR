@@ -1,0 +1,17 @@
+{
+    "title": "Telecamere",
+    "subtitle": "Gestione flussi video, parametri di rete e diagnostica",
+    "addCamera": "Aggiungi Telecamera",
+    "name": "Nome Telecamera",
+    "rtspUrl": "URL Flusso RTSP",
+    "subStreamUrl": "URL Flusso Secondario",
+    "credentials": "Autenticazione",
+    "username": "Nome utente",
+    "password": "Password",
+    "statusOnline": "In linea",
+    "statusOffline": "Non raggiungibile",
+    "codec": "Codec Video",
+    "resolution": "Risoluzione",
+    "fps": "Frame per secondo",
+    "probeStream": "Verifica Flusso"
+}

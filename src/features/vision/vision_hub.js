@@ -1,0 +1,439 @@
+import { createLogger } from '../../kernel/logger.js';
+import { publish, subscribe, Topic } from '../../kernel/event_bus.js';
+import { Tracker } from './tracking.js';
+import { voteOnPlate } from './plates.js';
+import { findBestMatch, estimateFacePose3D, updateMovingCentroid, SFACE_COSINE_THRESHOLD } from './face_matcher.js';
+import { deriveBiometrics, blendFaceGeometry } from './face_geometry.js';
+import { evaluateAccess } from '../access/access_rules.js';
+import { createVisionProcess } from './vision_process.js';
+import { probeStream } from '../cameras/stream_probe.js';
+import { storeSnapshot } from './snapshot_store.js';
+import { profileFor } from './analytics_repository.js';
+import { Capability } from './engines_catalog.js';
+import {
+    acceptedClasses,
+    blockedCapabilities,
+    buildWorkerProfile,
+    disableUnsupported,
+    faceMatchThreshold,
+    needsWorker,
+    requiredModels
+} from './analytics_profile.js';
+import { modelFiles, modelsDirFor, missingModels } from './models_service.js';
+import { readPerformanceSettings } from '../settings/performance_tuning.js';
+
+const log = createLogger('vision-hub');
+
+const LIVE_INTERVAL_MS = 200;
+const MAX_LIVE_BOXES = 24;
+
+const PLATE_SOURCES = new Set(['car', 'truck', 'bus', 'motorcycle', 'plate']);
+const PLATE_MIN_VOTES = 3;
+
+export function installVisionHub({ config, cameraRepository, detectionsRepository, peopleRepository, accessRepository }) {
+    const processes = new Map();
+    const trackers = new Map();
+    const runtime = new Map();
+    const lastBroadcast = new Map();
+    const lastFaceLogs = new Map();
+    const plateFormat = config.plateFormat ?? 'italian';
+    const degraded = new Map();
+    const sourceSizes = new Map();
+    const modelsDir = modelsDirFor(config);
+
+    function ensureSourceSize(camera) {
+        if (sourceSizes.has(camera.id)) return;
+
+        if (Number(camera.captureWidth) > 0 && Number(camera.captureHeight) > 0) {
+            sourceSizes.set(camera.id, { width: Number(camera.captureWidth), height: Number(camera.captureHeight) });
+            return;
+        }
+
+        sourceSizes.set(camera.id, null);
+        probeStream(camera.id)
+            .then((report) => {
+                const video = report?.video;
+                if (!(Number(video?.width) > 0 && Number(video?.height) > 0)) return;
+                sourceSizes.set(camera.id, { width: Number(video.width), height: Number(video.height) });
+                log.info('source resolution probed', { cameraId: camera.id, width: video.width, height: video.height });
+                stopCamera(camera.id, 'source-size');
+                syncCameras();
+            })
+            .catch((error) => log.warn('source probe failed', { cameraId: camera.id, error: error.message }));
+    }
+
+    function plannedFor(camera) {
+        const stored = profileFor(camera.id);
+        const pending = missingModels(requiredModels(stored), config);
+        const entries = disableUnsupported(stored, pending);
+        const blocked = blockedCapabilities(stored, entries);
+
+        if (blocked.length > 0) {
+            degraded.set(camera.id, { models: pending, capabilities: blocked });
+            log.warn('vision degraded: models missing', { cameraId: camera.id, models: pending, capabilities: blocked });
+        }
+
+        if (!needsWorker(entries)) return null;
+
+        const workerProfile = buildWorkerProfile(entries, modelFiles());
+
+        return {
+            entries,
+            workerProfile,
+            accepted: acceptedClasses(entries),
+            faceThreshold: faceMatchThreshold(entries) ?? SFACE_COSINE_THRESHOLD,
+            recognizeFaces: entries.some((entry) => entry.capability === Capability.FACE_RECOGNIZE && entry.enabled),
+            detectFaces: entries.some((entry) => entry.capability === Capability.FACE_DETECT && entry.enabled),
+            readPlates: entries.some((entry) => entry.capability === Capability.PLATE && entry.enabled),
+            signature: JSON.stringify(workerProfile)
+        };
+    }
+
+    function stopCamera(cameraId, reason) {
+        const proc = processes.get(cameraId);
+        if (!proc) return;
+        proc.stop();
+        processes.delete(cameraId);
+        trackers.delete(cameraId);
+        runtime.delete(cameraId);
+        log.info('stopped vision analysis', { cameraId, reason });
+    }
+
+    function syncCameras() {
+        const cameras = cameraRepository.list().filter((camera) => camera.enabled);
+        const planned = new Map();
+        degraded.clear();
+
+        for (const camera of cameras) {
+            const plan = plannedFor(camera);
+            if (!plan) continue;
+            ensureSourceSize(camera);
+            planned.set(camera.id, plan);
+        }
+
+        for (const cameraId of [...processes.keys()]) {
+            if (!planned.has(cameraId)) stopCamera(cameraId, 'analytics-off');
+        }
+
+        const performanceSettings = readPerformanceSettings();
+
+        for (const [cameraId, plan] of planned.entries()) {
+            const current = runtime.get(cameraId);
+            if (current && current.signature === plan.signature) {
+                runtime.set(cameraId, plan);
+                continue;
+            }
+            if (current) stopCamera(cameraId, 'profile-changed');
+
+            const camera = cameras.find((entry) => entry.id === cameraId);
+            trackers.set(cameraId, new Tracker({ iouThreshold: 0.3, minHits: 2, maxMisses: 4 }));
+            runtime.set(cameraId, plan);
+
+            processes.set(cameraId, createVisionProcess({
+                camera,
+                ffmpegPath: config.ffmpegPath,
+                dataDir: config.dataDir,
+                modelsDir,
+                performanceSettings,
+                sourceSize: sourceSizes.get(cameraId) ?? null,
+                workerProfile: plan.workerProfile,
+                onDetections: handleDetections
+            }));
+
+            log.info('started vision analysis', {
+                cameraId,
+                capabilities: plan.entries.filter((entry) => entry.enabled).map((entry) => entry.capability)
+            });
+        }
+    }
+
+    function recordTrack(cameraId, plan, track) {
+        if (!plan.accepted.has(track.className)) return;
+
+        const plate = plan.readPlates ? track.plateReadings?.[0]?.text ?? null : null;
+        const snapshotPath = storeSnapshot(config, cameraId, track.bestSnapshot, track.id);
+
+        detectionsRepository.recordEvent({
+            cameraId,
+            source: 'vision',
+            className: track.className,
+            trackId: track.id,
+            confidence: track.maxConfidence,
+            box: track.bestBox,
+            snapshotPath,
+            plateText: plate,
+            upperColor: track.upperColor ?? null,
+            startedAt: new Date(track.startedAt).toISOString(),
+            endedAt: new Date(track.endedAt).toISOString()
+        });
+
+        const dwellSeconds = Math.max(0, Math.round(((track.endedAt ?? track.startedAt) - track.startedAt) / 1000));
+
+        publish(Topic.DETECTION, {
+            cameraId,
+            className: track.className,
+            confidence: track.maxConfidence,
+            box: track.bestBox,
+            plateText: plate,
+            upperColor: track.upperColor ?? null,
+            dwellSeconds,
+            durationMs: (track.endedAt ?? track.startedAt) - track.startedAt,
+            timestamp: track.startedAt
+        });
+    }
+
+    let cachedPeople = null;
+    let cachedPeopleAt = 0;
+    const lastLearnAt = new Map();
+
+    function getPeople() {
+        const now = Date.now();
+        if (cachedPeople && now - cachedPeopleAt < 2000) return cachedPeople;
+        cachedPeople = peopleRepository.listPeople();
+        cachedPeopleAt = now;
+        return cachedPeople;
+    }
+
+    const LEARNING_MIN_SCORE = 0.55;
+    const LEARNING_INTERVAL_MS = 3000;
+
+    function pickBestFaceSample(samples) {
+        if (!Array.isArray(samples) || samples.length === 0) return null;
+        let best = null;
+        for (const sample of samples) {
+            if (!sample) continue;
+            const hasEmbedding = Array.isArray(sample.embedding) && sample.embedding.length > 0;
+            if (best && hasEmbedding === (Array.isArray(best.embedding) && best.embedding.length > 0)) {
+                if ((sample.confidence ?? 0) <= (best.confidence ?? 0)) continue;
+            } else if (best && !hasEmbedding) {
+                continue;
+            }
+            best = sample;
+        }
+        return best;
+    }
+
+    function recordFaces(cameraId, plan, tracker, detections, timestamp) {
+        if (!plan.detectFaces && !plan.recognizeFaces) return;
+
+        const people = plan.recognizeFaces ? getPeople() : [];
+
+        // Log newly confirmed faces (once per physical track)
+        for (const track of tracker.activeTracks || Array.from(tracker.tracks.values()).filter(t => t.isConfirmed)) {
+            if (track.className !== 'face') continue;
+            
+            // Ensure we log each track only once
+            if (track.hasBeenLogged) continue;
+            track.hasBeenLogged = true;
+
+            const bestDet = pickBestFaceSample(track.faceEmbeddings);
+
+            const embedding = bestDet?.embedding ?? null;
+            let match = null;
+
+            if (plan.recognizeFaces && embedding) {
+                match = findBestMatch(embedding, people, plan.faceThreshold);
+            }
+
+            const personId = match ? match.person.id : null;
+
+            peopleRepository.recordFaceLog({
+                cameraId,
+                personId,
+                confidence: track.maxConfidence,
+                box: track.bestBox,
+                pose3d: bestDet?.landmarks ? {
+                    ...estimateFacePose3D(bestDet.landmarks),
+                    biometrics: deriveBiometrics(bestDet.landmarks, track.bestBox)
+                } : {},
+                embedding: Array.isArray(embedding) ? embedding : [],
+                snapshotPath: bestDet?.snapshotBase64 ?? null,
+                createdAt: new Date(timestamp).toISOString()
+            });
+        }
+
+        if (plan.recognizeFaces) {
+            for (const detection of detections) {
+                if (detection.className !== 'face' || !detection.faceEmbedding) continue;
+                const match = findBestMatch(detection.faceEmbedding, people, plan.faceThreshold);
+                if (!match || match.score < LEARNING_MIN_SCORE || !(match.person.embedding?.length > 0)) continue;
+                if (timestamp - (lastLearnAt.get(match.person.id) ?? 0) < LEARNING_INTERVAL_MS) continue;
+                lastLearnAt.set(match.person.id, timestamp);
+
+                const embedding = updateMovingCentroid(match.person.embedding, detection.faceEmbedding, 0.92);
+                const sampleCount = (match.person.sampleCount || 1) + 1;
+                const changes = { embedding, sampleCount };
+
+                const biometrics = deriveBiometrics(detection.landmarks ?? [], detection.box ?? [0, 0, 1, 1]);
+                if (biometrics) {
+                    const geometry = blendFaceGeometry(match.person.face3dParams ?? {}, {
+                        biometrics,
+                        pose: estimateFacePose3D(detection.landmarks ?? []),
+                        confidence: detection.confidence ?? 0
+                    });
+                    if (geometry) changes.face3dParams = geometry;
+                }
+
+                peopleRepository.updatePerson(match.person.id, changes);
+                Object.assign(match.person, changes);
+            }
+        }
+    }
+
+    function recordPlates(cameraId, plan, closedTracks, timestamp) {
+        if (!plan.readPlates) return;
+
+        for (const track of closedTracks) {
+            if (!PLATE_SOURCES.has(track.className)) continue;
+
+            const plateResult = voteOnPlate(track.plateReadings, PLATE_MIN_VOTES, { format: plateFormat });
+            if (!plateResult) continue;
+
+            const evaluation = evaluateAccess(plateResult.text, accessRepository.listRules());
+
+            accessRepository.recordEvent({
+                cameraId,
+                plate: plateResult.text,
+                decision: evaluation.decision,
+                ruleId: evaluation.rule ? evaluation.rule.id : null,
+                confidence: plateResult.confidence,
+                createdAt: new Date(timestamp).toISOString()
+            });
+
+            publish(Topic.ACCESS, {
+                cameraId,
+                plate: plateResult.text,
+                decision: evaluation.decision,
+                label: evaluation.rule ? evaluation.rule.label : null,
+                timestamp
+            });
+        }
+    }
+
+    function broadcastLive(cameraId, tracker, plan, timestamp) {
+        const previous = lastBroadcast.get(cameraId) ?? 0;
+        if (timestamp - previous < LIVE_INTERVAL_MS) return;
+        lastBroadcast.set(cameraId, timestamp);
+
+        const people = plan.recognizeFaces ? getPeople() : [];
+        const boxes = [];
+        for (const track of tracker.tracks.values()) {
+            if (!track.isConfirmed || !plan.accepted.has(track.className)) continue;
+            if (!Array.isArray(track.box) || track.box.length !== 4) continue;
+            if (boxes.length >= MAX_LIVE_BOXES) break;
+
+            let personName = null;
+            let personRole = null;
+            if (track.className === 'face' && track.faceEmbeddings?.length > 0) {
+                const bestEmbedding = track.faceEmbeddings[track.faceEmbeddings.length - 1].embedding;
+                const match = findBestMatch(bestEmbedding, people, plan.faceThreshold);
+                if (match) {
+                    personName = match.person.name;
+                    personRole = match.person.role;
+                }
+            }
+
+            boxes.push({
+                id: track.id.slice(0, 8),
+                className: track.className,
+                confidence: Math.round(track.maxConfidence * 100) / 100,
+                box: track.box.map((value) => Math.round(value * 1000) / 1000),
+                plate: track.plateReadings?.[0]?.text ?? null,
+                personName,
+                personRole
+            });
+        }
+
+        publish(Topic.VISION_LIVE, { cameraId, at: timestamp, boxes });
+    }
+
+    function handleDetections({ cameraId, timestamp, detections }) {
+        const tracker = trackers.get(cameraId);
+        const plan = runtime.get(cameraId);
+        if (!tracker || !plan) return;
+
+        const { newlyConfirmed, closedTracks } = tracker.update(detections, timestamp);
+
+        for (const track of newlyConfirmed) recordTrack(cameraId, plan, track);
+        recordFaces(cameraId, plan, tracker, detections, timestamp);
+        recordPlates(cameraId, plan, closedTracks, timestamp);
+        broadcastLive(cameraId, tracker, plan, timestamp);
+    }
+
+    const interval = setInterval(syncCameras, 30000);
+
+    interval.unref();
+    syncCameras();
+
+    const unsubscribeAnalytics = subscribe(Topic.ANALYTICS_UPDATED, (event) => {
+        stopCamera(event.payload.cameraId, 'analytics-updated');
+        syncCameras();
+    });
+
+    const unsubscribeCamera = subscribe(Topic.CAMERA_UPDATED, (event) => {
+        stopCamera(event.payload.id, 'camera-updated');
+        syncCameras();
+    });
+
+    const unsubscribeDeleted = subscribe(Topic.CAMERA_DELETED, (event) => {
+        stopCamera(event.payload.id, 'camera-deleted');
+    });
+
+    log.info('vision hub ready', { active: processes.size, modelsDir });
+
+    return {
+        status() {
+            const cameras = cameraRepository.list();
+            const byId = new Map(cameras.map((camera) => [camera.id, camera]));
+
+            const entries = [...processes.entries()].map(([cameraId, process]) => {
+                const plan = runtime.get(cameraId);
+                const snapshot = process.snapshot ? process.snapshot() : { state: 'unknown' };
+
+                const blocked = degraded.get(cameraId) ?? null;
+
+                return {
+                    cameraId,
+                    cameraName: byId.get(cameraId)?.name ?? cameraId,
+                    capabilities: plan ? plan.entries.filter((entry) => entry.enabled).map((entry) => entry.capability) : [],
+                    engines: plan ? [...new Set(plan.entries.filter((entry) => entry.enabled).map((entry) => entry.engineId))] : [],
+                    classes: plan ? [...plan.accepted] : [],
+                    blockedCapabilities: blocked ? blocked.capabilities : [],
+                    missingModels: blocked ? blocked.models : [],
+                    ...snapshot
+                };
+            });
+
+            const stalled = [...degraded.entries()]
+                .filter(([cameraId]) => !processes.has(cameraId))
+                .map(([cameraId, blocked]) => ({
+                    cameraId,
+                    cameraName: byId.get(cameraId)?.name ?? cameraId,
+                    capabilities: [],
+                    engines: [],
+                    classes: [],
+                    blockedCapabilities: blocked.capabilities,
+                    missingModels: blocked.models,
+                    state: 'blocked'
+                }));
+
+            return {
+                active: entries.length,
+                configured: cameras.length,
+                degraded: entries.filter((entry) => entry.blockedCapabilities.length > 0).length + stalled.length,
+                modelsDir,
+                cameras: [...entries, ...stalled].sort((a, b) => a.cameraName.localeCompare(b.cameraName))
+            };
+        },
+        sync() {
+            syncCameras();
+        },
+        stop() {
+            clearInterval(interval);
+            unsubscribeAnalytics();
+            unsubscribeCamera();
+            unsubscribeDeleted();
+            for (const cameraId of [...processes.keys()]) stopCamera(cameraId, 'shutdown');
+        }
+    };
+}

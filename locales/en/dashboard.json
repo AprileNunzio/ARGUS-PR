@@ -1,0 +1,9 @@
+{
+    "title": "System Dashboard",
+    "onlineCameras": "Active Cameras",
+    "recordingStatus": "Recording Status",
+    "storageUsage": "Disk Usage",
+    "activeAlerts": "Active Alerts",
+    "recentEvents": "Recent Events",
+    "systemUptime": "System Uptime"
+}

@@ -1,0 +1,18 @@
+{
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "back": "Back",
+    "close": "Close",
+    "search": "Search...",
+    "status": "Status",
+    "actions": "Actions",
+    "error": "Error",
+    "success": "Operation completed",
+    "empty": "No items available"
+}

@@ -1,0 +1,14 @@
+{
+    "title": "Regia Muro Video",
+    "subtitle": "Configurazione layout, griglia e uscite monitor",
+    "layout": "Layout",
+    "display": "Uscita Video",
+    "resolution": "Risoluzione",
+    "quality": "Qualità Flusso",
+    "subStream": "Flusso secondario (bassa latenza)",
+    "mainStream": "Flusso primario (alta risoluzione)",
+    "emptyTile": "Riquadro vuoto",
+    "assignCamera": "Assegna telecamera",
+    "autoRotate": "Rotazione automatica",
+    "intervalSeconds": "Intervallo (secondi)"
+}

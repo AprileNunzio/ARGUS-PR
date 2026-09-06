@@ -1,0 +1,37 @@
+[Unit]
+Description=ARGUS-PR Network Video Recorder
+Documentation=https://github.com/AprileNunzio/ARGUS-PR
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+SupplementaryGroups=video render
+WorkingDirectory=/opt/argus-pr
+ExecStart=/usr/bin/node /opt/argus-pr/bin/argus.js serve
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+Environment=NODE_ENV=production
+Environment=ARGUS_HOST=0.0.0.0
+Environment=ARGUS_PORT=443
+Environment=ARGUS_HTTP_PORT=80
+Environment=ARGUS_DATA_DIR=/var/lib/argus-pr
+Environment=ARGUS_MEDIA_DIR=/var/lib/argus-pr/media
+Environment=ARGUS_LOG_LEVEL=info
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+PrivateTmp=true
+MemoryDenyWriteExecute=false
+PrivateDevices=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argus-pr
+
+[Install]
+WantedBy=multi-user.target

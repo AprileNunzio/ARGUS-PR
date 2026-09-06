@@ -1,0 +1,18 @@
+{
+    "defaultLocale": "it",
+    "fallbackLocale": "en",
+    "supportedLocales": [
+        {
+            "code": "it",
+            "name": "Italiano",
+            "englishName": "Italian",
+            "direction": "ltr"
+        },
+        {
+            "code": "en",
+            "name": "English",
+            "englishName": "English",
+            "direction": "ltr"
+        }
+    ]
+}
